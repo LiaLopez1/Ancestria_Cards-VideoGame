@@ -271,18 +271,14 @@ public class LobbyManager : MonoBehaviour
 
             GameObject fila = Instantiate(filaSalaPrefab, listaSalasContent);
 
-            var label = fila.GetComponentInChildren<TMP_Text>();
-            if (label != null)
-            {
-                label.text = $"Juego de {hostNick}  ({lobby.CurrentPlayers}/{lobby.MaxPlayers})";
-            }
-
+            var itemUI = fila.GetComponent<SalaListItemUI>();
             string connString = lobby.ConnectionString;
-            var boton = fila.GetComponent<Button>();
-            if (boton != null)
-            {
-                boton.onClick.AddListener(() => OnUnirseASalaPressed(connString));
-            }
+
+            itemUI.Configurar(
+                nombreSala: $"Juego de {hostNick}",
+                jugadoresLabel: $"{lobby.CurrentPlayers}/{lobby.MaxPlayers}",
+                alUnirse: () => OnUnirseASalaPressed(connString)
+            );
         }
     }
 
