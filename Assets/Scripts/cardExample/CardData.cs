@@ -8,13 +8,13 @@ public enum CardCategory
     Apariciones,
 }
 
-public enum CardColor
+/*public enum CardColor
 {
     Rojo,
     Azul,
     verde,
     Morado,
-}
+}*/
 
 
 
@@ -29,10 +29,13 @@ public class CardData : ScriptableObject
 
     [Header ("Caracteristicas")]
     public CardCategory category;
-    public CardColor color;
+    public Sprite icono;
+    public Sprite character;
+
+    //public CardColor color;
 
     public void Print()
     {
-        Debug.Log("Nombre: "+ cardName +  "Categoria: "  + category + "Color: " + color );
+        Debug.Log("Nombre: "+ cardName +  "Categoria: "  + category + "Color: ");
     }
 }

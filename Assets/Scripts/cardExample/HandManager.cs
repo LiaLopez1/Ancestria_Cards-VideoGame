@@ -3,13 +3,16 @@ using UnityEngine;
 
 public class HandManager : MonoBehaviour
 {
-    [Header("Slots de la mano")]
+    [Header("Creación de cartas")]
+    [SerializeField] private GameObject cardPrefab;
     [SerializeField] private List<CardSlot> cardSlots = new List<CardSlot>();
 
     [Header("Forma de la mano")]
     [SerializeField] private float spacing = 130f;
     [SerializeField] private float curveHeight = 25f;
     [SerializeField] private float maxRotation = 10f;
+
+
 
     private RectTransform handRectTransform;
     private CardSlot draggedSlot;
@@ -22,6 +25,35 @@ public class HandManager : MonoBehaviour
     private void Start()
     {
         ArrangeHand();
+    }
+
+    public int GetCardCount()
+    {
+        int cardCount = 0;
+
+        foreach (CardSlot slot in cardSlots)
+        {
+            if (slot != null && slot.transform.childCount > 0)
+            {
+                cardCount++;
+            }
+        }
+
+        return cardCount;
+    }
+
+//Funcion para saber si hay espacio
+    public bool HasEmptySlot()
+    {
+        foreach (CardSlot slot in cardSlots)
+        {
+            if (slot != null && slot.RectTransform.childCount == 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void ArrangeHand()
@@ -49,10 +81,7 @@ public class HandManager : MonoBehaviour
         // Actaulizamos el orden visual en la jerarquia
             slot.transform.SetSiblingIndex(i);
 
-            slot.SetTarget(
-                new Vector2(x, y),
-                rotationZ
-                );
+            slot.SetTarget( new Vector2(x, y), rotationZ);
 
 
             /*visibleSlots[i].SetTarget(     
@@ -64,16 +93,65 @@ public class HandManager : MonoBehaviour
         }
     }
 
-    public void BeginCardDrag(CardSlot slot)
+    public bool AddCardToHand(CardData cardData)
     {
+        if (cardData == null)
+        {
+            Debug.LogWarning("No se recibió información para crear la carta.");
+            return false;
+        }
+
+        foreach (CardSlot slot in cardSlots)
+        {
+            if (slot == null || slot.RectTransform.childCount > 0)
+            {
+                continue;
+            }
+
+            GameObject newCard = Instantiate(cardPrefab, slot.RectTransform);
+
+            newCard.name = "Card - " + cardData.cardName;
+
+            RectTransform cardRect = newCard.GetComponent<RectTransform>();
+
+            if (cardRect != null)
+            {
+                cardRect.anchoredPosition = Vector2.zero;
+                cardRect.localRotation = Quaternion.identity;
+                cardRect.localScale = Vector3.one;
+            }
+
+            CardDisplay cardDisplay = newCard.GetComponent<CardDisplay>();
+
+            if (cardDisplay == null)
+            {
+                Debug.LogError( "El prefab Card no contiene el componente CardDisplay.");
+
+                Destroy(newCard);
+                return false;
+            }
+
+            cardDisplay.card= cardData;
+
+            Debug.Log("Carta agregada a la mano: " + cardData.cardName);
+            ArrangeHand();
+
+            return true;
+        }
+
+        Debug.LogWarning("No quedan espacios vacíos en la mano.");
+        return false;
+    }
+
+   public void BeginCardDrag(CardSlot slot)
+    {
+        
+
         draggedSlot = slot;
         ArrangeHand();
     }
 
-    public int GetInsertionIndex(
-        Vector2 screenPosition,
-        Camera eventCamera
-    )
+    public int GetInsertionIndex(Vector2 screenPosition,Camera eventCamera)
     {
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
             handRectTransform,
@@ -96,7 +174,7 @@ public class HandManager : MonoBehaviour
 
         return visibleSlots.Count;
     }
-
+  
     public void CompleteCardDrag(CardSlot slot, int newIndex)
     {
         cardSlots.Remove(slot);
@@ -113,7 +191,6 @@ public class HandManager : MonoBehaviour
 
         ArrangeHand();
     }
-
     public void CancelCardDrag()
     {
         draggedSlot = null;
@@ -135,10 +212,7 @@ public class HandManager : MonoBehaviour
         return visibleSlots;
     }
 
-    public bool IsPointerInsideHand(
-    Vector2 screenPosition,
-    Camera eventCamera
-    )
+    public bool IsPointerInsideHand( Vector2 screenPosition,Camera eventCamera)
     {
         return RectTransformUtility.RectangleContainsScreenPoint(
             handRectTransform,
@@ -149,16 +223,23 @@ public class HandManager : MonoBehaviour
 
     public void RemoveSolt(CardSlot slot)
     {
-        cardSlots.Remove(slot);
+        if(slot == null)
+        {
+            return;
+        }
 
         if (draggedSlot == slot)
         {
             draggedSlot = null;
         }
 
+        if (slot.transform.childCount>0)
+        {
+            Transform card = slot.transform.GetChild(0);
+            card.SetParent(null);
+            Destroy(card.gameObject);
+        }
         ArrangeHand();
-
-        Destroy(slot.gameObject);
 
 
     }

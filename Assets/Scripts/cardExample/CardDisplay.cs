@@ -7,22 +7,25 @@ public class CardDisplay : MonoBehaviour
     public CardData card;
 
     public TMP_Text textNombre;
-    public TMP_Text textCategoria;
-    public Image ImageColor;
+    //public TMP_Text textCategoria;
+    public Image categoryIcon;
+    public Image characterImg;
 
 
     void Start()
     {
         card.Print();
         textNombre.text = card.cardName;
-        textCategoria.text = card.category.ToString(); // esto despues se cambia a unn ícono   ImageColor.sprite = card.artwork; 
+        categoryIcon.sprite = card.character;
+        //textCategoria.text = card.category.ToString(); // esto despues se cambia a unn ícono   
+        characterImg.sprite = card.icono; 
       
 
 
-        cambiarColor();
+        //cambiarColor();
     }
 
-    void cambiarColor()
+    /*void cambiarColor()
     {
         switch(card.color)
         {
@@ -43,7 +46,7 @@ public class CardDisplay : MonoBehaviour
                 break;
 
         }  
-    }
+    }*/
 
 
 

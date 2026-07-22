@@ -10,8 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e31101a804144e3468dbb82b7f9fc61f, type: 3}
-  m_Name: HombreCaiman
+  m_Name: MadreMonte
   m_EditorClassIdentifier: Assembly-CSharp::CardData
-  cardName: Hombre Caiman
-  category: 2
-  color: 2
+  cardName: LA MADRE MONTE
+  category: 0
+  icono: {fileID: 0}
+  character: {fileID: 0}
