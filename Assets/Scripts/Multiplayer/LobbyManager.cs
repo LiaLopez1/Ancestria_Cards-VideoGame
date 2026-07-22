@@ -18,6 +18,9 @@ using UnityEngine.UI;
 ///
 /// Requiere que el jugador ya haya iniciado sesion (PlayFabAuthManager) y tenga
 /// su EntityId/EntityType asignados, ya que la API de Lobby los necesita.
+///
+/// IMPORTANTE: Crear sala y Unirse tienen texto de estado y slider de progreso
+/// COMPLETAMENTE INDEPENDIENTES entre si (cada uno en su propio panel).
 /// </summary>
 public class LobbyManager : MonoBehaviour
 {
@@ -27,10 +30,55 @@ public class LobbyManager : MonoBehaviour
     [SerializeField] private PlayFabAuthManager authManager;
     [SerializeField] private NetworkBootstrap networkBootstrap;
 
-    [Header("UI: lista de salas (panel de Unirse)")]
-    [SerializeField] private RectTransform listaSalasContent;
-    [SerializeField] private GameObject filaSalaPrefab;
-    [SerializeField] private TMP_Text estadoText;
+    [Header("Colores del relleno del slider (inicio -> fin)")]
+    [SerializeField] private Color colorProgresoInicio = Color.red;
+    [SerializeField] private Color colorProgresoFinal = Color.green;
+
+    [Header("Animacion del slider")]
+    [Tooltip("Que tan rapido se mueve el slider hacia el valor objetivo (unidades de 0 a 1 por segundo).")]
+    [SerializeField] private float velocidadAnimacionSlider = 1.5f;
+
+    // Cada slider anima con su propia corrutina, independiente uno del otro.
+    private Coroutine animacionSliderCrearSala;
+    private Coroutine animacionSliderUnirse;
+
+    // Estas referencias de UI YA NO se arrastran en el Inspector de este
+    // componente: LobbyManager sobrevive los cambios de escena (DontDestroyOnLoad)
+    // pero la UI del menu NO sobrevive (se recrea cada vez que se recarga la
+    // escena, por ejemplo al volver por una desconexion). Por eso StartupFlowUI
+    // se las entrega en tiempo de ejecucion via RegistrarReferenciasUI(), cada
+    // vez que esa escena carga.
+    private RectTransform listaSalasContent;
+    private GameObject filaSalaPrefab;
+    private TMP_Text estadoCrearSalaText;
+    private Slider sliderCrearSala;
+    private TMP_Text estadoUnirseText;
+    private Slider sliderUnirse;
+
+    /// <summary>
+    /// StartupFlowUI llama esto en su propio Start(), cada vez que la escena
+    /// de menu se carga (incluida la primera vez), para que LobbyManager
+    /// siempre tenga referencias validas a la UI actual, sin importar cuantas
+    /// veces se haya recargado la escena.
+    /// </summary>
+    public void RegistrarReferenciasUI(
+        RectTransform listaSalasContentUI,
+        GameObject filaSalaPrefabUI,
+        TMP_Text estadoCrearSalaTextUI,
+        Slider sliderCrearSalaUI,
+        TMP_Text estadoUnirseTextUI,
+        Slider sliderUnirseUI)
+    {
+        listaSalasContent = listaSalasContentUI;
+        filaSalaPrefab = filaSalaPrefabUI;
+        estadoCrearSalaText = estadoCrearSalaTextUI;
+        sliderCrearSala = sliderCrearSalaUI;
+        estadoUnirseText = estadoUnirseTextUI;
+        sliderUnirse = sliderUnirseUI;
+
+        if (sliderCrearSala != null) sliderCrearSala.gameObject.SetActive(false);
+        if (sliderUnirse != null) sliderUnirse.gameObject.SetActive(false);
+    }
 
     [Header("Escena de destino")]
     [SerializeField] private string gameSceneName = "Game";
@@ -63,10 +111,10 @@ public class LobbyManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    public void CrearSala()
+    public void CrearSala(System.Action onError = null)
     {
-        SetEstado("Limpiando salas anteriores...");
-        LimpiarMisSalasAnteriores(CrearSalaInterno);
+        SetEstadoCrearSala("Creando sala...", 0.1f);
+        LimpiarMisSalasAnteriores(() => CrearSalaInterno(onError));
     }
 
     /// <summary>
@@ -188,9 +236,9 @@ public class LobbyManager : MonoBehaviour
         );
     }
 
-    private async void CrearSalaInterno()
+    private async void CrearSalaInterno(System.Action onError)
     {
-        SetEstado("Preparando conexion...");
+        SetEstadoCrearSala("Creando sala...", 0.4f);
 
         string joinCode;
         try
@@ -200,11 +248,13 @@ public class LobbyManager : MonoBehaviour
         catch (System.Exception e)
         {
             Debug.LogError($"[Lobby] Error preparando Relay: {e.Message}");
-            SetEstado("Error de conexion. Intenta de nuevo.");
+            SetEstadoCrearSala("Error de conexion. Intenta de nuevo.");
+            OcultarProgresoCrearSala();
+            onError?.Invoke();
             return;
         }
 
-        SetEstado("Creando sala...");
+        SetEstadoCrearSala("Creando sala...", 0.75f);
 
         var miEntity = new EntityKey { Id = authManager.EntityId, Type = authManager.EntityType };
 
@@ -229,7 +279,13 @@ public class LobbyManager : MonoBehaviour
             }
         };
 
-        PlayFabMultiplayerAPI.CreateLobby(request, OnCreateLobbySuccess, OnLobbyError);
+        PlayFabMultiplayerAPI.CreateLobby(request, OnCreateLobbySuccess, error =>
+        {
+            SetEstadoCrearSala("Error: " + error.ErrorMessage);
+            Debug.LogError($"[Lobby] Error creando sala: {error.GenerateErrorReport()}");
+            OcultarProgresoCrearSala();
+            onError?.Invoke();
+        });
     }
 
     private void OnCreateLobbySuccess(CreateLobbyResult result)
@@ -239,6 +295,8 @@ public class LobbyManager : MonoBehaviour
 
         Debug.Log($"[Lobby] Creada. LobbyId: {lobbyIdActual}, ConnectionString: {connectionStringActual}");
 
+        SetEstadoCrearSala("Creando sala...", 1f);
+
         // El host ya esta conectado por Netcode (arrancado dentro de
         // IniciarHostYObtenerJoinCode). Es el host quien controla la carga de
         // escena para que se sincronice automaticamente con quien se una despues.
@@ -247,15 +305,14 @@ public class LobbyManager : MonoBehaviour
 
     public void BuscarSalas()
     {
-        SetEstado("Buscando salas...");
-        PlayFabMultiplayerAPI.FindLobbies(new FindLobbiesRequest(), OnFindLobbiesSuccess, OnLobbyError);
+        PlayFabMultiplayerAPI.FindLobbies(new FindLobbiesRequest(), OnFindLobbiesSuccess, OnLobbyErrorUnirse);
     }
 
     private void OnFindLobbiesSuccess(FindLobbiesResult result)
     {
         Debug.Log($"[Lobby] FindLobbies devolvio {result.Lobbies.Count} sala(s).");
 
-        SetEstado($"{result.Lobbies.Count} sala(s) encontradas.");
+        SetEstadoUnirse($"{result.Lobbies.Count} sala(s) encontradas.");
 
         // Limpiar la lista anterior antes de mostrar los resultados nuevos.
         foreach (Transform child in listaSalasContent)
@@ -284,7 +341,8 @@ public class LobbyManager : MonoBehaviour
 
     private void OnUnirseASalaPressed(string connectionString)
     {
-        SetEstado("Uniendose a la sala...");
+        SetEstadoUnirse("Uniendose a la sala...", 0.3f);
+        DeshabilitarBotonesDeSalas();
 
         var request = new JoinLobbyRequest
         {
@@ -292,17 +350,17 @@ public class LobbyManager : MonoBehaviour
             MemberEntity = new EntityKey { Id = authManager.EntityId, Type = authManager.EntityType }
         };
 
-        PlayFabMultiplayerAPI.JoinLobby(request, OnJoinLobbySuccess, OnLobbyError);
+        PlayFabMultiplayerAPI.JoinLobby(request, OnJoinLobbySuccess, OnLobbyErrorUnirse);
     }
 
     private void OnJoinLobbySuccess(JoinLobbyResult result)
     {
         lobbyIdActual = result.LobbyId;
         Debug.Log($"[Lobby] Unido correctamente a la sala {lobbyIdActual}. Buscando datos de conexion...");
-        SetEstado("Conectando a la partida...");
+        SetEstadoUnirse("Uniendose a la sala...", 0.6f);
 
         // JoinLobbyResult no trae el LobbyData, hay que pedirlo aparte.
-        PlayFabMultiplayerAPI.GetLobby(new GetLobbyRequest { LobbyId = lobbyIdActual }, OnGetLobbyParaUnirse, OnLobbyError);
+        PlayFabMultiplayerAPI.GetLobby(new GetLobbyRequest { LobbyId = lobbyIdActual }, OnGetLobbyParaUnirse, OnLobbyErrorUnirse);
     }
 
     private async void OnGetLobbyParaUnirse(GetLobbyResult result)
@@ -310,7 +368,9 @@ public class LobbyManager : MonoBehaviour
         if (result.Lobby.LobbyData == null || !result.Lobby.LobbyData.ContainsKey(LobbyDataKeyRelayJoinCode))
         {
             Debug.LogError("[Lobby] La sala no tiene join code de Relay guardado.");
-            SetEstado("Error: la sala no tiene datos de conexion.");
+            SetEstadoUnirse("Error: la sala no tiene datos de conexion.");
+            RehabilitarBotonesDeSalas();
+            OcultarProgresoUnirse();
             return;
         }
 
@@ -320,13 +380,34 @@ public class LobbyManager : MonoBehaviour
         {
             await networkBootstrap.UnirseComoClienteConJoinCode(joinCode);
             Debug.Log("[Lobby] Conectado via Relay/Netcode como cliente.");
+            SetEstadoUnirse("Uniendose a la sala...", 1f);
             // No hace falta cargar la escena manualmente: Netcode sincroniza
             // al cliente automaticamente con la escena que el host ya cargo.
         }
         catch (System.Exception e)
         {
             Debug.LogError($"[Lobby] Error conectando via Relay: {e.Message}");
-            SetEstado("Error de conexion. Intenta de nuevo.");
+            SetEstadoUnirse("Error de conexion. Intenta de nuevo.");
+            RehabilitarBotonesDeSalas();
+            OcultarProgresoUnirse();
+        }
+    }
+
+    private void DeshabilitarBotonesDeSalas()
+    {
+        foreach (Transform fila in listaSalasContent)
+        {
+            var boton = fila.GetComponentInChildren<Button>();
+            if (boton != null) boton.interactable = false;
+        }
+    }
+
+    private void RehabilitarBotonesDeSalas()
+    {
+        foreach (Transform fila in listaSalasContent)
+        {
+            var boton = fila.GetComponentInChildren<Button>();
+            if (boton != null) boton.interactable = true;
         }
     }
 
@@ -362,14 +443,82 @@ public class LobbyManager : MonoBehaviour
         }, null, null);
     }
 
-    private void OnLobbyError(PlayFabError error)
+    /// <summary>
+    /// Errores del camino de Unirse (BuscarSalas, JoinLobby, GetLobby).
+    /// El error de CrearSala se maneja directo en su propio lambda porque
+    /// ademas necesita disparar el callback onError hacia StartupFlowUI.
+    /// </summary>
+    private void OnLobbyErrorUnirse(PlayFabError error)
     {
-        SetEstado("Error: " + error.ErrorMessage);
+        SetEstadoUnirse("Error: " + error.ErrorMessage);
         Debug.LogError($"[Lobby] Error: {error.GenerateErrorReport()}");
+        RehabilitarBotonesDeSalas();
+        OcultarProgresoUnirse();
     }
 
-    private void SetEstado(string mensaje)
+    // ---------- Estado y progreso: CREAR SALA ----------
+
+    private void SetEstadoCrearSala(string mensaje, float? progreso = null)
     {
-        if (estadoText != null) estadoText.text = mensaje;
+        if (estadoCrearSalaText != null)
+        {
+            estadoCrearSalaText.text = mensaje;
+            estadoCrearSalaText.gameObject.SetActive(true);
+        }
+        ActualizarSlider(sliderCrearSala, progreso, ref animacionSliderCrearSala);
+    }
+
+    private void OcultarProgresoCrearSala()
+    {
+        if (sliderCrearSala != null) sliderCrearSala.gameObject.SetActive(false);
+    }
+
+    // ---------- Estado y progreso: UNIRSE ----------
+
+    private void SetEstadoUnirse(string mensaje, float? progreso = null)
+    {
+        if (estadoUnirseText != null) estadoUnirseText.text = mensaje;
+        ActualizarSlider(sliderUnirse, progreso, ref animacionSliderUnirse);
+    }
+
+    private void OcultarProgresoUnirse()
+    {
+        if (sliderUnirse != null) sliderUnirse.gameObject.SetActive(false);
+    }
+
+    // ---------- Comun a ambos sliders ----------
+
+    private void ActualizarSlider(Slider slider, float? progreso, ref Coroutine animacionActual)
+    {
+        if (!progreso.HasValue || slider == null) return;
+
+        slider.gameObject.SetActive(true);
+
+        if (animacionActual != null) StopCoroutine(animacionActual);
+        animacionActual = StartCoroutine(AnimarSlider(slider, progreso.Value));
+    }
+
+    private System.Collections.IEnumerator AnimarSlider(Slider slider, float objetivo)
+    {
+        while (!Mathf.Approximately(slider.value, objetivo))
+        {
+            slider.value = Mathf.MoveTowards(slider.value, objetivo, velocidadAnimacionSlider * Time.deltaTime);
+            ActualizarColorRelleno(slider, slider.value);
+            yield return null;
+        }
+
+        slider.value = objetivo;
+        ActualizarColorRelleno(slider, objetivo);
+    }
+
+    private void ActualizarColorRelleno(Slider slider, float valor)
+    {
+        if (slider.fillRect == null) return;
+
+        var fillImage = slider.fillRect.GetComponent<Image>();
+        if (fillImage != null)
+        {
+            fillImage.color = Color.Lerp(colorProgresoInicio, colorProgresoFinal, valor);
+        }
     }
 }

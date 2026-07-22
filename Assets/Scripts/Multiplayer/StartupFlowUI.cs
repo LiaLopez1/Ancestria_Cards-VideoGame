@@ -33,9 +33,14 @@ public class StartupFlowUI : MonoBehaviour
     [SerializeField] private TMP_InputField nicknameInput;
     [SerializeField] private Button confirmNicknameButton;
     [SerializeField] private TMP_Text nicknameErrorText;
+    [SerializeField] private Slider sliderCrearSala;
 
     [Header("Panel: lista de salas (solo para Unirse)")]
     [SerializeField] private GameObject panelListaSalas;
+    [SerializeField] private RectTransform listaSalasContent;
+    [SerializeField] private GameObject filaSalaPrefab;
+    [SerializeField] private TMP_Text estadoUnirseText;
+    [SerializeField] private Slider sliderUnirse;
 
     [Header("Panel: aviso de desconexion (se muestra encima del menu)")]
     [SerializeField] private GameObject panelAvisoDesconexion;
@@ -55,6 +60,12 @@ public class StartupFlowUI : MonoBehaviour
 
         if (nicknameErrorText != null) nicknameErrorText.gameObject.SetActive(false);
         if (panelAvisoDesconexion != null) panelAvisoDesconexion.SetActive(false);
+
+        lobbyManager.RegistrarReferenciasUI(
+            listaSalasContent, filaSalaPrefab,
+            nicknameErrorText, sliderCrearSala,
+            estadoUnirseText, sliderUnirse
+        );
 
         MostrarMensajePendienteSiExiste();
 
@@ -142,7 +153,7 @@ public class StartupFlowUI : MonoBehaviour
         {
             // Host: se crea la sala y se entra directo al GameScene,
             // ahi mismo se espera a que se unan los demas jugadores.
-            lobbyManager.CrearSala();
+            lobbyManager.CrearSala(onError: () => confirmNicknameButton.interactable = true);
         }
         else
         {
@@ -157,6 +168,31 @@ public class StartupFlowUI : MonoBehaviour
         if (nicknameErrorText == null) return;
         nicknameErrorText.text = message;
         nicknameErrorText.gameObject.SetActive(true);
+    }
+
+    public void OnAtrasDesdeNicknamePressed()
+    {
+        VolverAlInicio();
+    }
+
+    public void OnAtrasDesdeListaSalasPressed()
+    {
+        VolverAlInicio();
+    }
+
+    private void VolverAlInicio()
+    {
+        // Invalida el nick actual: al volver, el campo queda vacio, asi que
+        // la proxima vez hay que escribir uno nuevo de verdad antes de poder
+        // confirmar (no queda el nick anterior precargado).
+        if (nicknameInput != null) nicknameInput.text = string.Empty;
+        if (nicknameErrorText != null) nicknameErrorText.gameObject.SetActive(false);
+
+        crearSalaButton.interactable = true;
+        unirseButton.interactable = true;
+        SetEstadoInicio(string.Empty);
+
+        ShowOnly(panelInicio);
     }
 
     private void SetEstadoInicio(string message)

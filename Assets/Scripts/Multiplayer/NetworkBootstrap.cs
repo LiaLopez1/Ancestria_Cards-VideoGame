@@ -112,7 +112,7 @@ public class NetworkBootstrap : MonoBehaviour
         if (networkManager.IsServer) return;
         if (clientId != networkManager.LocalClientId) return;
 
-        Debug.Log("[Netcode] Se perdio la conexion con el host. Volviendo al menu.");
+        Debug.Log("[Netcode] El anfitrion se desconectó. Volviendo al menu.");
         VolverAlMenuPorDesconexion("El dueño de la sala se desconectó.");
     }
 
