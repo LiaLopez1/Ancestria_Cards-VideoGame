@@ -37,6 +37,11 @@ public class StartupFlowUI : MonoBehaviour
     [Header("Panel: lista de salas (solo para Unirse)")]
     [SerializeField] private GameObject panelListaSalas;
 
+    [Header("Panel: aviso de desconexion (se muestra encima del menu)")]
+    [SerializeField] private GameObject panelAvisoDesconexion;
+    [SerializeField] private TMP_Text avisoDesconexionText;
+    [SerializeField] private Button cerrarAvisoButton;
+
     private const int MinNickLength = 3;
     private const int MaxNickLength = 16;
 
@@ -49,10 +54,28 @@ public class StartupFlowUI : MonoBehaviour
         ShowOnly(panelInicio);
 
         if (nicknameErrorText != null) nicknameErrorText.gameObject.SetActive(false);
+        if (panelAvisoDesconexion != null) panelAvisoDesconexion.SetActive(false);
+
+        MostrarMensajePendienteSiExiste();
 
         authManager.OnLoginSuccess += HandleLoginSuccess;
         authManager.OnLoginFailed += HandleLoginFailed;
         authManager.OnDisplayNameUpdated += HandleDisplayNameUpdated;
+    }
+
+    private void MostrarMensajePendienteSiExiste()
+    {
+        if (string.IsNullOrEmpty(NetworkBootstrap.MensajePendiente)) return;
+
+        avisoDesconexionText.text = NetworkBootstrap.MensajePendiente;
+        panelAvisoDesconexion.SetActive(true);
+
+        NetworkBootstrap.LimpiarMensajePendiente();
+    }
+
+    public void OnCerrarAvisoPressed()
+    {
+        panelAvisoDesconexion.SetActive(false);
     }
 
     private void OnDestroy()

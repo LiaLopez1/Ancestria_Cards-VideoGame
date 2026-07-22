@@ -21,6 +21,8 @@ using UnityEngine.UI;
 /// </summary>
 public class LobbyManager : MonoBehaviour
 {
+    public static LobbyManager Instance { get; private set; }
+
     [Header("Referencias")]
     [SerializeField] private PlayFabAuthManager authManager;
     [SerializeField] private NetworkBootstrap networkBootstrap;
@@ -49,6 +51,13 @@ public class LobbyManager : MonoBehaviour
 
     private void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+
         // Debe sobrevivir el cambio de escena hacia GameScene: si no, se pierde
         // lobbyIdActual y el OnApplicationQuit ya no puede limpiar la sala al cerrar.
         DontDestroyOnLoad(gameObject);
@@ -327,19 +336,32 @@ public class LobbyManager : MonoBehaviour
 
     private void OnApplicationQuit()
     {
+        SalirDeSalaActual();
+    }
+
+    /// <summary>
+    /// Sale de la sala actual en PlayFab, si hay alguna. Se usa tanto al cerrar
+    /// el juego (OnApplicationQuit) como cuando Netcode detecta que se perdio
+    /// la conexion con el host y hay que volver al menu.
+    ///
+    /// Nota: esto es "mejor esfuerzo". Si el proceso se cierra de golpe, la
+    /// llamada de red puede no completarse a tiempo. Aun asi, PlayFab tiene un
+    /// TTL de 1 hora que limpia la sala aunque esta llamada no llegue a tiempo.
+    ///
+    /// Siempre usamos LeaveLobby (sea host o invitado): DeleteLobby es exclusivo
+    /// para entidades game_server. En salas client-owned, cuando el ultimo
+    /// miembro se sale, PlayFab borra la sala automaticamente.
+    /// </summary>
+    public void SalirDeSalaActual()
+    {
         if (string.IsNullOrEmpty(lobbyIdActual)) return;
 
-        // Nota: esto es "mejor esfuerzo". Al cerrar el juego (sobre todo en un build,
-        // no tanto en el Editor) el proceso puede terminar antes de que la llamada de
-        // red termine de completarse. Aun asi, PlayFab tiene un TTL de 1 hora que
-        // limpia la sala aunque esta llamada no llegue a tiempo.
-        //
-        // Siempre usamos LeaveLobby (sea host o invitado): DeleteLobby es exclusivo
-        // para entidades game_server. En salas client-owned, cuando el ultimo
-        // miembro se sale, PlayFab borra la sala automaticamente.
+        string lobbyASalir = lobbyIdActual;
+        lobbyIdActual = null;
+
         PlayFabMultiplayerAPI.LeaveLobby(new LeaveLobbyRequest
         {
-            LobbyId = lobbyIdActual,
+            LobbyId = lobbyASalir,
             MemberEntity = new EntityKey { Id = authManager.EntityId, Type = authManager.EntityType }
         }, null, null);
     }
