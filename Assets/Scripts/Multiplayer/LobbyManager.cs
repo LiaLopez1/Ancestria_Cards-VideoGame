@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using PlayFab;
 using PlayFab.MultiplayerModels;
 using TMPro;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -22,6 +23,7 @@ public class LobbyManager : MonoBehaviour
 {
     [Header("Referencias")]
     [SerializeField] private PlayFabAuthManager authManager;
+    [SerializeField] private NetworkBootstrap networkBootstrap;
 
     [Header("UI: lista de salas (panel de Unirse)")]
     [SerializeField] private RectTransform listaSalasContent;
@@ -37,6 +39,10 @@ public class LobbyManager : MonoBehaviour
     // (string_key1..string_key30, number_key1..number_key30), no nombres libres.
     // Usamos string_key1 para guardar el nick del host.
     private const string SearchKeyHostNick = "string_key1";
+
+    // A diferencia de SearchData, LobbyData si acepta nombres libres.
+    // Aqui guardamos el join code de Relay para que los invitados lo lean.
+    private const string LobbyDataKeyRelayJoinCode = "RelayJoinCode";
 
     private string lobbyIdActual;
     private string connectionStringActual;
@@ -173,8 +179,22 @@ public class LobbyManager : MonoBehaviour
         );
     }
 
-    private void CrearSalaInterno()
+    private async void CrearSalaInterno()
     {
+        SetEstado("Preparando conexion...");
+
+        string joinCode;
+        try
+        {
+            joinCode = await networkBootstrap.IniciarHostYObtenerJoinCode();
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"[Lobby] Error preparando Relay: {e.Message}");
+            SetEstado("Error de conexion. Intenta de nuevo.");
+            return;
+        }
+
         SetEstado("Creando sala...");
 
         var miEntity = new EntityKey { Id = authManager.EntityId, Type = authManager.EntityType };
@@ -193,6 +213,10 @@ public class LobbyManager : MonoBehaviour
             SearchData = new Dictionary<string, string>
             {
                 { SearchKeyHostNick, authManager.DisplayName }
+            },
+            LobbyData = new Dictionary<string, string>
+            {
+                { LobbyDataKeyRelayJoinCode, joinCode }
             }
         };
 
@@ -206,8 +230,10 @@ public class LobbyManager : MonoBehaviour
 
         Debug.Log($"[Lobby] Creada. LobbyId: {lobbyIdActual}, ConnectionString: {connectionStringActual}");
 
-        // El host entra directo al GameScene y ahi espera a que se unan los demas.
-        SceneManager.LoadScene(gameSceneName);
+        // El host ya esta conectado por Netcode (arrancado dentro de
+        // IniciarHostYObtenerJoinCode). Es el host quien controla la carga de
+        // escena para que se sincronice automaticamente con quien se una despues.
+        NetworkManager.Singleton.SceneManager.LoadScene(gameSceneName, LoadSceneMode.Single);
     }
 
     public void BuscarSalas()
@@ -267,10 +293,36 @@ public class LobbyManager : MonoBehaviour
     private void OnJoinLobbySuccess(JoinLobbyResult result)
     {
         lobbyIdActual = result.LobbyId;
-        Debug.Log($"[Lobby] Unido correctamente. LobbyId: {lobbyIdActual}");
+        Debug.Log($"[Lobby] Unido correctamente a la sala {lobbyIdActual}. Buscando datos de conexion...");
+        SetEstado("Conectando a la partida...");
 
-        // El guest tambien entra directo al GameScene al unirse.
-        SceneManager.LoadScene(gameSceneName);
+        // JoinLobbyResult no trae el LobbyData, hay que pedirlo aparte.
+        PlayFabMultiplayerAPI.GetLobby(new GetLobbyRequest { LobbyId = lobbyIdActual }, OnGetLobbyParaUnirse, OnLobbyError);
+    }
+
+    private async void OnGetLobbyParaUnirse(GetLobbyResult result)
+    {
+        if (result.Lobby.LobbyData == null || !result.Lobby.LobbyData.ContainsKey(LobbyDataKeyRelayJoinCode))
+        {
+            Debug.LogError("[Lobby] La sala no tiene join code de Relay guardado.");
+            SetEstado("Error: la sala no tiene datos de conexion.");
+            return;
+        }
+
+        string joinCode = result.Lobby.LobbyData[LobbyDataKeyRelayJoinCode];
+
+        try
+        {
+            await networkBootstrap.UnirseComoClienteConJoinCode(joinCode);
+            Debug.Log("[Lobby] Conectado via Relay/Netcode como cliente.");
+            // No hace falta cargar la escena manualmente: Netcode sincroniza
+            // al cliente automaticamente con la escena que el host ya cargo.
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"[Lobby] Error conectando via Relay: {e.Message}");
+            SetEstado("Error de conexion. Intenta de nuevo.");
+        }
     }
 
     private void OnApplicationQuit()
