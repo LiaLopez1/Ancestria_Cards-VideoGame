@@ -41,7 +41,139 @@ public class LobbyManager : MonoBehaviour
     private string lobbyIdActual;
     private string connectionStringActual;
 
+    private void Awake()
+    {
+        // Debe sobrevivir el cambio de escena hacia GameScene: si no, se pierde
+        // lobbyIdActual y el OnApplicationQuit ya no puede limpiar la sala al cerrar.
+        DontDestroyOnLoad(gameObject);
+    }
+
     public void CrearSala()
+    {
+        SetEstado("Limpiando salas anteriores...");
+        LimpiarMisSalasAnteriores(CrearSalaInterno);
+    }
+
+    /// <summary>
+    /// Busca todas las salas de las que el jugador actual es dueno (sin importar
+    /// el nick que tuvieran al crearlas) y las deja completamente vacias:
+    /// primero saca a cualquier otro miembro colgado (RemoveMember) y despues
+    /// sale el mismo (LeaveLobby). En salas client-owned, al quedar vacia,
+    /// PlayFab la borra sola.
+    /// </summary>
+    private void LimpiarMisSalasAnteriores(System.Action alTerminar)
+    {
+        var request = new FindLobbiesRequest { Filter = "lobby/amOwner eq 'true'" };
+
+        PlayFabMultiplayerAPI.FindLobbies(request,
+            result =>
+            {
+                Debug.Log($"[Lobby] Limpieza: {result.Lobbies.Count} sala(s) propia(s) anterior(es) encontrada(s).");
+
+                if (result.Lobbies.Count == 0)
+                {
+                    alTerminar?.Invoke();
+                    return;
+                }
+
+                int pendientes = result.Lobbies.Count;
+
+                foreach (var lobbyVieja in result.Lobbies)
+                {
+                    VaciarSalaVieja(lobbyVieja.LobbyId, () =>
+                    {
+                        pendientes--;
+                        if (pendientes == 0) alTerminar?.Invoke();
+                    });
+                }
+            },
+            error =>
+            {
+                Debug.LogWarning($"[Lobby] No se pudo revisar salas anteriores: {error.GenerateErrorReport()}");
+                alTerminar?.Invoke();
+            }
+        );
+    }
+
+    private void VaciarSalaVieja(string lobbyId, System.Action onDone)
+    {
+        PlayFabMultiplayerAPI.GetLobby(new GetLobbyRequest { LobbyId = lobbyId },
+            result =>
+            {
+                var otrosMiembros = new List<Member>();
+                foreach (var m in result.Lobby.Members)
+                {
+                    if (m.MemberEntity.Id != authManager.EntityId)
+                    {
+                        otrosMiembros.Add(m);
+                    }
+                }
+
+                if (otrosMiembros.Count == 0)
+                {
+                    SalirDeSalaVieja(lobbyId, onDone);
+                    return;
+                }
+
+                Debug.Log($"[Lobby] Sala {lobbyId}: sacando {otrosMiembros.Count} miembro(s) colgado(s).");
+
+                int pendientesMiembros = otrosMiembros.Count;
+
+                foreach (var miembroColgado in otrosMiembros)
+                {
+                    PlayFabMultiplayerAPI.RemoveMember(
+                        new RemoveMemberFromLobbyRequest
+                        {
+                            LobbyId = lobbyId,
+                            MemberEntity = miembroColgado.MemberEntity
+                        },
+                        removeResult =>
+                        {
+                            pendientesMiembros--;
+                            if (pendientesMiembros == 0) SalirDeSalaVieja(lobbyId, onDone);
+                        },
+                        error =>
+                        {
+                            Debug.LogWarning($"[Lobby] No se pudo sacar miembro colgado de {lobbyId}: {error.GenerateErrorReport()}");
+                            pendientesMiembros--;
+                            if (pendientesMiembros == 0) SalirDeSalaVieja(lobbyId, onDone);
+                        }
+                    );
+                }
+            },
+            error =>
+            {
+                Debug.LogWarning($"[Lobby] No se pudo revisar miembros de {lobbyId}: {error.GenerateErrorReport()}");
+                onDone?.Invoke();
+            }
+        );
+    }
+
+    private void SalirDeSalaVieja(string lobbyId, System.Action onDone)
+    {
+        // DeleteLobby es exclusivo para entidades game_server. Como cliente,
+        // la forma correcta de limpiar una sala propia es salir de ella (LeaveLobby):
+        // en salas client-owned, al quedar vacia, PlayFab la borra sola.
+        PlayFabMultiplayerAPI.LeaveLobby(
+            new LeaveLobbyRequest
+            {
+                LobbyId = lobbyId,
+                MemberEntity = new EntityKey { Id = authManager.EntityId, Type = authManager.EntityType }
+            },
+            leaveResult =>
+            {
+                Debug.Log($"[Lobby] Salida OK de sala vieja (deberia autoborrarse): {lobbyId}");
+                onDone?.Invoke();
+            },
+            error =>
+            {
+                Debug.LogError($"[Lobby] FALLO al salir de sala vieja {lobbyId}: {error.GenerateErrorReport()}");
+                onDone?.Invoke();
+            }
+        );
+    }
+
+    private void CrearSalaInterno()
     {
         SetEstado("Creando sala...");
 
@@ -86,6 +218,8 @@ public class LobbyManager : MonoBehaviour
 
     private void OnFindLobbiesSuccess(FindLobbiesResult result)
     {
+        Debug.Log($"[Lobby] FindLobbies devolvio {result.Lobbies.Count} sala(s).");
+
         SetEstado($"{result.Lobbies.Count} sala(s) encontradas.");
 
         // Limpiar la lista anterior antes de mostrar los resultados nuevos.
@@ -137,6 +271,25 @@ public class LobbyManager : MonoBehaviour
 
         // El guest tambien entra directo al GameScene al unirse.
         SceneManager.LoadScene(gameSceneName);
+    }
+
+    private void OnApplicationQuit()
+    {
+        if (string.IsNullOrEmpty(lobbyIdActual)) return;
+
+        // Nota: esto es "mejor esfuerzo". Al cerrar el juego (sobre todo en un build,
+        // no tanto en el Editor) el proceso puede terminar antes de que la llamada de
+        // red termine de completarse. Aun asi, PlayFab tiene un TTL de 1 hora que
+        // limpia la sala aunque esta llamada no llegue a tiempo.
+        //
+        // Siempre usamos LeaveLobby (sea host o invitado): DeleteLobby es exclusivo
+        // para entidades game_server. En salas client-owned, cuando el ultimo
+        // miembro se sale, PlayFab borra la sala automaticamente.
+        PlayFabMultiplayerAPI.LeaveLobby(new LeaveLobbyRequest
+        {
+            LobbyId = lobbyIdActual,
+            MemberEntity = new EntityKey { Id = authManager.EntityId, Type = authManager.EntityType }
+        }, null, null);
     }
 
     private void OnLobbyError(PlayFabError error)
