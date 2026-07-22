@@ -14,6 +14,8 @@ public class PlayFabAuthManager : MonoBehaviour
 
     public string PlayFabId { get; private set; }
     public string DisplayName { get; private set; }
+    public string EntityId { get; private set; }
+    public string EntityType { get; private set; }
 
     public bool HasDisplayName => !string.IsNullOrEmpty(DisplayName);
 
@@ -54,8 +56,10 @@ public class PlayFabAuthManager : MonoBehaviour
     {
         PlayFabId = result.PlayFabId;
         DisplayName = result.InfoResultPayload?.PlayerProfile?.DisplayName;
+        EntityId = result.EntityToken?.Entity?.Id;
+        EntityType = result.EntityToken?.Entity?.Type;
 
-        Debug.Log($"[PlayFab] Login OK. PlayFabId: {PlayFabId}. HasDisplayName: {HasDisplayName}");
+        Debug.Log($"[PlayFab] Login OK. PlayFabId: {PlayFabId} (deviceId usado: {SystemInfo.deviceUniqueIdentifier}). HasDisplayName: {HasDisplayName}");
 
         OnLoginSuccess?.Invoke();
     }

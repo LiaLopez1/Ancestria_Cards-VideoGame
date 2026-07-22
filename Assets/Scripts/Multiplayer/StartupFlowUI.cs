@@ -3,44 +3,50 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Controla las 2 pantallas del arranque (flujo "oneshot": se repite en cada partida):
-/// 1) Panel con el boton "Jugar" -> hace login silencioso contra PlayFab
-/// 2) Panel para pedir el nick -> se pide SIEMPRE, se guarda en PlayFab
-///    (sobreescribiendo el anterior si ya existia) y se carga la escena del juego
+/// Controla el arranque del jugador con dos caminos posibles:
 ///
-/// Todavia no hay sistema de salas ni Netcode: el paso a la escena de juego
-/// es un SceneManager.LoadScene normal.
+/// 1) CREAR SALA (host): boton "Crear sala" -> login -> pedir nick (siempre,
+///    es "oneshot") -> LobbyManager crea la sala -> entra directo al GameScene,
+///    donde espera a que otros se unan.
 ///
-/// Este script necesita una referencia directa a un PlayFabAuthManager
-/// (arrastrala en el Inspector, campo "Auth Manager").
+/// 2) UNIRSE (guest): boton "Unirse" -> login -> pedir nick (siempre) ->
+///    se muestra la lista de salas disponibles -> al elegir una, LobbyManager
+///    se une -> entra al GameScene.
+///
+/// Este script necesita una referencia directa a un PlayFabAuthManager y a un
+/// LobbyManager (arrastralas en el Inspector).
 /// </summary>
 public class StartupFlowUI : MonoBehaviour
 {
     [Header("Referencias")]
     [SerializeField] private PlayFabAuthManager authManager;
+    [SerializeField] private LobbyManager lobbyManager;
 
-    [Header("Paneles")]
-    [SerializeField] private GameObject panelPlayButton;
-    [SerializeField] private GameObject panelNickname;
-
-    [Header("Panel: boton jugar")]
-    [SerializeField] private Button playButton;
-    [SerializeField] private TMP_Text playButtonStatusText;
+    [Header("Panel: inicio")]
+    [SerializeField] private GameObject panelInicio;
+    [SerializeField] private Button crearSalaButton;
+    [SerializeField] private Button unirseButton;
+    [SerializeField] private TMP_Text estadoInicioText;
 
     [Header("Panel: nickname")]
+    [SerializeField] private GameObject panelNickname;
     [SerializeField] private TMP_InputField nicknameInput;
     [SerializeField] private Button confirmNicknameButton;
     [SerializeField] private TMP_Text nicknameErrorText;
 
-    [Header("Escena de destino")]
-    [SerializeField] private string gameSceneName = "Game";
+    [Header("Panel: lista de salas (solo para Unirse)")]
+    [SerializeField] private GameObject panelListaSalas;
 
     private const int MinNickLength = 3;
     private const int MaxNickLength = 16;
 
+    // Recuerda que boton se presiono originalmente (Crear sala o Unirse),
+    // para saber que hacer una vez el nick quede confirmado.
+    private bool intentaSerHost;
+
     private void Start()
     {
-        ShowOnly(panelPlayButton);
+        ShowOnly(panelInicio);
 
         if (nicknameErrorText != null) nicknameErrorText.gameObject.SetActive(false);
 
@@ -58,10 +64,23 @@ public class StartupFlowUI : MonoBehaviour
         authManager.OnDisplayNameUpdated -= HandleDisplayNameUpdated;
     }
 
-    public void OnPlayPressed()
+    public void OnCrearSalaButtonPressed()
     {
-        playButton.interactable = false;
-        SetStatus("Conectando...");
+        intentaSerHost = true;
+        IniciarLogin();
+    }
+
+    public void OnUnirseButtonPressed()
+    {
+        intentaSerHost = false;
+        IniciarLogin();
+    }
+
+    private void IniciarLogin()
+    {
+        crearSalaButton.interactable = false;
+        unirseButton.interactable = false;
+        SetEstadoInicio("Conectando...");
         authManager.Login();
     }
 
@@ -74,8 +93,9 @@ public class StartupFlowUI : MonoBehaviour
 
     private void HandleLoginFailed(string error)
     {
-        playButton.interactable = true;
-        SetStatus("No se pudo conectar. Intenta de nuevo.");
+        crearSalaButton.interactable = true;
+        unirseButton.interactable = true;
+        SetEstadoInicio("No se pudo conectar. Intenta de nuevo.");
         Debug.LogWarning($"[StartupFlowUI] Login fallido: {error}");
     }
 
@@ -95,15 +115,18 @@ public class StartupFlowUI : MonoBehaviour
 
     private void HandleDisplayNameUpdated()
     {
-        confirmNicknameButton.interactable = true;
-        LoadGameScene();
-    }
-
-    private void LoadGameScene()
-    {
-        // Por ahora sin salas ni Netcode: solo confirmamos que el nick
-        // quedo guardado y pasamos directo a la escena de juego.
-        UnityEngine.SceneManagement.SceneManager.LoadScene(gameSceneName);
+        if (intentaSerHost)
+        {
+            // Host: se crea la sala y se entra directo al GameScene,
+            // ahi mismo se espera a que se unan los demas jugadores.
+            lobbyManager.CrearSala();
+        }
+        else
+        {
+            // Guest: se muestra la lista de salas disponibles para elegir una.
+            ShowOnly(panelListaSalas);
+            lobbyManager.BuscarSalas();
+        }
     }
 
     private void ShowNicknameError(string message)
@@ -113,19 +136,19 @@ public class StartupFlowUI : MonoBehaviour
         nicknameErrorText.gameObject.SetActive(true);
     }
 
-    private void SetStatus(string message)
+    private void SetEstadoInicio(string message)
     {
-        if (playButtonStatusText != null) playButtonStatusText.text = message;
+        if (estadoInicioText != null) estadoInicioText.text = message;
     }
 
     private void ShowOnly(GameObject panelToShow)
     {
-        panelPlayButton.SetActive(panelToShow == panelPlayButton);
+        panelInicio.SetActive(panelToShow == panelInicio);
         panelNickname.SetActive(panelToShow == panelNickname);
+        panelListaSalas.SetActive(panelToShow == panelListaSalas);
 
         // Blindaje: cada vez que se muestra el panel del nick, el boton de
-        // confirmar debe quedar interactuable si o si, sin depender de que
-        // el Inspector haya quedado bien configurado a mano.
+        // confirmar debe quedar interactuable si o si.
         if (panelToShow == panelNickname)
         {
             confirmNicknameButton.interactable = true;
