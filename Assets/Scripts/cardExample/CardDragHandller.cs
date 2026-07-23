@@ -225,6 +225,12 @@ public class CardDragHandler : MonoBehaviour,
             return;
         }
 
+        if (deckManager != null && !deckManager.CanDiscardNow())
+        {
+            Debug.Log("No puedes descartar en este momento (no es tu turno).");
+            return;
+        }
+
         if (cardDisplay == null || cardDisplay.card == null)
         {
             Debug.LogError("La carta no tiene CardDisplay/CardData asignado, no se puede descartar.");

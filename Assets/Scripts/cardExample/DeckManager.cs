@@ -118,12 +118,19 @@ public class DeckManager : NetworkBehaviour
             botonIniciarPartida.SetActive(false);
         }
 
+        int cantidadJugadores = NetworkManager.Singleton.ConnectedClientsIds.Count;
+
         foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
         {
             StartCoroutine(RepartirManoAJugador(clientId));
         }
 
-        Debug.Log($"[Servidor] Partida iniciada. Repartiendo a {NetworkManager.Singleton.ConnectedClientsIds.Count} jugador(es).");
+        if (turnManager != null)
+        {
+            turnManager.IniciarPrimerTurno(cantidadJugadores);
+        }
+
+        Debug.Log($"[Servidor] Partida iniciada. Repartiendo a {cantidadJugadores} jugador(es).");
     }
 
     private void BuildLogicalDeck()
@@ -331,7 +338,14 @@ public class DeckManager : NetworkBehaviour
 
     public bool CanStartManualDraw()
     {
-        return handManager != null && handManager.GetCardCount() == initialHandSize;
+        return handManager != null
+            && handManager.GetCardCount() == initialHandSize
+            && (turnManager == null || turnManager.EsMiTurno());
+    }
+
+    public bool CanDiscardNow()
+    {
+        return turnManager == null || turnManager.CanDiscard();
     }
 
     /// <summary>
@@ -355,6 +369,12 @@ public class DeckManager : NetworkBehaviour
         if (handManager == null)
         {
             Debug.LogError("No se asignó el HandManager.");
+            return false;
+        }
+
+        if (turnManager != null && !turnManager.CanDraw())
+        {
+            Debug.Log("No puedes robar una carta en este momento (no es tu turno).");
             return false;
         }
 
@@ -382,6 +402,11 @@ public class DeckManager : NetworkBehaviour
     {
         ulong clienteSolicitante = rpcParams.Receive.SenderClientId;
 
+        if (!ValidarTurnoDelCliente(clienteSolicitante, "robar"))
+        {
+            return;
+        }
+
         if (drawPile.Count == 0)
         {
             Debug.LogWarning($"[Servidor] Cliente {clienteSolicitante} pidió robar pero no quedan cartas.");
@@ -407,6 +432,11 @@ public class DeckManager : NetworkBehaviour
 
         EnviarCartaAlJugadorClientRpc(drawnCard.cardId, ParaCliente(clienteSolicitante));
 
+        if (turnManager != null)
+        {
+            turnManager.NotificarRoboRealizado();
+        }
+
         Debug.Log($"[Servidor] Cliente {clienteSolicitante} robó correctamente. Ahora tiene {cartasActuales + 1} carta(s).");
     }
 
@@ -421,6 +451,11 @@ public class DeckManager : NetworkBehaviour
     {
         ulong clienteSolicitante = rpcParams.Receive.SenderClientId;
 
+        if (!ValidarTurnoDelCliente(clienteSolicitante, "descartar"))
+        {
+            return;
+        }
+
         List<int> mano = ObtenerManoDeCliente(clienteSolicitante);
 
         if (!mano.Remove(cardId))
@@ -432,6 +467,11 @@ public class DeckManager : NetworkBehaviour
         Debug.Log($"[Servidor] Cliente {clienteSolicitante} descartó cardId={cardId}. Le quedan {mano.Count} carta(s).");
 
         MostrarCartaDescartadaClientRpc(cardId);
+
+        if (turnManager != null)
+        {
+            turnManager.NotificarDescarteRealizado();
+        }
     }
 
     /// <summary>
@@ -453,6 +493,32 @@ public class DeckManager : NetworkBehaviour
         {
             tableManager.AgregarCartaDescartada(carta);
         }
+    }
+
+    /// <summary>
+    /// SOLO corre en el servidor. Traduce el clientId al slot (0/1/2) y le
+    /// pregunta a TurnManager si de verdad es el turno de ese slot.
+    /// </summary>
+    private bool ValidarTurnoDelCliente(ulong clientId, string accion)
+    {
+        if (turnManager == null)
+        {
+            return true; // sin TurnManager asignado, no bloqueamos (modo de prueba)
+        }
+
+        if (!NetworkBootstrap.Instance.TryObtenerSlot(clientId, out int slot))
+        {
+            Debug.LogWarning($"[Servidor] No se encontró el slot del cliente {clientId} al intentar {accion}.");
+            return false;
+        }
+
+        if (!turnManager.EsTurnoDelSlot(slot))
+        {
+            Debug.LogWarning($"[Servidor] Cliente {clientId} (slot {slot}) intentó {accion} fuera de su turno.");
+            return false;
+        }
+
+        return true;
     }
 
     private List<int> ObtenerManoDeCliente(ulong clientId)

@@ -26,6 +26,13 @@ using UnityEngine;
 /// </summary>
 public class PlayerCube : NetworkBehaviour
 {
+    /// <summary>
+    /// El slot (0/1/2) del jugador local en ESTA maquina. -1 si todavia no
+    /// se sabe. Cualquier sistema (como TurnManager) puede consultar esto
+    /// para saber "cual es mi propio slot" sin tener que buscar el cubo.
+    /// </summary>
+    public static int MiSlot { get; private set; } = -1;
+
     [Header("Referencias")]
     [SerializeField] private Camera camaraJugador;
     [SerializeField] private AudioListener audioListenerJugador;
@@ -63,6 +70,11 @@ public class PlayerCube : NetworkBehaviour
         {
             AsignarMaterialSegunSlot();
             AvisarPanelDeNombre();
+
+            if (IsOwner)
+            {
+                MiSlot = nuevo;
+            }
         };
         nickJugador.OnValueChanged += (anterior, nuevo) => AvisarPanelDeNombre();
 
@@ -85,6 +97,11 @@ public class PlayerCube : NetworkBehaviour
 
         AsignarMaterialSegunSlot();
         AvisarPanelDeNombre();
+
+        if (IsOwner && slotJugador.Value >= 0)
+        {
+            MiSlot = slotJugador.Value;
+        }
     }
 
     /// <summary>

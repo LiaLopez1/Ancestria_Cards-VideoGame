@@ -88,6 +88,16 @@ public class NetworkBootstrap : MonoBehaviour
     }
 
     /// <summary>
+    /// Solo consulta, no asigna - para que otros sistemas del servidor
+    /// (como TurnManager) puedan validar "¿este clientId es el slot X?"
+    /// sin arriesgarse a asignarle un slot nuevo por accidente.
+    /// </summary>
+    public bool TryObtenerSlot(ulong clientId, out int slot)
+    {
+        return slotsAsignados.TryGetValue(clientId, out slot);
+    }
+
+    /// <summary>
     /// Libera el slot de un jugador que se desconecto, para que el proximo
     /// que se una pueda ocuparlo (en vez de que los slots solo avancen).
     /// </summary>

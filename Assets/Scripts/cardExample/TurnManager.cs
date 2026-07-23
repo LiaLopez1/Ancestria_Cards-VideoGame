@@ -1,4 +1,5 @@
 using TMPro;
+using Unity.Netcode;
 using UnityEngine;
 
 public enum TurnState
@@ -6,120 +7,119 @@ public enum TurnState
     Dealing,
     WaitingToDraw,
     WaitingToDiscard,
-    TurnFinished
 }
 
-public class TurnManager : MonoBehaviour
+/// <summary>
+/// De quien es el turno (por slot: 0=host, 1=invitado1, 2=invitado2) y en
+/// que parte de su turno esta (robar/descartar), sincronizado a todos.
+///
+/// El SERVIDOR es quien decide y avanza el turno (via IniciarPrimerTurno,
+/// NotificarRoboRealizado, NotificarDescarteRealizado, todos llamados desde
+/// DeckManager despues de validar cada accion). Los clientes solo leen el
+/// estado sincronizado para saber si pueden actuar.
+/// </summary>
+public class TurnManager : NetworkBehaviour
 {
     [Header("Referencias")]
     [SerializeField] private HandManager handManager;
     [SerializeField] private TMP_Text turnMessage;
 
-    private TurnState currentState;
+    private readonly NetworkVariable<int> turnoActual = new NetworkVariable<int>(0);
+    private readonly NetworkVariable<TurnState> estadoActual = new NetworkVariable<TurnState>(TurnState.Dealing);
 
-    public TurnState CurrentState
+    private int cantidadJugadores = 1;
+
+    public override void OnNetworkSpawn()
     {
-        get { return currentState; }
+        turnoActual.OnValueChanged += (anterior, nuevo) => ActualizarMensaje();
+        estadoActual.OnValueChanged += (anterior, nuevo) => ActualizarMensaje();
+
+        ActualizarMensaje();
     }
 
-    private void Start()
+    /// <summary>
+    /// SOLO debe llamarse desde el servidor (DeckManager, al presionar
+    /// "Iniciar partida"). Arranca el turno en el slot 0 (el host).
+    /// </summary>
+    public void IniciarPrimerTurno(int totalJugadoresConectados)
     {
-        ChangeState(TurnState.Dealing);
+        if (!IsServer) return;
+
+        cantidadJugadores = Mathf.Max(1, totalJugadoresConectados);
+        turnoActual.Value = 0;
+        estadoActual.Value = TurnState.WaitingToDraw;
     }
 
-    public void InitialDealFinished()
+    /// <summary>¿El turno actual le pertenece a este slot?</summary>
+    public bool EsTurnoDelSlot(int slot)
     {
-        if (handManager.GetCardCount() != 4)
-        {
-            Debug.LogWarning(
-                "El reparto terminó, pero la mano no tiene 4 cartas."
-            );
+        return estadoActual.Value != TurnState.Dealing && turnoActual.Value == slot;
+    }
 
-            return;
-        }
-
-        ChangeState(TurnState.WaitingToDraw);
+    /// <summary>¿Es mi propio turno, en este cliente?</summary>
+    public bool EsMiTurno()
+    {
+        return EsTurnoDelSlot(PlayerCube.MiSlot);
     }
 
     public bool CanDraw()
     {
-        return currentState == TurnState.WaitingToDraw  && handManager.GetCardCount() == 4;
-        // Para poder robar se deben cumplir 2 condiciones
-    }
-
-    public void CardWasDrawn()
-    {
-        if (currentState != TurnState.WaitingToDraw)
-        {
-            Debug.LogWarning("El robo no corresponde al estado actual.");
-            return;
-        }
-
-        if (handManager.GetCardCount() != 5)
-        {
-            Debug.LogWarning(
-                "Después de robar, la mano debería tener 5 cartas."
-            );
-            return;
-        }
-
-        ChangeState(TurnState.WaitingToDiscard);
+        return EsMiTurno() && estadoActual.Value == TurnState.WaitingToDraw && handManager.GetCardCount() == 4;
     }
 
     public bool CanDiscard()
     {
-        return currentState == TurnState.WaitingToDiscard && handManager.GetCardCount() == 5;
+        return EsMiTurno() && estadoActual.Value == TurnState.WaitingToDiscard && handManager.GetCardCount() == 5;
     }
 
-    public void CardWasDiscarded()
+    /// <summary>SOLO el servidor llama esto, despues de validar un robo.</summary>
+    public void NotificarRoboRealizado()
     {
-        if (currentState != TurnState.WaitingToDiscard)
-        {
-            Debug.LogWarning( "El descarte no corresponde al estado actual.");
-            return;
-        }
-
-        if (handManager.GetCardCount() != 4)
-        {
-            Debug.LogWarning( "Después de descartar, la mano debería tener 4 cartas.");
-            return;
-        }
-        ChangeState(TurnState.TurnFinished);
+        if (!IsServer) return;
+        estadoActual.Value = TurnState.WaitingToDiscard;
     }
 
-    private void ChangeState(TurnState newState)
+    /// <summary>SOLO el servidor llama esto, despues de validar un descarte - avanza el turno.</summary>
+    public void NotificarDescarteRealizado()
     {
-        currentState = newState;
+        if (!IsServer) return;
 
-        switch (currentState)
+        turnoActual.Value = (turnoActual.Value + 1) % cantidadJugadores;
+        estadoActual.Value = TurnState.WaitingToDraw;
+    }
+
+    private void ActualizarMensaje()
+    {
+        string mensaje;
+
+        switch (estadoActual.Value)
         {
             case TurnState.Dealing:
-                ShowMessage("Repartiendo cartas...");
+                mensaje = "Repartiendo cartas...";
                 break;
 
             case TurnState.WaitingToDraw:
-                ShowMessage("Tu turno: roba una carta.");
+                mensaje = EsMiTurno()
+                    ? "Tu turno: roba una carta."
+                    : $"Turno del jugador {turnoActual.Value}: esperando a que robe.";
                 break;
 
             case TurnState.WaitingToDiscard:
-                ShowMessage("Ahora descarta una carta.");
+                mensaje = EsMiTurno()
+                    ? "Ahora descarta una carta."
+                    : $"Turno del jugador {turnoActual.Value}: esperando a que descarte.";
                 break;
 
-            case TurnState.TurnFinished:
-                ShowMessage("Turno finalizado.");
+            default:
+                mensaje = "";
                 break;
         }
 
-        Debug.Log("Estado del turno: " + currentState);
-    }
-
-    private void ShowMessage(string message)
-    {
-        Debug.Log(message);
+        Debug.Log("Estado del turno: " + estadoActual.Value + " | Slot con el turno: " + turnoActual.Value);
 
         if (turnMessage != null)
         {
-            turnMessage.text = message;
+            turnMessage.text = mensaje;
         }
     }
 }
