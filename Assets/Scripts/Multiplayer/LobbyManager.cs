@@ -38,6 +38,12 @@ public class LobbyManager : MonoBehaviour
     [Tooltip("Que tan rapido se mueve el slider hacia el valor objetivo (unidades de 0 a 1 por segundo).")]
     [SerializeField] private float velocidadAnimacionSlider = 1.5f;
 
+    [Header("Sondeo de salas disponibles")]
+    [Tooltip("Cada cuantos segundos se vuelve a buscar salas mientras el jugador ve la lista.")]
+    [SerializeField] private float intervaloBusquedaSalas = 0.5f;
+
+    private Coroutine busquedaPeriodicaCoroutine;
+
     // Cada slider anima con su propia corrutina, independiente uno del otro.
     private Coroutine animacionSliderCrearSala;
     private Coroutine animacionSliderUnirse;
@@ -305,7 +311,44 @@ public class LobbyManager : MonoBehaviour
 
     public void BuscarSalas()
     {
-        PlayFabMultiplayerAPI.FindLobbies(new FindLobbiesRequest(), OnFindLobbiesSuccess, OnLobbyErrorUnirse);
+        IniciarBusquedaPeriodica();
+    }
+
+    /// <summary>
+    /// Arranca (o reinicia) el sondeo periodico de salas disponibles. No es
+    /// tiempo real de verdad (eso requeriria activar conexiones en tiempo real
+    /// de PlayFab), pero busca de nuevo cada pocos segundos mientras el
+    /// jugador esta viendo la lista, dando el mismo efecto practico.
+    /// </summary>
+    private void IniciarBusquedaPeriodica()
+    {
+        DetenerBusquedaPeriodica();
+        busquedaPeriodicaCoroutine = StartCoroutine(BusquedaPeriodicaCoroutine());
+    }
+
+    /// <summary>
+    /// Se debe llamar apenas se deja de ver la lista de salas (al presionar
+    /// Atras, o al empezar a unirse a una) para no seguir gastando llamadas
+    /// de red de fondo sin necesidad - sobre todo porque LobbyManager
+    /// sobrevive el cambio de escena, y si no se detiene, seguiria buscando
+    /// salas incluso ya adentro de la partida.
+    /// </summary>
+    public void DetenerBusquedaPeriodica()
+    {
+        if (busquedaPeriodicaCoroutine != null)
+        {
+            StopCoroutine(busquedaPeriodicaCoroutine);
+            busquedaPeriodicaCoroutine = null;
+        }
+    }
+
+    private System.Collections.IEnumerator BusquedaPeriodicaCoroutine()
+    {
+        while (true)
+        {
+            PlayFabMultiplayerAPI.FindLobbies(new FindLobbiesRequest(), OnFindLobbiesSuccess, OnLobbyErrorUnirse);
+            yield return new WaitForSeconds(intervaloBusquedaSalas);
+        }
     }
 
     private void OnFindLobbiesSuccess(FindLobbiesResult result)
@@ -341,6 +384,7 @@ public class LobbyManager : MonoBehaviour
 
     private void OnUnirseASalaPressed(string connectionString)
     {
+        DetenerBusquedaPeriodica();
         SetEstadoUnirse("Uniendose a la sala...", 0.3f);
         DeshabilitarBotonesDeSalas();
 
@@ -371,6 +415,7 @@ public class LobbyManager : MonoBehaviour
             SetEstadoUnirse("Error: la sala no tiene datos de conexion.");
             RehabilitarBotonesDeSalas();
             OcultarProgresoUnirse();
+            IniciarBusquedaPeriodica();
             return;
         }
 
@@ -390,6 +435,7 @@ public class LobbyManager : MonoBehaviour
             SetEstadoUnirse("Error de conexion. Intenta de nuevo.");
             RehabilitarBotonesDeSalas();
             OcultarProgresoUnirse();
+            IniciarBusquedaPeriodica();
         }
     }
 
@@ -454,6 +500,7 @@ public class LobbyManager : MonoBehaviour
         Debug.LogError($"[Lobby] Error: {error.GenerateErrorReport()}");
         RehabilitarBotonesDeSalas();
         OcultarProgresoUnirse();
+        IniciarBusquedaPeriodica();
     }
 
     // ---------- Estado y progreso: CREAR SALA ----------

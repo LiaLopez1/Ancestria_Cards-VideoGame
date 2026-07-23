@@ -186,6 +186,7 @@ public class StartupFlowUI : MonoBehaviour
 
     public void OnAtrasDesdeListaSalasPressed()
     {
+        lobbyManager.DetenerBusquedaPeriodica();
         VolverAlInicio();
     }
 
