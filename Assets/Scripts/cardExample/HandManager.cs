@@ -6,6 +6,8 @@ public class HandManager : MonoBehaviour
     [Header("Creación de cartas")]
     [SerializeField] private GameObject cardPrefab;
     [SerializeField] private List<CardSlot> cardSlots = new List<CardSlot>();
+    private List<CardSlot> activeSlots = new List<CardSlot>();
+    private CardSlot freeSlot;
 
     [Header("Forma de la mano")]
     [SerializeField] private float spacing = 130f;
@@ -20,6 +22,23 @@ public class HandManager : MonoBehaviour
     private void Awake()
     {
         handRectTransform = GetComponent<RectTransform>();
+
+        activeSlots.Clear();
+
+        foreach (CardSlot slot in cardSlots)
+        {
+            if (slot == null)
+            {
+                continue;
+            }
+
+            if (slot.transform.childCount > 0)
+            {
+                activeSlots.Add(slot);
+            }
+        }
+
+        UpdateFreeSlot();
     }
 
     private void Start()
@@ -29,31 +48,14 @@ public class HandManager : MonoBehaviour
 
     public int GetCardCount()
     {
-        int cardCount = 0;
-
-        foreach (CardSlot slot in cardSlots)
-        {
-            if (slot != null && slot.transform.childCount > 0)
-            {
-                cardCount++;
-            }
-        }
-
-        return cardCount;
+       return activeSlots.Count;
     }
 
 //Funcion para saber si hay espacio
     public bool HasEmptySlot()
     {
-        foreach (CardSlot slot in cardSlots)
-        {
-            if (slot != null && slot.RectTransform.childCount == 0)
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return freeSlot != null;
+        //me dice, si hay una slot libre= hay espacio;
     }
 
     public void ArrangeHand()
@@ -97,57 +99,86 @@ public class HandManager : MonoBehaviour
     {
         if (cardData == null)
         {
-            Debug.LogWarning("No se recibió información para crear la carta.");
+            Debug.LogWarning(
+                "No se recibió información para crear la carta."
+            );
+
             return false;
         }
 
-        foreach (CardSlot slot in cardSlots)
+        if (freeSlot == null)
         {
-            if (slot == null || slot.RectTransform.childCount > 0)
-            {
-                continue;
-            }
-
-            GameObject newCard = Instantiate(cardPrefab, slot.RectTransform);
-
-            newCard.name = "Card - " + cardData.cardName;
-
-            RectTransform cardRect = newCard.GetComponent<RectTransform>();
-
-            if (cardRect != null)
-            {
-                cardRect.anchoredPosition = Vector2.zero;
-                cardRect.localRotation = Quaternion.identity;
-                cardRect.localScale = Vector3.one;
-            }
-
-            CardDisplay cardDisplay = newCard.GetComponent<CardDisplay>();
-
-            if (cardDisplay == null)
-            {
-                Debug.LogError( "El prefab Card no contiene el componente CardDisplay.");
-
-                Destroy(newCard);
-                return false;
-            }
-
-            cardDisplay.card= cardData;
-
-            Debug.Log("Carta agregada a la mano: " + cardData.cardName);
-            ArrangeHand();
-
-            return true;
+            UpdateFreeSlot();
         }
 
-        Debug.LogWarning("No quedan espacios vacíos en la mano.");
-        return false;
+        if (freeSlot == null)
+        {
+            Debug.LogWarning(
+                "No quedan espacios vacíos en la mano."
+            );
+
+            return false;
+        }
+
+        CardSlot destinationSlot = freeSlot;
+
+        GameObject newCard = Instantiate(
+            cardPrefab,
+            destinationSlot.RectTransform
+        );
+
+        newCard.name = "Card - " + cardData.cardName;
+
+        RectTransform cardRect =
+            newCard.GetComponent<RectTransform>();
+
+        if (cardRect != null)
+        {
+            cardRect.anchoredPosition = Vector2.zero;
+            cardRect.localRotation = Quaternion.identity;
+            cardRect.localScale = Vector3.one;
+        }
+
+        CardDisplay cardDisplay =
+            newCard.GetComponent<CardDisplay>();
+
+        if (cardDisplay == null)
+        {
+            Debug.LogError(
+                "El prefab Card no contiene CardDisplay."
+            );
+
+            Destroy(newCard);
+            return false;
+        }
+
+        cardDisplay.card = cardData;
+
+        if (!activeSlots.Contains(destinationSlot))
+        {
+            activeSlots.Add(destinationSlot);
+        }
+
+        UpdateFreeSlot();
+
+        Debug.Log(
+            "Carta agregada a la mano: " +
+            cardData.cardName
+        );
+
+        ArrangeHand();
+
+        return true;
     }
 
    public void BeginCardDrag(CardSlot slot)
     {
-        
-
         draggedSlot = slot;
+        ArrangeHand();
+    }
+    public void CancelCardDrag()
+    {
+        draggedSlot = null;
         ArrangeHand();
     }
 
@@ -177,31 +208,20 @@ public class HandManager : MonoBehaviour
   
     public void CompleteCardDrag(CardSlot slot, int newIndex)
     {
-        cardSlots.Remove(slot);
+        activeSlots.Remove(slot);
 
-        newIndex = Mathf.Clamp(
-            newIndex,
-            0,
-            cardSlots.Count
-        );
-
-        cardSlots.Insert(newIndex, slot);
-
-        draggedSlot = null;
-
-        ArrangeHand();
-    }
-    public void CancelCardDrag()
-    {
+        newIndex = Mathf.Clamp( newIndex, 0, activeSlots.Count);
+        activeSlots.Insert(newIndex, slot);
         draggedSlot = null;
         ArrangeHand();
     }
+    
 
     private List<CardSlot> GetVisibleSlots()
     {
         List<CardSlot> visibleSlots = new List<CardSlot>();
 
-        foreach (CardSlot slot in cardSlots)
+        foreach (CardSlot slot in activeSlots)
         {
             if (slot != draggedSlot)
             {
@@ -221,27 +241,38 @@ public class HandManager : MonoBehaviour
         );
     }
 
+    private void UpdateFreeSlot()
+    {
+        freeSlot = null;
+
+        foreach (CardSlot slot in cardSlots)
+        {
+            if (
+                slot != null && slot.transform.childCount == 0 && !activeSlots.Contains(slot))
+            {
+                freeSlot = slot;
+                return;
+            }
+        }
+    }
+
     public void RemoveSolt(CardSlot slot)
     {
-        if(slot == null)
+        if (slot == null)
         {
             return;
         }
+
+        activeSlots.Remove(slot);
+
+        freeSlot = slot;
 
         if (draggedSlot == slot)
         {
             draggedSlot = null;
         }
 
-        if (slot.transform.childCount>0)
-        {
-            Transform card = slot.transform.GetChild(0);
-            card.SetParent(null);
-            Destroy(card.gameObject);
-        }
         ArrangeHand();
-
-
     }
 
 

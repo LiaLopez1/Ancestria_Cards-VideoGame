@@ -1,17 +1,36 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public class DeckCardDrag :MonoBehaviour,IBeginDragHandler,IDragHandler,IEndDragHandler
+public class DeckCardDrag : MonoBehaviour,
+    IBeginDragHandler,
+    IDragHandler,
+    IEndDragHandler
 {
-    private DeckManager deckManager;
     private RectTransform rectTransform;
-    private Canvas canvas;
+    private Canvas parentCanvas;
+    private RectTransform canvasRect;
     private CanvasGroup canvasGroup;
 
-    private Vector2 originalPosition;
+    private Vector3 originalPosition;
     private Quaternion originalRotation;
+    private Vector3 dragOffset;
 
-    private bool isDragging;
+    private Transform originalParent;
+    private int originalSiblingIndex;
+
+    private Vector2 originalAnchoredPosition;
+    private Quaternion originalLocalRotation;
+    private Vector3 originalLocalScale;
+
+    private DeckManager deckManager;
+
+    [Header("Regreso al mazo")]
+    [SerializeField] private float returnDuration = 0.2f;
+    private Coroutine returnCoroutine;
+    private Vector3 originalWorldPosition;
+    private Quaternion originalWorldRotation;
+
 
     public void Configure(DeckManager manager)
     {
@@ -21,7 +40,9 @@ public class DeckCardDrag :MonoBehaviour,IBeginDragHandler,IDragHandler,IEndDrag
     private void Awake()
     {
         rectTransform = GetComponent<RectTransform>();
-        canvas = GetComponentInParent<Canvas>();
+
+        parentCanvas = GetComponentInParent<Canvas>();
+        canvasRect = parentCanvas.GetComponent<RectTransform>();
 
         canvasGroup = GetComponent<CanvasGroup>();
 
@@ -31,66 +52,120 @@ public class DeckCardDrag :MonoBehaviour,IBeginDragHandler,IDragHandler,IEndDrag
         }
     }
 
-    public void OnBeginDrag(PointerEventData eventData) //presionas y mueves la carta
+ 
+
+    public void OnBeginDrag(PointerEventData eventData)
     {
-        if (
-            deckManager == null ||
-            !deckManager.CanStartManualDraw()
-        )
+        originalPosition = rectTransform.position;
+        originalRotation = rectTransform.rotation;
+
+        if (returnCoroutine != null)
         {
-            isDragging = false;
-            return;
+            StopCoroutine(returnCoroutine);
+            returnCoroutine = null;
         }
 
-        isDragging = true;
+        originalParent = transform.parent;
+        originalSiblingIndex = transform.GetSiblingIndex();
 
-        originalPosition = rectTransform.anchoredPosition;
-        originalRotation = rectTransform.localRotation;
+        originalAnchoredPosition = rectTransform.anchoredPosition;
+        originalLocalRotation = rectTransform.localRotation;
+        originalLocalScale = rectTransform.localScale;
+
+        originalWorldPosition = rectTransform.position;
+        originalWorldRotation = rectTransform.rotation;
+
+
+        RectTransformUtility.ScreenPointToWorldPointInRectangle( canvasRect, eventData.position, eventData.pressEventCamera,
+            out Vector3 pointerWorldPosition );
+
+        dragOffset = rectTransform.position - pointerWorldPosition;
+
+        transform.SetParent(parentCanvas.transform, true);
+        transform.SetAsLastSibling();
+
+        rectTransform.rotation = Quaternion.identity;
 
         canvasGroup.blocksRaycasts = false;
 
-        transform.SetAsLastSibling();
+        Debug.Log("Comenzó el arrastre desde el mazo.");
     }
 
     public void OnDrag(PointerEventData eventData)
     {
-        if (!isDragging)
+        bool converted =
+            RectTransformUtility.ScreenPointToWorldPointInRectangle( canvasRect,eventData.position,
+                eventData.pressEventCamera,
+                out Vector3 pointerWorldPosition );
+
+        if (!converted)
         {
             return;
         }
 
-        float scaleFactor = 1f;
-
-        if (canvas != null)
-        {
-            scaleFactor = canvas.scaleFactor;
-        }
-
-        rectTransform.anchoredPosition +=
-            eventData.delta / scaleFactor;
-
-        rectTransform.localRotation = Quaternion.identity;
+        rectTransform.position = pointerWorldPosition + dragOffset;
     }
 
     public void OnEndDrag(PointerEventData eventData)
     {
-        if (!isDragging)
+        bool drawAccepted = false;
+
+        if (deckManager != null)
+        {
+            drawAccepted = deckManager.TryDrawCardToHand( eventData.position, eventData.pressEventCamera );
+        }
+
+        if (drawAccepted)
         {
             return;
         }
 
-        isDragging = false;
-        canvasGroup.blocksRaycasts = true;
+        canvasGroup.blocksRaycasts = false;
 
-        bool drawAccepted = deckManager.TryManualDraw(
-            eventData.position,
-            eventData.pressEventCamera
-        );
-
-        if (!drawAccepted)
+        if (returnCoroutine != null)
         {
-            rectTransform.anchoredPosition = originalPosition;
-            rectTransform.localRotation = originalRotation;
+            StopCoroutine(returnCoroutine);
         }
+
+        returnCoroutine = StartCoroutine(ReturnToDeckSmooth());
+    }
+
+    private IEnumerator ReturnToDeckSmooth()
+    {
+        Vector3 startPosition = rectTransform.position;
+        Quaternion startRotation = rectTransform.rotation;
+
+        float elapsedTime = 0f;
+
+        while (elapsedTime < returnDuration)
+        {
+            elapsedTime += Time.deltaTime;
+
+            float progress = Mathf.Clamp01(
+                elapsedTime / returnDuration
+            );
+
+            float smoothProgress = Mathf.SmoothStep(0f,1f,progress);
+
+            rectTransform.position = Vector3.Lerp(startPosition, originalWorldPosition, smoothProgress);
+
+            rectTransform.rotation = Quaternion.Lerp(
+                startRotation,
+                originalWorldRotation,
+                smoothProgress
+            );
+
+            yield return null;
+        }
+
+        transform.SetParent(originalParent, true);
+        transform.SetSiblingIndex(originalSiblingIndex);
+        rectTransform.anchoredPosition = originalAnchoredPosition;
+        rectTransform.localRotation = originalLocalRotation;
+        rectTransform.localScale =originalLocalScale;
+        canvasGroup.blocksRaycasts = true;
+        returnCoroutine = null;
+
+        Debug.Log("La carta regresó visualmente al mazo.");
     }
 }

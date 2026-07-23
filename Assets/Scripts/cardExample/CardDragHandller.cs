@@ -16,13 +16,16 @@ public class CardDragHandler : MonoBehaviour,
     private HandManager handManager;
     private CardInteraction cardInteraction;
 
-    private Vector3 dragOffset;
-    private Coroutine returnCoroutine;
+  
+   
 
     private bool wasPlacedOnTable;
 
     [Header("Regreso al slot")]
     [SerializeField] private float returnDuration = 0.2f;
+
+    private Coroutine returnCoroutine;
+    private Vector3 dragOffset;
 
     private void Awake()
     {
@@ -203,21 +206,30 @@ public class CardDragHandler : MonoBehaviour,
             return;
         }
 
+        if (handManager == null)
+        {
+            Debug.LogError("La carta no encontró su HandManager.");
+            return;
+        }
+
+        if (handManager.GetCardCount() != 5)
+        {
+            Debug.Log("Primero debes agarrar una carta antes de descartarte.");
+
+            return;
+        }
+
         wasPlacedOnTable = true;
 
         StopAllCoroutines();
-
         handManager.RemoveSolt(originalSlot);
-
         tableManager.PlaceCard(rectTransform);
-
         canvasGroup.blocksRaycasts = false;
 
         if (cardInteraction != null)
         {
             cardInteraction.enabled = false;
         }
-
         enabled = false;
     }
 }

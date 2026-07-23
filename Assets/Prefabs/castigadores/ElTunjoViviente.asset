@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e31101a804144e3468dbb82b7f9fc61f, type: 3}
   m_Name: ElTunjoViviente
   m_EditorClassIdentifier: Assembly-CSharp::CardData
-  cardName: LA LLORONA
+  cardName: EL TUNJO VIVIENTE
   category: 1
   icono: {fileID: 0}
   character: {fileID: 0}

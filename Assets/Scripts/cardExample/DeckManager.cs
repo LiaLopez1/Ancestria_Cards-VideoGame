@@ -18,6 +18,9 @@ private bool initialDealFinished;
     [SerializeField] private GameObject deckCardPrefab;
     [SerializeField] private Vector2 cardOffset = new Vector2(0.25f, -0.25f);
 
+    [Header("Turno")]
+    [SerializeField] private TurnManager turnManager;
+
     [Header("Mano del jugador")]
     [SerializeField] private HandManager handManager;
 
@@ -80,9 +83,9 @@ private bool initialDealFinished;
 
         for (int i = 0; i < drawPile.Count; i++)
         {
-            GameObject visualCard = Instantiate( deckCardPrefab,deckArea);
-            DeckCardDrag deckCardDrag =
-            visualCard.GetComponent<DeckCardDrag>();
+            GameObject visualCard = Instantiate(deckCardPrefab,deckArea);
+            visualCard.name = "DeckCard " + i + " - " + drawPile[i].cardName; // para saber herarquia cuantas se crean de un tipo
+            DeckCardDrag deckCardDrag = visualCard.GetComponent<DeckCardDrag>();
 
             if (deckCardDrag != null)
             {
@@ -90,17 +93,31 @@ private bool initialDealFinished;
                 deckCardDrag.enabled = false;
             }
 
-            /*cardRect.anchoredPosition = cardOffset * i;
+            RectTransform cardRect =
+                visualCard.GetComponent<RectTransform>();
+
+            if (cardRect == null)
+            {
+                Debug.LogError(
+                    "El prefab del mazo necesita RectTransform."
+                );
+
+                Destroy(visualCard);
+                continue;
+            }
+
+            cardRect.anchoredPosition = cardOffset * i;
             cardRect.localRotation = Quaternion.identity;
             cardRect.localScale = Vector3.one;
 
             visualCard.transform.SetSiblingIndex(i);
 
-            visualDeck.Add(visualCard);*/
-
-            RefreshTopCardDrag();
+            visualDeck.Add(visualCard);
         }
+
+        RefreshTopCardDrag();
     }
+
 
 
 
@@ -146,7 +163,7 @@ private bool initialDealFinished;
         return drawnCard;
     }
 
-    [ContextMenu("Probar robo de una carta")]
+    /*[ContextMenu("Probar robo de una carta")]
     private void TestDrawCard()
     {
         if (handManager == null)
@@ -154,20 +171,18 @@ private bool initialDealFinished;
             Debug.LogError("No se asignó el HandManager.");
             return;
         }
-
         if (!handManager.HasEmptySlot())
         {
             Debug.LogWarning("La mano ya tiene cinco cartas.");
             return;
         }
-
         CardData drawnCard = DrawCard();
 
         if (drawnCard != null)
         {
             handManager.AddCardToHand(drawnCard);
         }
-    }
+    }*/
 
     private IEnumerator DealInitialHand()
     {
@@ -198,8 +213,12 @@ private bool initialDealFinished;
 
         initialDealFinished = true;
 
-        Debug.Log(
-            "Reparto inicial terminado. El jugador tiene " +handManager.GetCardCount() + " cartas.");
+        Debug.Log( "Reparto inicial terminado. El jugador tiene " +handManager.GetCardCount() + " cartas.");
+
+        if (turnManager != null)
+        {
+            turnManager.InitialDealFinished();
+        }
     }
 
     public bool CanStartManualDraw()
@@ -287,6 +306,88 @@ private bool initialDealFinished;
 
             drag.enabled = isTopCard;
         }
+    }
+
+    public bool CanDrawCard()
+    //Comprueba si el jugador puede robar una carta
+    {
+        if (handManager == null)
+        {
+            return false;
+        }
+
+        if (drawPile.Count == 0)
+        {
+            return false;
+        }
+
+        return handManager.GetCardCount() == 4;
+    }
+
+    public bool TryDrawCardToHand( Vector2 screenPosition, Camera eventCamera)
+    {
+
+        if (turnManager == null)
+        {
+            Debug.LogError("No se asignó el TurnManager.");
+            return false;
+        }
+
+        if (!turnManager.CanDraw())
+        {
+            Debug.Log( "No puedes robar una carta en este momento.");
+
+            return false;
+        }
+
+        if (handManager == null)
+        {
+            Debug.LogError("No se asignó el HandManager.");
+            return false;
+        }
+
+        bool isInsideHand = handManager.IsPointerInsideHand( screenPosition,eventCamera);
+
+        if (!isInsideHand)
+        {
+            Debug.Log("La carta se soltó fuera de la mano.");
+            return false;
+        }
+
+        if (handManager.GetCardCount() != 4)
+        {
+            Debug.LogWarning("No puedes robar: debes tener exactamente 4 cartas.");
+            return false;
+        }
+
+        if (!handManager.HasEmptySlot()) //confirmamos que haya un slot libre
+        {
+            Debug.LogWarning("No existe un slot vacío para recibir la carta.");
+            return false;
+        }
+
+        CardData drawnCard = DrawCard();
+
+        if (drawnCard == null)
+        {
+            Debug.LogWarning("No fue posible robar una carta.");
+            return false;
+        }
+        //Creamos la carta jugable dentro de la mano
+        bool wasAdded = handManager.AddCardToHand(drawnCard);
+
+        if (!wasAdded)
+        {
+            Debug.LogError("Se robó la carta, pero no se pudo agregar a la mano.");
+            return false;
+        }
+
+        turnManager.CardWasDrawn();
+
+        Debug.Log(
+            "Carta robada correctamente: " + drawnCard.cardName);
+
+        return true;
     }
 
     
