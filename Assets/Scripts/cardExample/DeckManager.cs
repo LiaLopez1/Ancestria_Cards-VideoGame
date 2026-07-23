@@ -39,6 +39,9 @@ public class DeckManager : NetworkBehaviour
     [Header("Mano del jugador")]
     [SerializeField] private HandManager handManager;
 
+    [Header("Iniciar partida (solo host)")]
+    [SerializeField] private GameObject botonIniciarPartida;
+
     // Cartas disponibles para robar. SOLO tiene contenido real en el servidor.
     private readonly List<CardData> drawPile = new List<CardData>();
 
@@ -46,7 +49,7 @@ public class DeckManager : NetworkBehaviour
     // no revelan identidad - por eso se pueden construir igual en todos lados).
     private readonly List<GameObject> visualDeck = new List<GameObject>();
 
-    private bool initialDealFinished;
+    private bool partidaIniciada;
 
     // Cuantas cartas quedan en el mazo - esto SI se sincroniza a todos,
     // para que el mazo visual se vea igual de "alto" en todas las pantallas.
@@ -71,14 +74,53 @@ public class DeckManager : NetworkBehaviour
             BuildLogicalDeck();
             ShuffleDeck();
             cartasEnMazo.Value = drawPile.Count;
+        }
 
-            StartCoroutine(RepartirManoInicialATodos());
+        // El boton de iniciar partida solo lo puede usar el host.
+        if (botonIniciarPartida != null)
+        {
+            botonIniciarPartida.SetActive(IsServer);
         }
 
         // Todos (incluido el host) arman su propio mazo visual con el
         // conteo actual - el host lo hace de una porque cartasEnMazo.Value
         // ya quedo asignado arriba antes de llegar aqui.
         ActualizarMazoVisual(cartasEnMazo.Value);
+    }
+
+    /// <summary>
+    /// Conectado al boton "Iniciar partida" (solo visible para el host).
+    /// Reparte la mano inicial a TODOS los jugadores conectados en este
+    /// momento (1, 2 o 3), simultaneamente, en vez de repartir uno por uno
+    /// a medida que se conectan.
+    /// </summary>
+    public void OnIniciarPartidaPressed()
+    {
+        if (!IsServer)
+        {
+            Debug.LogWarning("[DeckManager] Solo el host puede iniciar la partida.");
+            return;
+        }
+
+        if (partidaIniciada)
+        {
+            Debug.LogWarning("[DeckManager] La partida ya fue iniciada.");
+            return;
+        }
+
+        partidaIniciada = true;
+
+        if (botonIniciarPartida != null)
+        {
+            botonIniciarPartida.SetActive(false);
+        }
+
+        foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
+        {
+            StartCoroutine(RepartirManoAJugador(clientId));
+        }
+
+        Debug.Log($"[Servidor] Partida iniciada. Repartiendo a {NetworkManager.Singleton.ConnectedClientsIds.Count} jugador(es).");
     }
 
     private void BuildLogicalDeck()
@@ -192,35 +234,30 @@ public class DeckManager : NetworkBehaviour
     }
 
     /// <summary>
-    /// SOLO corre en el servidor. Reparte la mano inicial a cada jugador
-    /// conectado, mandandole a cada uno UNICAMENTE sus propias cartas.
+    /// SOLO corre en el servidor. Reparte la mano inicial a UN jugador en
+    /// particular, mandandole UNICAMENTE sus propias cartas. OnIniciarPartidaPressed
+    /// arranca una de estas corrutinas por jugador EN PARALELO, asi todos
+    /// reciben sus cartas al mismo tiempo (no uno detras de otro).
     /// </summary>
-    private IEnumerator RepartirManoInicialATodos()
+    private IEnumerator RepartirManoAJugador(ulong clientId)
     {
-        initialDealFinished = false;
-
-        foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
+        for (int i = 0; i < initialHandSize; i++)
         {
-            for (int i = 0; i < initialHandSize; i++)
+            yield return new WaitForSeconds(delayBetweenCards);
+
+            CardData drawnCard = DrawCard();
+
+            if (drawnCard == null)
             {
-                yield return new WaitForSeconds(delayBetweenCards);
-
-                CardData drawnCard = DrawCard();
-
-                if (drawnCard == null)
-                {
-                    yield break;
-                }
-
-                EnviarCartaAlJugadorClientRpc(drawnCard.cardId, ParaCliente(clientId));
-
-                cartasEnManoPorCliente[clientId] = (cartasEnManoPorCliente.TryGetValue(clientId, out int actual) ? actual : 0) + 1;
+                yield break;
             }
+
+            EnviarCartaAlJugadorClientRpc(drawnCard.cardId, ParaCliente(clientId));
+
+            cartasEnManoPorCliente[clientId] = (cartasEnManoPorCliente.TryGetValue(clientId, out int actual) ? actual : 0) + 1;
         }
 
-        initialDealFinished = true;
-
-        Debug.Log("[Servidor] Reparto inicial terminado para todos los jugadores.");
+        Debug.Log($"[Servidor] Reparto inicial terminado para el cliente {clientId}.");
 
         // TODO (paso 5): reconectar esto con un TurnManager sincronizado.
         // Todavia no llamamos turnManager.InitialDealFinished() aqui porque
@@ -291,7 +328,7 @@ public class DeckManager : NetworkBehaviour
 
     public bool CanStartManualDraw()
     {
-        return initialDealFinished && handManager != null && handManager.GetCardCount() == initialHandSize;
+        return handManager != null && handManager.GetCardCount() == initialHandSize;
     }
 
     /// <summary>
