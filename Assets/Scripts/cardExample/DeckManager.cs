@@ -39,6 +39,9 @@ public class DeckManager : NetworkBehaviour
     [Header("Mano del jugador")]
     [SerializeField] private HandManager handManager;
 
+    [Header("Mesa de descarte")]
+    [SerializeField] private TableManager tableManager;
+
     [Header("Iniciar partida (solo host)")]
     [SerializeField] private GameObject botonIniciarPartida;
 
@@ -55,10 +58,10 @@ public class DeckManager : NetworkBehaviour
     // para que el mazo visual se vea igual de "alto" en todas las pantallas.
     private readonly NetworkVariable<int> cartasEnMazo = new NetworkVariable<int>(0);
 
-    // Cuantas cartas tiene cada cliente EN TOTAL - no cuales, solo cuantas.
-    // Necesario para validar reglas (ej: "solo puedes robar con 4 cartas")
-    // sin que el servidor necesite saber el contenido de tu mano.
-    private readonly Dictionary<ulong, int> cartasEnManoPorCliente = new Dictionary<ulong, int>();
+    // Que cartas (por ID) tiene cada cliente EN SU MANO ahora mismo - no
+    // solo cuantas, sino cuales exactamente. Necesario para poder validar
+    // el descarte (¿de verdad tienes esa carta?) ademas de reglas de conteo.
+    private readonly Dictionary<ulong, List<int>> manoPorCliente = new Dictionary<ulong, List<int>>();
 
     public int CardsRemaining
     {
@@ -254,7 +257,7 @@ public class DeckManager : NetworkBehaviour
 
             EnviarCartaAlJugadorClientRpc(drawnCard.cardId, ParaCliente(clientId));
 
-            cartasEnManoPorCliente[clientId] = (cartasEnManoPorCliente.TryGetValue(clientId, out int actual) ? actual : 0) + 1;
+            AgregarCartaAManoDeCliente(clientId, drawnCard.cardId);
         }
 
         Debug.Log($"[Servidor] Reparto inicial terminado para el cliente {clientId}.");
@@ -385,7 +388,7 @@ public class DeckManager : NetworkBehaviour
             return;
         }
 
-        int cartasActuales = cartasEnManoPorCliente.TryGetValue(clienteSolicitante, out int valor) ? valor : 0;
+        int cartasActuales = ObtenerManoDeCliente(clienteSolicitante).Count;
 
         if (cartasActuales != initialHandSize)
         {
@@ -400,10 +403,70 @@ public class DeckManager : NetworkBehaviour
             return;
         }
 
-        cartasEnManoPorCliente[clienteSolicitante] = cartasActuales + 1;
+        AgregarCartaAManoDeCliente(clienteSolicitante, drawnCard.cardId);
 
         EnviarCartaAlJugadorClientRpc(drawnCard.cardId, ParaCliente(clienteSolicitante));
 
         Debug.Log($"[Servidor] Cliente {clienteSolicitante} robó correctamente. Ahora tiene {cartasActuales + 1} carta(s).");
+    }
+
+    /// <summary>
+    /// SOLO corre en el servidor. El cliente pide descartar una carta
+    /// puntual (por su cardId) - se valida que de verdad la tenga en mano
+    /// antes de aceptar, y se le avisa a TODOS los jugadores (la mesa de
+    /// descarte es publica, a diferencia de la mano).
+    /// </summary>
+    [ServerRpc(RequireOwnership = false)]
+    public void SolicitarDescarteServerRpc(int cardId, ServerRpcParams rpcParams = default)
+    {
+        ulong clienteSolicitante = rpcParams.Receive.SenderClientId;
+
+        List<int> mano = ObtenerManoDeCliente(clienteSolicitante);
+
+        if (!mano.Remove(cardId))
+        {
+            Debug.LogWarning($"[Servidor] Cliente {clienteSolicitante} intentó descartar una carta que no tiene (cardId={cardId}).");
+            return;
+        }
+
+        Debug.Log($"[Servidor] Cliente {clienteSolicitante} descartó cardId={cardId}. Le quedan {mano.Count} carta(s).");
+
+        MostrarCartaDescartadaClientRpc(cardId);
+    }
+
+    /// <summary>
+    /// Se ejecuta en TODOS los clientes (a diferencia del reparto, que es
+    /// privado) - la mesa de descarte es publica, todos deben ver lo mismo.
+    /// </summary>
+    [ClientRpc]
+    private void MostrarCartaDescartadaClientRpc(int cardId)
+    {
+        CardData carta = CardDatabase.Instance.ObtenerPorId(cardId);
+
+        if (carta == null)
+        {
+            Debug.LogError($"[Cliente] Llegó un cardId inválido para descarte: {cardId}");
+            return;
+        }
+
+        if (tableManager != null)
+        {
+            tableManager.AgregarCartaDescartada(carta);
+        }
+    }
+
+    private List<int> ObtenerManoDeCliente(ulong clientId)
+    {
+        if (!manoPorCliente.TryGetValue(clientId, out List<int> mano))
+        {
+            mano = new List<int>();
+            manoPorCliente[clientId] = mano;
+        }
+        return mano;
+    }
+
+    private void AgregarCartaAManoDeCliente(ulong clientId, int cardId)
+    {
+        ObtenerManoDeCliente(clientId).Add(cardId);
     }
 }

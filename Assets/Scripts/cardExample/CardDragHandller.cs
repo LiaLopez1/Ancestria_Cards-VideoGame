@@ -15,6 +15,7 @@ public class CardDragHandler : MonoBehaviour,
     private CardSlot originalSlot;
     private HandManager handManager;
     private CardInteraction cardInteraction;
+    private CardDisplay cardDisplay;
 
   
    
@@ -38,6 +39,7 @@ public class CardDragHandler : MonoBehaviour,
         handManager = GetComponentInParent<HandManager>();
 
         cardInteraction = GetComponent<CardInteraction>();
+        cardDisplay = GetComponent<CardDisplay>();
 
         canvasGroup = GetComponent<CanvasGroup>();
 
@@ -199,7 +201,12 @@ public class CardDragHandler : MonoBehaviour,
         returnCoroutine = null;
     }
 
-    public void PlaceOnTable(TableManager tableManager)
+    /// <summary>
+    /// Ya no recibe un TableManager: recibe el DeckManager, porque el
+    /// descarte tiene que pasar por el servidor (para que sea publico y
+    /// validado), no moverse directamente en este cliente.
+    /// </summary>
+    public void PlaceOnTable(DeckManager deckManager)
     {
         if (wasPlacedOnTable)
         {
@@ -215,7 +222,18 @@ public class CardDragHandler : MonoBehaviour,
         if (handManager.GetCardCount() != 5)
         {
             Debug.Log("Primero debes agarrar una carta antes de descartarte.");
+            return;
+        }
 
+        if (cardDisplay == null || cardDisplay.card == null)
+        {
+            Debug.LogError("La carta no tiene CardDisplay/CardData asignado, no se puede descartar.");
+            return;
+        }
+
+        if (deckManager == null)
+        {
+            Debug.LogError("No se asignó el DeckManager en DropZone.");
             return;
         }
 
@@ -223,13 +241,23 @@ public class CardDragHandler : MonoBehaviour,
 
         StopAllCoroutines();
         handManager.RemoveSolt(originalSlot);
-        tableManager.PlaceCard(rectTransform);
+
+        // Le pedimos al servidor que confirme el descarte - la version
+        // visible en la mesa (para TODOS los jugadores) la crea el servidor
+        // al aprobar, via DeckManager.MostrarCartaDescartadaClientRpc.
+        deckManager.SolicitarDescarteServerRpc(cardDisplay.card.cardId);
+
         canvasGroup.blocksRaycasts = false;
 
         if (cardInteraction != null)
         {
             cardInteraction.enabled = false;
         }
+
         enabled = false;
+
+        // Esta instancia era solo la representacion en tu mano - la version
+        // "oficial" en la mesa se crea aparte (fresca) para todos.
+        Destroy(gameObject);
     }
 }
