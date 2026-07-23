@@ -1,14 +1,30 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 
-public class DeckManager : MonoBehaviour
+/// <summary>
+/// El mazo real (drawPile) SOLO existe en el servidor - los clientes nunca lo
+/// tienen en memoria, para que ninguno pueda "ver" el orden de las cartas.
+///
+/// Cada cliente arma su propio mazo VISUAL (la pila boca abajo) segun un
+/// contador sincronizado (cartasEnMazo), no segun las cartas reales - por
+/// eso el mazo visual nunca revela identidad, solo cantidad.
+///
+/// El reparto inicial lo hace el servidor, y le manda a cada jugador
+/// UNICAMENTE sus propias cartas via ClientRpc dirigido (no a todos).
+///
+/// IMPORTANTE: el robo manual (arrastrar del mazo a la mano) queda
+/// temporalmente deshabilitado en este paso - eso se conecta en el
+/// siguiente paso (ServerRpc de robo). Por ahora solo se blinda con un
+/// aviso claro en vez de fallar en silencio.
+/// </summary>
+public class DeckManager : NetworkBehaviour
 {
     [Header("Reparto inicial")]
     [SerializeField] private int initialHandSize = 4;
     [SerializeField] private float delayBetweenCards = 0.25f;
 
-private bool initialDealFinished;
     [Header("Configuración del mazo")]
     [SerializeField] private int copiesPerCard = 4;
 
@@ -23,23 +39,46 @@ private bool initialDealFinished;
     [Header("Mano del jugador")]
     [SerializeField] private HandManager handManager;
 
-    // Cartas disponibles para robar.
+    // Cartas disponibles para robar. SOLO tiene contenido real en el servidor.
     private readonly List<CardData> drawPile = new List<CardData>();
 
-    // Objetos que representan las cartas apiladas en pantalla.
+    // Objetos que representan las cartas apiladas en pantalla (genericos,
+    // no revelan identidad - por eso se pueden construir igual en todos lados).
     private readonly List<GameObject> visualDeck = new List<GameObject>();
+
+    private bool initialDealFinished;
+
+    // Cuantas cartas quedan en el mazo - esto SI se sincroniza a todos,
+    // para que el mazo visual se vea igual de "alto" en todas las pantallas.
+    private readonly NetworkVariable<int> cartasEnMazo = new NetworkVariable<int>(0);
+
+    // Cuantas cartas tiene cada cliente EN TOTAL - no cuales, solo cuantas.
+    // Necesario para validar reglas (ej: "solo puedes robar con 4 cartas")
+    // sin que el servidor necesite saber el contenido de tu mano.
+    private readonly Dictionary<ulong, int> cartasEnManoPorCliente = new Dictionary<ulong, int>();
 
     public int CardsRemaining
     {
-        get { return drawPile.Count; }
+        get { return cartasEnMazo.Value; }
     }
 
-    private void Start()
+    public override void OnNetworkSpawn()
     {
-        BuildLogicalDeck();
-        ShuffleDeck();
-        BuildVisualDeck();
-        StartCoroutine(DealInitialHand());
+        cartasEnMazo.OnValueChanged += (anterior, nuevo) => ActualizarMazoVisual(nuevo);
+
+        if (IsServer)
+        {
+            BuildLogicalDeck();
+            ShuffleDeck();
+            cartasEnMazo.Value = drawPile.Count;
+
+            StartCoroutine(RepartirManoInicialATodos());
+        }
+
+        // Todos (incluido el host) arman su propio mazo visual con el
+        // conteo actual - el host lo hace de una porque cartasEnMazo.Value
+        // ya quedo asignado arriba antes de llegar aqui.
+        ActualizarMazoVisual(cartasEnMazo.Value);
     }
 
     private void BuildLogicalDeck()
@@ -59,7 +98,7 @@ private bool initialDealFinished;
             }
         }
 
-        Debug.Log("Mazo creado con " + drawPile.Count + " cartas.");
+        Debug.Log("[Servidor] Mazo creado con " + drawPile.Count + " cartas.");
     }
 
     private void ShuffleDeck()
@@ -73,17 +112,22 @@ private bool initialDealFinished;
             drawPile[randomIndex] = temporaryCard;
         }
 
-        Debug.Log("El mazo fue mezclado.");
+        Debug.Log("[Servidor] El mazo fue mezclado.");
     }
 
-    private void BuildVisualDeck()
+    /// <summary>
+    /// Reconstruye la pila visual (generica, sin identidad) para que tenga
+    /// exactamente "cantidad" cartas boca abajo.
+    /// </summary>
+    private void ActualizarMazoVisual(int cantidad)
     {
         ClearVisualDeck();
 
-        for (int i = 0; i < drawPile.Count; i++)
+        for (int i = 0; i < cantidad; i++)
         {
-            GameObject visualCard = Instantiate(deckCardPrefab,deckArea);
-            visualCard.name = "DeckCard " + i + " - " + drawPile[i].cardName; // para saber herarquia cuantas se crean de un tipo
+            GameObject visualCard = Instantiate(deckCardPrefab, deckArea);
+            visualCard.name = "DeckCard " + i;
+
             DeckCardDrag deckCardDrag = visualCard.GetComponent<DeckCardDrag>();
 
             if (deckCardDrag != null)
@@ -92,15 +136,11 @@ private bool initialDealFinished;
                 deckCardDrag.enabled = false;
             }
 
-            RectTransform cardRect =
-                visualCard.GetComponent<RectTransform>();
+            RectTransform cardRect = visualCard.GetComponent<RectTransform>();
 
             if (cardRect == null)
             {
-                Debug.LogError(
-                    "El prefab del mazo necesita RectTransform."
-                );
-
+                Debug.LogError("El prefab del mazo necesita RectTransform.");
                 Destroy(visualCard);
                 continue;
             }
@@ -117,9 +157,6 @@ private bool initialDealFinished;
         RefreshTopCardDrag();
     }
 
-
-
-
     private void ClearVisualDeck()
     {
         foreach (GameObject visualCard in visualDeck)
@@ -132,11 +169,14 @@ private bool initialDealFinished;
         visualDeck.Clear();
     }
 
-    public CardData DrawCard()
+    /// <summary>
+    /// SOLO debe llamarse desde el servidor - roba del mazo real.
+    /// </summary>
+    private CardData DrawCard()
     {
         if (drawPile.Count == 0)
         {
-            Debug.LogWarning("No quedan cartas en el mazo.");
+            Debug.LogWarning("[Servidor] No quedan cartas en el mazo.");
             return null;
         }
 
@@ -144,140 +184,81 @@ private bool initialDealFinished;
         CardData drawnCard = drawPile[topCardIndex];
         drawPile.RemoveAt(topCardIndex);
 
-        if (visualDeck.Count > 0)
-        {
-            int topVisualIndex = visualDeck.Count - 1;
-            GameObject topVisualCard = visualDeck[topVisualIndex];
-            visualDeck.RemoveAt(topVisualIndex);
-            Destroy(topVisualCard);
-            RefreshTopCardDrag();
-        }
+        cartasEnMazo.Value = drawPile.Count;
 
-        
-
-        Debug.Log(
-            "Carta robada: " + drawnCard.name + " | Cartas restantes: " + drawPile.Count
-        );
+        Debug.Log("[Servidor] Carta robada: " + drawnCard.cardName + " | Cartas restantes: " + drawPile.Count);
 
         return drawnCard;
     }
 
-    /*[ContextMenu("Probar robo de una carta")]
-    private void TestDrawCard()
-    {
-        if (handManager == null)
-        {
-            Debug.LogError("No se asignó el HandManager.");
-            return;
-        }
-        if (!handManager.HasEmptySlot())
-        {
-            Debug.LogWarning("La mano ya tiene cinco cartas.");
-            return;
-        }
-        CardData drawnCard = DrawCard();
-
-        if (drawnCard != null)
-        {
-            handManager.AddCardToHand(drawnCard);
-        }
-    }*/
-
-    private IEnumerator DealInitialHand()
+    /// <summary>
+    /// SOLO corre en el servidor. Reparte la mano inicial a cada jugador
+    /// conectado, mandandole a cada uno UNICAMENTE sus propias cartas.
+    /// </summary>
+    private IEnumerator RepartirManoInicialATodos()
     {
         initialDealFinished = false;
 
-        for (int i = 0; i < initialHandSize; i++)
+        foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
         {
-            yield return new WaitForSeconds(delayBetweenCards);
-
-            CardData drawnCard = DrawCard();
-
-            if (drawnCard == null)
+            for (int i = 0; i < initialHandSize; i++)
             {
-                yield break;
-            }
+                yield return new WaitForSeconds(delayBetweenCards);
 
-            bool cardAdded = handManager.AddCardToHand(drawnCard);
+                CardData drawnCard = DrawCard();
 
-            if (!cardAdded)
-            {
-                Debug.LogError(
-                    "No fue posible agregar una carta durante el reparto."
-                );
+                if (drawnCard == null)
+                {
+                    yield break;
+                }
 
-                yield break;
+                EnviarCartaAlJugadorClientRpc(drawnCard.cardId, ParaCliente(clientId));
+
+                cartasEnManoPorCliente[clientId] = (cartasEnManoPorCliente.TryGetValue(clientId, out int actual) ? actual : 0) + 1;
             }
         }
 
         initialDealFinished = true;
 
-        Debug.Log( "Reparto inicial terminado. El jugador tiene " +handManager.GetCardCount() + " cartas.");
+        Debug.Log("[Servidor] Reparto inicial terminado para todos los jugadores.");
 
-        if (turnManager != null)
-        {
-            turnManager.InitialDealFinished();
-        }
+        // TODO (paso 5): reconectar esto con un TurnManager sincronizado.
+        // Todavia no llamamos turnManager.InitialDealFinished() aqui porque
+        // el turno todavia no esta en red - lo hacemos en el siguiente paso.
     }
 
-    public bool CanStartManualDraw()
+    /// <summary>
+    /// Se ejecuta SOLO en el cliente al que se dirigio (gracias a
+    /// ClientRpcParams) - por eso ningun otro jugador ve esta carta.
+    /// </summary>
+    [ClientRpc]
+    private void EnviarCartaAlJugadorClientRpc(int cardId, ClientRpcParams clientRpcParams = default)
     {
-        if (!initialDealFinished)
+        CardData carta = CardDatabase.Instance.ObtenerPorId(cardId);
+
+        if (carta == null)
         {
-            return false;
+            Debug.LogError($"[Cliente] Llego un cardId invalido: {cardId}");
+            return;
         }
 
-        if (handManager == null)
-        {
-            return false;
-        }
-
-        if (drawPile.Count == 0)
-        {
-            return false;
-        }
-
-        return handManager.GetCardCount() == initialHandSize;
-    }
-
-    public bool TryManualDraw( Vector2 screenPosition,Camera eventCamera)
-    {
-        if (handManager == null)
-        {
-            Debug.LogError("No se asignó el HandManager.");
-            return false;
-        }
-
-        bool pointerInsideHand = handManager.IsPointerInsideHand(screenPosition, eventCamera
-        );
-
-        if (!pointerInsideHand)
-        {
-            return false;
-        }
-
-        if (!CanStartManualDraw())
-        {
-            Debug.LogWarning("No puedes robar ahora. Debes tener exactamente 4 cartas.");
-            return false;
-        }
-        CardData drawnCard = DrawCard();
-
-        if (drawnCard == null)
-        {
-            return false;
-        }
-
-        bool cardAdded = handManager.AddCardToHand(drawnCard);
+        bool cardAdded = handManager.AddCardToHand(carta);
 
         if (!cardAdded)
         {
-            Debug.LogError("La carta fue robada, pero no pudo agregarse a la mano.");
-            return false;
+            Debug.LogError("[Cliente] No fue posible agregar la carta recibida a la mano.");
         }
+    }
 
-        Debug.Log("Robo manual completado: " + drawnCard.cardName);
-        return true;
+    private ClientRpcParams ParaCliente(ulong clientId)
+    {
+        return new ClientRpcParams
+        {
+            Send = new ClientRpcSendParams
+            {
+                TargetClientIds = new ulong[] { clientId }
+            }
+        };
     }
 
     private void RefreshTopCardDrag()
@@ -291,8 +272,7 @@ private bool initialDealFinished;
                 continue;
             }
 
-            DeckCardDrag drag =
-                visualCard.GetComponent<DeckCardDrag>();
+            DeckCardDrag drag = visualCard.GetComponent<DeckCardDrag>();
 
             if (drag == null)
             {
@@ -307,45 +287,38 @@ private bool initialDealFinished;
         }
     }
 
-    public bool CanDrawCard()
-    //Comprueba si el jugador puede robar una carta
+    // ---------- Robo manual (drag del mazo a la mano) ----------
+
+    public bool CanStartManualDraw()
     {
-        if (handManager == null)
-        {
-            return false;
-        }
-
-        if (drawPile.Count == 0)
-        {
-            return false;
-        }
-
-        return handManager.GetCardCount() == 4;
+        return initialDealFinished && handManager != null && handManager.GetCardCount() == initialHandSize;
     }
 
-    public bool TryDrawCardToHand( Vector2 screenPosition, Camera eventCamera)
+    /// <summary>
+    /// Corre en el CLIENTE que arrastro la carta. Solo hace la validacion
+    /// visual basica (¿la soltaste dentro de tu mano?) y le pide permiso al
+    /// servidor - la validacion de verdad (¿tienes las cartas correctas?
+    /// ¿queda mazo?) pasa del lado del servidor, nunca aqui.
+    /// </summary>
+    public bool TryManualDraw(Vector2 screenPosition, Camera eventCamera)
     {
+        return TryDrawCardToHand(screenPosition, eventCamera);
+    }
 
-        if (turnManager == null)
-        {
-            Debug.LogError("No se asignó el TurnManager.");
-            return false;
-        }
+    public bool CanDrawCard()
+    {
+        return CanStartManualDraw();
+    }
 
-        if (!turnManager.CanDraw())
-        {
-            Debug.Log( "No puedes robar una carta en este momento.");
-
-            return false;
-        }
-
+    public bool TryDrawCardToHand(Vector2 screenPosition, Camera eventCamera)
+    {
         if (handManager == null)
         {
             Debug.LogError("No se asignó el HandManager.");
             return false;
         }
 
-        bool isInsideHand = handManager.IsPointerInsideHand( screenPosition,eventCamera);
+        bool isInsideHand = handManager.IsPointerInsideHand(screenPosition, eventCamera);
 
         if (!isInsideHand)
         {
@@ -353,41 +326,47 @@ private bool initialDealFinished;
             return false;
         }
 
-        if (handManager.GetCardCount() != 4)
+        // No agregamos la carta aqui: solo pedimos permiso. Si el servidor
+        // aprueba, la carta real llega despues via EnviarCartaAlJugadorClientRpc.
+        SolicitarRoboServerRpc();
+        return true;
+    }
+
+    /// <summary>
+    /// El cliente PIDE robar, no roba directamente - el servidor decide.
+    /// RequireOwnership=false porque DeckManager es un objeto de escena del
+    /// servidor, no le pertenece a ningun cliente en particular.
+    /// </summary>
+    [ServerRpc(RequireOwnership = false)]
+    private void SolicitarRoboServerRpc(ServerRpcParams rpcParams = default)
+    {
+        ulong clienteSolicitante = rpcParams.Receive.SenderClientId;
+
+        if (drawPile.Count == 0)
         {
-            Debug.LogWarning("No puedes robar: debes tener exactamente 4 cartas.");
-            return false;
+            Debug.LogWarning($"[Servidor] Cliente {clienteSolicitante} pidió robar pero no quedan cartas.");
+            return;
         }
 
-        if (!handManager.HasEmptySlot()) //confirmamos que haya un slot libre
+        int cartasActuales = cartasEnManoPorCliente.TryGetValue(clienteSolicitante, out int valor) ? valor : 0;
+
+        if (cartasActuales != initialHandSize)
         {
-            Debug.LogWarning("No existe un slot vacío para recibir la carta.");
-            return false;
+            Debug.LogWarning($"[Servidor] Cliente {clienteSolicitante} intentó robar con {cartasActuales} carta(s) (debe tener {initialHandSize}).");
+            return;
         }
 
         CardData drawnCard = DrawCard();
 
         if (drawnCard == null)
         {
-            Debug.LogWarning("No fue posible robar una carta.");
-            return false;
-        }
-        //Creamos la carta jugable dentro de la mano
-        bool wasAdded = handManager.AddCardToHand(drawnCard);
-
-        if (!wasAdded)
-        {
-            Debug.LogError("Se robó la carta, pero no se pudo agregar a la mano.");
-            return false;
+            return;
         }
 
-        turnManager.CardWasDrawn();
+        cartasEnManoPorCliente[clienteSolicitante] = cartasActuales + 1;
 
-        Debug.Log(
-            "Carta robada correctamente: " + drawnCard.cardName);
+        EnviarCartaAlJugadorClientRpc(drawnCard.cardId, ParaCliente(clienteSolicitante));
 
-        return true;
+        Debug.Log($"[Servidor] Cliente {clienteSolicitante} robó correctamente. Ahora tiene {cartasActuales + 1} carta(s).");
     }
-
-    
 }
