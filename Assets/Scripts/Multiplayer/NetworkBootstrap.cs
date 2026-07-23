@@ -24,7 +24,9 @@ public class NetworkBootstrap : MonoBehaviour
     public static NetworkBootstrap Instance { get; private set; }
 
     [SerializeField] private NetworkManager networkManager;
-    [SerializeField] private LobbyManager lobbyManager;
+    // LobbyManager se resuelve por .Instance (no arrastrado en el Inspector) por
+    // el mismo motivo explicado en StartupFlowUI: una referencia arrastrada no
+    // sobrevive a una recarga de escena.
 
     [Header("Escena a la que volver si se pierde la conexion")]
     [SerializeField] private string escenaMenuInicial = "Menu";
@@ -112,7 +114,7 @@ public class NetworkBootstrap : MonoBehaviour
         if (networkManager.IsServer) return;
         if (clientId != networkManager.LocalClientId) return;
 
-        Debug.Log("[Netcode] El anfitrion se desconectó. Volviendo al menu.");
+        Debug.Log("[Netcode] Se perdio la conexion con el host. Volviendo al menu.");
         VolverAlMenuPorDesconexion("El dueño de la sala se desconectó.");
     }
 
@@ -120,7 +122,7 @@ public class NetworkBootstrap : MonoBehaviour
     {
         MensajePendiente = mensaje;
 
-        lobbyManager?.SalirDeSalaActual();
+        LobbyManager.Instance?.SalirDeSalaActual();
 
         if (networkManager.IsListening)
         {

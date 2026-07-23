@@ -18,9 +18,15 @@ using UnityEngine.UI;
 /// </summary>
 public class StartupFlowUI : MonoBehaviour
 {
-    [Header("Referencias")]
-    [SerializeField] private PlayFabAuthManager authManager;
-    [SerializeField] private LobbyManager lobbyManager;
+    // authManager y lobbyManager YA NO se arrastran en el Inspector: ambos son
+    // singletons persistentes (DontDestroyOnLoad). Una referencia arrastrada
+    // en el Editor se re-resuelve contra la escena recien cargada cada vez que
+    // esta se recarga (por ejemplo al volver por una desconexion) - apuntando
+    // a una copia nueva que se autodestruye por el blindaje anti-duplicados,
+    // no al objeto original que sigue vivo de verdad. Por eso se resuelven por
+    // .Instance en Start(), que siempre apunta al objeto que realmente persiste.
+    private PlayFabAuthManager authManager;
+    private LobbyManager lobbyManager;
 
     [Header("Panel: inicio")]
     [SerializeField] private GameObject panelInicio;
@@ -56,6 +62,9 @@ public class StartupFlowUI : MonoBehaviour
 
     private void Start()
     {
+        authManager = PlayFabAuthManager.Instance;
+        lobbyManager = LobbyManager.Instance;
+
         ShowOnly(panelInicio);
 
         if (nicknameErrorText != null) nicknameErrorText.gameObject.SetActive(false);
