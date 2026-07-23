@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e31101a804144e3468dbb82b7f9fc61f, type: 3}
   m_Name: HombreCaiman
   m_EditorClassIdentifier: Assembly-CSharp::CardData
+  cardId: 13
   cardName: "EL HOMBRE CAIM\xC1N "
   category: 2
   icono: {fileID: 0}

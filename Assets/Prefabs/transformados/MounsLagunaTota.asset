@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e31101a804144e3468dbb82b7f9fc61f, type: 3}
   m_Name: MounsLagunaTota
   m_EditorClassIdentifier: Assembly-CSharp::CardData
+  cardId: 15
   cardName: EL MOUNSTRO DE LA LAGUNA DE TOTA
   category: 2
   icono: {fileID: 0}

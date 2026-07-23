@@ -24,6 +24,10 @@ public class CardData : ScriptableObject
 
     //public Sprite artwork; ejemplo en el video
 
+    [Header ("Identidad (para multijugador)")]
+    [Tooltip("Debe ser unico entre TODAS las cartas del juego y nunca cambiar una vez asignado. Se usa para sincronizar la carta por red en vez de mandar el ScriptableObject completo.")]
+    public int cardId;
+
     [Header ("Información")]
     public string cardName;
 

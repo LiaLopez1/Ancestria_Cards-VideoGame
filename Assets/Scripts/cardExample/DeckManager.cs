@@ -10,7 +10,6 @@ public class DeckManager : MonoBehaviour
 
 private bool initialDealFinished;
     [Header("Configuración del mazo")]
-    [SerializeField] private List<CardData> uniqueCards;
     [SerializeField] private int copiesPerCard = 4;
 
     [Header("Representación visual")]
@@ -47,7 +46,7 @@ private bool initialDealFinished;
     {
         drawPile.Clear();
 
-        foreach (CardData cardData in uniqueCards)
+        foreach (CardData cardData in CardDatabase.Instance.ObtenerTodas())
         {
             if (cardData == null)
             {
