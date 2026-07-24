@@ -178,7 +178,7 @@ public class DeckManager : NetworkBehaviour
         for (int i = 0; i < cantidad; i++)
         {
             GameObject visualCard = Instantiate(deckCardPrefab, deckArea);
-            visualCard.name = "DeckCard " + i;
+            visualCard.name = "DeckCard " + i; // cambiarlo despues solo por i
 
             DeckCardDrag deckCardDrag = visualCard.GetComponent<DeckCardDrag>();
 
@@ -467,6 +467,15 @@ public class DeckManager : NetworkBehaviour
         Debug.Log($"[Servidor] Cliente {clienteSolicitante} descartó cardId={cardId}. Le quedan {mano.Count} carta(s).");
 
         MostrarCartaDescartadaClientRpc(cardId);
+
+        if (turnManager != null && VictoryRules.SeCumple(turnManager.ReglaActiva, mano))
+        {
+            if (NetworkBootstrap.Instance.TryObtenerSlot(clienteSolicitante, out int slotGanador))
+            {
+                turnManager.DeclararGanador(slotGanador);
+                return; // no avanzamos el turno, la partida ya termino
+            }
+        }
 
         if (turnManager != null)
         {
