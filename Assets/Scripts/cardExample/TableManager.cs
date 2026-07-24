@@ -68,5 +68,34 @@ public class TableManager : MonoBehaviour
         cardRect.anchoredPosition = randomPosition;
         cardRect.localRotation = Quaternion.Euler(0f, 0f, randomRotation);
         cardRect.localScale = Vector3.one;
+
+        DesactivarInteraccion(cartaVisual);
+    }
+
+    /// <summary>
+    /// El prefab de la mesa es el mismo que el de la mano, asi que trae
+    /// componentes de arrastre/interaccion que ya no tienen sentido aqui -
+    /// se desactivan para que la carta quede solo visual, sin poder
+    /// arrastrarse ni generar errores al intentarlo.
+    /// </summary>
+    private void DesactivarInteraccion(GameObject cartaVisual)
+    {
+        CardDragHandler dragHandler = cartaVisual.GetComponent<CardDragHandler>();
+        if (dragHandler != null)
+        {
+            dragHandler.enabled = false;
+        }
+
+        CardInteraction interaccion = cartaVisual.GetComponent<CardInteraction>();
+        if (interaccion != null)
+        {
+            interaccion.enabled = false;
+        }
+
+        CanvasGroup canvasGroup = cartaVisual.GetComponent<CanvasGroup>();
+        if (canvasGroup != null)
+        {
+            canvasGroup.blocksRaycasts = false;
+        }
     }
 }
