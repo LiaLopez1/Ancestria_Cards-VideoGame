@@ -6,6 +6,9 @@ using UnityEngine;
 /// <summary>
 /// El mazo real (drawPile) SOLO existe en el servidor - los clientes nunca lo
 /// tienen en memoria, para que ninguno pueda "ver" el orden de las cartas.
+/// Lo mismo pasa con la pila de descarte real (discardPile): el servidor la
+/// usa para reciclar cartas al mazo cuando este se queda vacio (mezcla todo
+/// de vuelta y avisa a los clientes que limpien la mesa visual).
 ///
 /// Cada cliente arma su propio mazo VISUAL (la pila boca abajo) segun un
 /// contador sincronizado (cartasEnMazo), no segun las cartas reales - por
@@ -47,6 +50,11 @@ public class DeckManager : NetworkBehaviour
 
     // Cartas disponibles para robar. SOLO tiene contenido real en el servidor.
     private readonly List<CardData> drawPile = new List<CardData>();
+
+    // Cartas descartadas por todos los jugadores. SOLO tiene contenido real
+    // en el servidor - igual que drawPile, es la fuente de verdad para
+    // reciclar cartas cuando el mazo para robar se queda vacio.
+    private readonly List<CardData> discardPile = new List<CardData>();
 
     // Objetos que representan las cartas apiladas en pantalla (genericos,
     // no revelan identidad - por eso se pueden construir igual en todos lados).
@@ -228,7 +236,12 @@ public class DeckManager : NetworkBehaviour
     {
         if (drawPile.Count == 0)
         {
-            Debug.LogWarning("[Servidor] No quedan cartas en el mazo.");
+            ReciclarDescarteEnMazo();
+        }
+
+        if (drawPile.Count == 0)
+        {
+            Debug.LogWarning("[Servidor] No quedan cartas en el mazo (ni en la pila de descarte para remezclar).");
             return null;
         }
 
@@ -241,6 +254,44 @@ public class DeckManager : NetworkBehaviour
         Debug.Log("[Servidor] Carta robada: " + drawnCard.cardName + " | Cartas restantes: " + drawPile.Count);
 
         return drawnCard;
+    }
+
+    /// <summary>
+    /// SOLO se llama desde el servidor, cuando el mazo para robar se queda
+    /// sin cartas. Recicla toda la pila de descarte de vuelta al mazo, la
+    /// mezcla, y avisa a todos los clientes que limpien la mesa (esas
+    /// cartas ya no estan ahi, volvieron al mazo).
+    /// </summary>
+    private void ReciclarDescarteEnMazo()
+    {
+        if (discardPile.Count == 0)
+        {
+            return; // no hay nada para reciclar
+        }
+
+        Debug.Log($"[Servidor] Mazo vacío - remezclando {discardPile.Count} carta(s) de la pila de descarte.");
+
+        drawPile.AddRange(discardPile);
+        discardPile.Clear();
+
+        ShuffleDeck();
+
+        cartasEnMazo.Value = drawPile.Count;
+
+        ReiniciarMesaDeDescarteClientRpc();
+    }
+
+    /// <summary>
+    /// Se ejecuta en TODOS los clientes: le pide a TableManager que vacíe
+    /// la mesa, porque las cartas descartadas acaban de volver al mazo.
+    /// </summary>
+    [ClientRpc]
+    private void ReiniciarMesaDeDescarteClientRpc()
+    {
+        if (tableManager != null)
+        {
+            tableManager.LimpiarMesa();
+        }
     }
 
     /// <summary>
@@ -407,9 +458,9 @@ public class DeckManager : NetworkBehaviour
             return;
         }
 
-        if (drawPile.Count == 0)
+        if (drawPile.Count == 0 && discardPile.Count == 0)
         {
-            Debug.LogWarning($"[Servidor] Cliente {clienteSolicitante} pidió robar pero no quedan cartas.");
+            Debug.LogWarning($"[Servidor] Cliente {clienteSolicitante} pidió robar pero no quedan cartas (ni en el mazo ni en el descarte).");
             return;
         }
 
@@ -462,6 +513,17 @@ public class DeckManager : NetworkBehaviour
         {
             Debug.LogWarning($"[Servidor] Cliente {clienteSolicitante} intentó descartar una carta que no tiene (cardId={cardId}).");
             return;
+        }
+
+        CardData cartaDescartada = CardDatabase.Instance.ObtenerPorId(cardId);
+
+        if (cartaDescartada != null)
+        {
+            discardPile.Add(cartaDescartada);
+        }
+        else
+        {
+            Debug.LogError($"[Servidor] cardId inválido al descartar: {cardId}");
         }
 
         Debug.Log($"[Servidor] Cliente {clienteSolicitante} descartó cardId={cardId}. Le quedan {mano.Count} carta(s).");

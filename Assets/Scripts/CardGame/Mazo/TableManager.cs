@@ -73,6 +73,25 @@ public class TableManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Vacía la mesa de descarte visualmente. Lo llama DeckManager en TODOS
+    /// los clientes cuando el mazo se queda sin cartas y la pila de
+    /// descarte se recicla de vuelta al mazo - esas cartas ya no están en
+    /// la mesa, así que hay que sacarlas de pantalla.
+    /// </summary>
+    public void LimpiarMesa()
+    {
+        if (tableCards == null)
+        {
+            return;
+        }
+
+        for (int i = tableCards.childCount - 1; i >= 0; i--)
+        {
+            Destroy(tableCards.GetChild(i).gameObject);
+        }
+    }
+
+    /// <summary>
     /// El prefab de la mesa es el mismo que el de la mano, asi que trae
     /// componentes de arrastre/interaccion que ya no tienen sentido aqui -
     /// se desactivan para que la carta quede solo visual, sin poder
