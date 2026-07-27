@@ -2,18 +2,19 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// El boss como "un jugador más" dentro de la arquitectura de red real:
 /// mismo mazo compartido, misma mano por cliente (con una identidad
 /// reservada, BOSS_ID, dentro de DeckManager), mismo turno (un slot más en
-/// la rotación de TurnManager). Corre ÚNICAMENTE en el servidor - nunca
-/// existe una versión "de cliente" de este script haciendo nada.
+/// la rotación de TurnManager). La lógica de decisión corre ÚNICAMENTE en
+/// el servidor - nunca existe una versión "de cliente" jugando por él.
 ///
-/// Sin representación visual de su mano por ahora (ningún jugador ve la
-/// mano de otro en esta arquitectura, así que el boss tampoco necesita esa
-/// puesta en escena) - su descarte sí aparece en la mesa de todos, porque
-/// usa el mismo ClientRpc público que ya usan los descartes de jugadores.
+/// Sin representación de su mano real por ahora (ningún jugador ve la mano
+/// de otro en esta arquitectura) - pero SÍ hay un indicador visual simple
+/// (que cartas tenga 4 o 5), sincronizado a todos, para que se note cuándo
+/// robó y cuándo descartó sin exponer identidad de ninguna carta.
 /// </summary>
 public class BossManager : NetworkBehaviour
 {
@@ -27,11 +28,27 @@ public class BossManager : NetworkBehaviour
     [Tooltip("Espera entre cada carta durante el reparto inicial (mismo propósito que delayBetweenCards en DeckManager).")]
     [SerializeField] private float delayEntreCartasReparto = 0.25f;
 
+    [Header("Visual (sincronizado a todos los clientes)")]
+    [SerializeField] private Image bossImage;
+    [SerializeField] private Sprite spriteConCuatroCartas;
+    [SerializeField] private Sprite spriteConCincoCartas;
+
+    // Puramente cosmético - NO revela identidad de ninguna carta, solo si
+    // el boss "tiene una de más" (recién robó, todavía no descartó). Se
+    // sincroniza a todos porque, a diferencia de la mano real, esto no es
+    // secreto - es como el contador del mazo (cartasEnMazo en DeckManager).
+    private readonly NetworkVariable<bool> tieneCincoCartas = new NetworkVariable<bool>(false);
+
     public override void OnNetworkSpawn()
     {
+        // El sprite se actualiza en TODOS los clientes, no solo el servidor -
+        // por eso esto va antes del "if (!IsServer) return;".
+        tieneCincoCartas.OnValueChanged += (anterior, nuevo) => ActualizarSprite(nuevo);
+        ActualizarSprite(tieneCincoCartas.Value);
+
         if (!IsServer)
         {
-            return; // el boss no existe del lado del cliente, ni siquiera escucha el evento
+            return; // la LÓGICA del boss no existe del lado del cliente
         }
 
         if (turnManager != null)
@@ -46,6 +63,16 @@ public class BossManager : NetworkBehaviour
         {
             turnManager.OnBossTurnStarted -= JugarTurno;
         }
+    }
+
+    private void ActualizarSprite(bool cincoCartas)
+    {
+        if (bossImage == null)
+        {
+            return;
+        }
+
+        bossImage.sprite = cincoCartas ? spriteConCincoCartas : spriteConCuatroCartas;
     }
 
     /// <summary>
@@ -113,6 +140,9 @@ public class BossManager : NetworkBehaviour
             yield break;
         }
 
+        // Recién robó - visualmente pasa a tener "una de más".
+        tieneCincoCartas.Value = true;
+
         yield return new WaitForSeconds(delayAntesDeActuar);
 
         // --- Evaluar y descartar ---
@@ -129,6 +159,9 @@ public class BossManager : NetworkBehaviour
         // avisar a todos vía MostrarCartaDescartadaClientRpc (aparece en la
         // mesa de todos), revisar VictoryRules, y avanzar el turno.
         deckManager.DescartarCartaDelBoss(cardIdADescartar);
+
+        // Recién descartó - vuelve a su cantidad "normal" de cartas.
+        tieneCincoCartas.Value = false;
 
         Debug.Log("[Boss] Termina su turno.");
     }
