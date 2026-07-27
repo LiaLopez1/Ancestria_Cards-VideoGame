@@ -11,19 +11,34 @@ public enum TurnState
 }
 
 /// <summary>
-/// De quien es el turno (por slot: 0=host, 1=invitado1, 2=invitado2) y en
-/// que parte de su turno esta (robar/descartar), sincronizado a todos.
+/// De quien es el turno (por slot: 0=host, 1=invitado1, 2=invitado2, mas el
+/// slot del boss) y en que parte de su turno esta (robar/descartar),
+/// sincronizado a todos.
 ///
 /// El SERVIDOR es quien decide y avanza el turno (via IniciarPrimerTurno,
 /// NotificarRoboRealizado, NotificarDescarteRealizado, todos llamados desde
 /// DeckManager despues de validar cada accion). Los clientes solo leen el
 /// estado sincronizado para saber si pueden actuar.
+///
+/// De cara al jugador, el turno YA NO se muestra como texto: se indica con
+/// un highlighter (turnHighlighter) que se reposiciona detras del panel de
+/// nombre del jugador en turno, usando coordenadas fijas por slot
+/// (posicionesHighlighterPorSlot) - el boss no tiene panel de nombre, asi
+/// que el highlighter se oculta durante su turno. El texto (turnMessage)
+/// ahora solo muestra la regla de victoria de la ronda (y
+/// "Repartiendo..."/el nombre del ganador en esos momentos puntuales).
 /// </summary>
 public class TurnManager : NetworkBehaviour
 {
     [Header("Referencias")]
     [SerializeField] private HandManager handManager;
     [SerializeField] private TMP_Text turnMessage;
+
+    [Header("Highlighter de turno")]
+    [Tooltip("Objeto que se reposiciona detras del panel del jugador en turno.")]
+    [SerializeField] private RectTransform turnHighlighter;
+    [Tooltip("Posiciones fijas (ancoradas) por slot: [0]=host, [1]=invitado1, [2]=invitado2 - deben coincidir con los paneles de PlayerNamePanelsUI. El boss no tiene panel de nombre, asi que su turno no tiene posicion aca.")]
+    [SerializeField] private Vector2[] posicionesHighlighterPorSlot = new Vector2[3];
 
     private readonly NetworkVariable<int> turnoActual = new NetworkVariable<int>(0);
     private readonly NetworkVariable<TurnState> estadoActual = new NetworkVariable<TurnState>(TurnState.Dealing);
@@ -61,12 +76,13 @@ public class TurnManager : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        turnoActual.OnValueChanged += (anterior, nuevo) => ActualizarMensaje();
-        estadoActual.OnValueChanged += (anterior, nuevo) => ActualizarMensaje();
-        slotGanador.OnValueChanged += (anterior, nuevo) => ActualizarMensaje();
-        slotBoss.OnValueChanged += (anterior, nuevo) => ActualizarMensaje();
+        turnoActual.OnValueChanged += (anterior, nuevo) => ActualizarHighlighter();
+        estadoActual.OnValueChanged += (anterior, nuevo) => { ActualizarMensaje(); ActualizarHighlighter(); };
+        slotGanador.OnValueChanged += (anterior, nuevo) => { ActualizarMensaje(); ActualizarHighlighter(); };
+        slotBoss.OnValueChanged += (anterior, nuevo) => { ActualizarMensaje(); ActualizarHighlighter(); };
 
         ActualizarMensaje();
+        ActualizarHighlighter();
     }
 
     /// <summary>
@@ -155,75 +171,73 @@ public class TurnManager : NetworkBehaviour
 
     private void ActualizarMensaje()
     {
+        string mensaje;
+
         if (PartidaTerminada)
         {
-            string quienGano;
+            string nombreGanador;
 
             if (slotGanador.Value == slotBoss.Value)
             {
-                quienGano = "¡Ganó el Boss!";
+                nombreGanador = "El Boss";
+            }
+            else if (PlayerNamePanelsUI.Instance != null)
+            {
+                nombreGanador = PlayerNamePanelsUI.Instance.ObtenerNombrePorSlot(slotGanador.Value);
             }
             else
             {
-                quienGano = slotGanador.Value == PlayerCube.MiSlot ? "¡Ganaste tú!" : $"Ganó el jugador {slotGanador.Value}.";
+                nombreGanador = $"Jugador {slotGanador.Value}";
             }
 
-            string mensajeFinal = $"{quienGano} Regla: {VictoryRules.ObtenerNombre(ReglaActiva)}.";
+            mensaje = $"{nombreGanador} ha ganado esta ronda";
 
-            Debug.Log("Partida terminada: " + mensajeFinal);
-
-            if (turnMessage != null)
-            {
-                turnMessage.text = mensajeFinal;
-            }
-
-            return;
+            Debug.Log("Partida terminada: " + mensaje);
         }
-
-        string mensaje;
-
-        switch (estadoActual.Value)
+        else if (estadoActual.Value == TurnState.Dealing)
         {
-            case TurnState.Dealing:
-                mensaje = "Repartiendo cartas...";
-                break;
-
-            case TurnState.WaitingToDraw:
-                if (EsTurnoDelBoss())
-                {
-                    mensaje = $"Turno del boss: robando... (Regla: {VictoryRules.ObtenerNombre(ReglaActiva)})";
-                }
-                else
-                {
-                    mensaje = EsMiTurno()
-                        ? $"Tu turno: roba una carta. (Regla: {VictoryRules.ObtenerNombre(ReglaActiva)})"
-                        : $"Turno del jugador {turnoActual.Value}: esperando a que robe.";
-                }
-                break;
-
-            case TurnState.WaitingToDiscard:
-                if (EsTurnoDelBoss())
-                {
-                    mensaje = $"Turno del boss: descartando... (Regla: {VictoryRules.ObtenerNombre(ReglaActiva)})";
-                }
-                else
-                {
-                    mensaje = EsMiTurno()
-                        ? $"Ahora descarta una carta. (Regla: {VictoryRules.ObtenerNombre(ReglaActiva)})"
-                        : $"Turno del jugador {turnoActual.Value}: esperando a que descarte.";
-                }
-                break;
-
-            default:
-                mensaje = "";
-                break;
+            mensaje = "Repartiendo cartas...";
         }
-
-        Debug.Log("Estado del turno: " + estadoActual.Value + " | Slot con el turno: " + turnoActual.Value);
+        else
+        {
+            mensaje = $"Regla: {VictoryRules.ObtenerNombre(ReglaActiva)}";
+        }
 
         if (turnMessage != null)
         {
             turnMessage.text = mensaje;
         }
+    }
+
+    /// <summary>
+    /// Mueve el highlighter a la posicion fija del slot en turno, o lo
+    /// oculta mientras se reparte, cuando la partida ya termino, o cuando
+    /// le toca al boss (no tiene panel de nombre que resaltar).
+    /// </summary>
+    private void ActualizarHighlighter()
+    {
+        if (turnHighlighter == null)
+        {
+            Debug.LogWarning("[TurnManager] 'Turn Highlighter' no está asignado en el Inspector - el prefab del turno nunca se va a mostrar hasta que se arrastre la referencia.");
+            return;
+        }
+
+        bool debeMostrarse = !PartidaTerminada
+            && estadoActual.Value != TurnState.Dealing
+            && !EsTurnoDelBoss();
+
+        turnHighlighter.gameObject.SetActive(debeMostrarse);
+
+        if (!debeMostrarse) return;
+
+        int slot = turnoActual.Value;
+
+        if (slot < 0 || slot >= posicionesHighlighterPorSlot.Length)
+        {
+            Debug.LogWarning($"[TurnManager] No hay posicion configurada para el slot {slot} en posicionesHighlighterPorSlot.");
+            return;
+        }
+
+        turnHighlighter.anchoredPosition = posicionesHighlighterPorSlot[slot];
     }
 }
