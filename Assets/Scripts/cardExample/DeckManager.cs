@@ -34,6 +34,14 @@ private bool initialDealFinished;
         get { return drawPile.Count; }
     }
 
+    // El boss también recibe una mano inicial (es "un jugador más") - expone
+    // este valor para que BossManager reparta exactamente la misma cantidad,
+    // sin duplicar el número mágico en dos scripts distintos.
+    public int InitialHandSize
+    {
+        get { return initialHandSize; }
+    }
+
     private void Start()
     {
         BuildLogicalDeck();

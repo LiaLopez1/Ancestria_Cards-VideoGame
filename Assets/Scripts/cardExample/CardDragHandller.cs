@@ -16,6 +16,10 @@ public class CardDragHandler : MonoBehaviour,
     private HandManager handManager;
     private CardInteraction cardInteraction;
 
+    [Header("Turno")]
+    [Tooltip("Necesario para avisar cuando la carta se descarta de verdad (no solo se suelta en la mano).")]
+    [SerializeField] private TurnManager turnManager;
+
   
    
 
@@ -34,6 +38,7 @@ public class CardDragHandler : MonoBehaviour,
         parentCanvas = GetComponentInParent<Canvas>();
         canvasRect = parentCanvas.GetComponent<RectTransform>();
 
+    
         originalSlot = GetComponentInParent<CardSlot>();
         handManager = GetComponentInParent<HandManager>();
 
@@ -44,6 +49,16 @@ public class CardDragHandler : MonoBehaviour,
         if (canvasGroup == null)
         {
             canvasGroup = gameObject.AddComponent<CanvasGroup>();
+        }
+
+        if (turnManager == null)
+        {
+            turnManager = FindFirstObjectByType<TurnManager>();
+
+            if (turnManager == null)
+            {
+                Debug.LogWarning("[CardDragHandler] No se encontró un TurnManager en la escena.");
+            }
         }
     }
 
@@ -225,6 +240,15 @@ public class CardDragHandler : MonoBehaviour,
         handManager.RemoveSolt(originalSlot);
         tableManager.PlaceCard(rectTransform);
         canvasGroup.blocksRaycasts = false;
+
+        if (turnManager != null)
+        {
+            turnManager.CardWasDiscarded();
+        }
+        else
+        {
+            Debug.LogWarning("[CardDragHandler] No se asignó el TurnManager - el turno no va a avanzar.");
+        }
 
         if (cardInteraction != null)
         {
