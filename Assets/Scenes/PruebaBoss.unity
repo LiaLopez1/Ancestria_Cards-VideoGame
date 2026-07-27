@@ -199,7 +199,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 614920917}
-  - {fileID: 2032638368}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &259482007
@@ -398,6 +397,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 614920917}
+  - component: {fileID: 614920918}
   - component: {fileID: 614920916}
   m_Layer: 0
   m_Name: TurnManager
@@ -418,6 +418,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fc12420142298be488e9f6698f1e79c0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TurnManager
+  ShowTopMostFoldoutHeaderGroup: 1
   handManager: {fileID: 1401430377}
   turnMessage: {fileID: 259482008}
 --- !u!4 &614920917
@@ -435,6 +436,32 @@ Transform:
   m_Children: []
   m_Father: {fileID: 247046613}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &614920918
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 614920915}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
+  GlobalObjectIdHash: 1405748037
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  <InScenePlaced>k__BackingField: 0
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 1
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
 --- !u!1 &661462842
 GameObject:
   m_ObjectHideFlags: 0
@@ -1069,13 +1096,13 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1136424913}
-  m_LocalRotation: {x: 0, y: 0.30810383, z: 0, w: 0.9513528}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.3, y: 0.3, z: 0.3}
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 799237544}
-  m_LocalEulerAnglesHint: {x: 0, y: 35.89, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 497, y: -18}
@@ -1425,7 +1452,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 907d4093e861f7e4c9f557f782746c70, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DropZone
-  tableManager: {fileID: 1214076079}
+  deckManager: {fileID: 0}
 --- !u!114 &1214076079
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1439,6 +1466,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TableManager
   tableCards: {fileID: 1590094004}
+  tableCardPrefab: {fileID: 0}
   positionRangeX: 25
   positionRangeY: 15
   rotationRangeZ: 8
@@ -2143,6 +2171,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 33f2d6bec6b93324aa6640a308a5e13d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DeckManager
+  ShowTopMostFoldoutHeaderGroup: 1
   initialHandSize: 4
   delayBetweenCards: 0.25
   copiesPerCard: 4
@@ -2150,7 +2179,10 @@ MonoBehaviour:
   deckCardPrefab: {fileID: 8731562171490182180, guid: e1e3013a430eef04897cee56274402e2, type: 3}
   cardOffset: {x: 0.25, y: -0.25}
   turnManager: {fileID: 614920916}
+  bossManager: {fileID: 0}
   handManager: {fileID: 1401430377}
+  tableManager: {fileID: 0}
+  botonIniciarPartida: {fileID: 0}
 --- !u!1 &1805011003
 GameObject:
   m_ObjectHideFlags: 0
@@ -2445,57 +2477,6 @@ RectTransform:
   m_AnchoredPosition: {x: 280, y: -186.66663}
   m_SizeDelta: {x: 300, y: 70}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!1 &2032638367
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2032638368}
-  - component: {fileID: 2032638369}
-  m_Layer: 0
-  m_Name: BossManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2032638368
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2032638367}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 247046613}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2032638369
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2032638367}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b7154fa601b7ac84c82ee76054f1411d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BossManager
-  deckManager: {fileID: 1669120396}
-  turnManager: {fileID: 614920916}
-  bossHandUI: {fileID: 1136424916}
-  tableManager: {fileID: 1214076079}
-  cartaInformativaPrefab: {fileID: 8731562171490182180, guid: 5d7f8453b831f144bb575922e355933f, type: 3}
-  delayAntesDeActuar: 1.5
-  delayEntreCartasReparto: 0.25
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

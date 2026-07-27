@@ -28,6 +28,8 @@ public class DeckManager : NetworkBehaviour
     [SerializeField] private int initialHandSize = 4;
     [SerializeField] private float delayBetweenCards = 0.25f;
 
+    public int InitialHandSize => initialHandSize;
+
     [Header("Configuración del mazo")]
     [SerializeField] private int copiesPerCard = 4;
 
@@ -38,6 +40,16 @@ public class DeckManager : NetworkBehaviour
 
     [Header("Turno")]
     [SerializeField] private TurnManager turnManager;
+
+    [Header("Boss")]
+    [Tooltip("Se le avisa cuando la partida arranca, para que reparta su mano inicial igual que a un jugador más.")]
+    [SerializeField] private BossManager bossManager;
+
+    // Identidad reservada para el boss dentro de manoPorCliente - reutiliza
+    // exactamente la misma estructura que ya usan los jugadores reales, así
+    // el boss "es un jugador más" también en la mano, no solo en el turno.
+    // ulong.MaxValue nunca lo va a asignar Netcode a un cliente real.
+    private const ulong BOSS_ID = ulong.MaxValue;
 
     [Header("Mano del jugador")]
     [SerializeField] private HandManager handManager;
@@ -136,6 +148,11 @@ public class DeckManager : NetworkBehaviour
         if (turnManager != null)
         {
             turnManager.IniciarPrimerTurno(cantidadJugadores);
+        }
+
+        if (bossManager != null)
+        {
+            bossManager.IniciarManoInicial();
         }
 
         Debug.Log($"[Servidor] Partida iniciada. Repartiendo a {cantidadJugadores} jugador(es).");
@@ -605,5 +622,119 @@ public class DeckManager : NetworkBehaviour
     private void AgregarCartaAManoDeCliente(ulong clientId, int cardId)
     {
         ObtenerManoDeCliente(clientId).Add(cardId);
+    }
+
+    // ---------- Boss: mismos mecanismos que un jugador, sin ServerRpc ----------
+    // El boss corre del lado del servidor (BossManager), así que no necesita
+    // pedir permiso por red como un cliente real - pero SÍ reusa exactamente
+    // la misma mano por cliente (manoPorCliente[BOSS_ID]), la misma pila de
+    // descarte, y el mismo ClientRpc de aviso a todos (MostrarCartaDescartadaClientRpc).
+
+    /// <summary>
+    /// Lógica compartida: roba y agrega a la mano del boss, sin tocar el
+    /// turno para nada - la usan tanto el reparto inicial como el turno real.
+    /// </summary>
+    private CardData RobarYAgregarAlBoss()
+    {
+        CardData cartaRobada = DrawCard();
+
+        if (cartaRobada != null)
+        {
+            AgregarCartaAManoDeCliente(BOSS_ID, cartaRobada.cardId);
+        }
+
+        return cartaRobada;
+    }
+
+    /// <summary>
+    /// SOLO desde el servidor (BossManager, durante el reparto inicial).
+    /// A propósito NO avisa a TurnManager - mismo motivo que
+    /// RepartirManoAJugador() con los jugadores: repartir la mano inicial no
+    /// es "robar en un turno", y avisarle a TurnManager acá adelantaría el
+    /// estado a WaitingToDiscard antes de que arranque la partida de verdad.
+    /// </summary>
+    public CardData RobarCartaInicialBoss()
+    {
+        if (!IsServer)
+        {
+            return null;
+        }
+
+        return RobarYAgregarAlBoss();
+    }
+
+    /// <summary>
+    /// SOLO desde el servidor (BossManager, durante SU TURNO real). A
+    /// diferencia de RobarCartaInicialBoss(), esta SÍ avisa a TurnManager -
+    /// es la acción real de robar en su turno, no el reparto inicial.
+    /// </summary>
+    public CardData RobarCartaParaBoss()
+    {
+        if (!IsServer)
+        {
+            return null;
+        }
+
+        CardData cartaRobada = RobarYAgregarAlBoss();
+
+        if (cartaRobada != null && turnManager != null)
+        {
+            turnManager.NotificarRoboRealizado();
+        }
+
+        return cartaRobada;
+    }
+
+    /// <summary>Mano actual del boss (solo cardIds) - la usa BossStrategy para decidir.</summary>
+    public List<int> ObtenerManoDelBoss()
+    {
+        return ObtenerManoDeCliente(BOSS_ID);
+    }
+
+    /// <summary>
+    /// SOLO desde el servidor (BossManager). Descarta una carta puntual de la
+    /// mano del boss - mismo camino que SolicitarDescarteServerRpc, pero sin
+    /// la capa de ServerRpc (no hace falta validar un cliente que no existe).
+    /// </summary>
+    public void DescartarCartaDelBoss(int cardId)
+    {
+        if (!IsServer)
+        {
+            return;
+        }
+
+        List<int> mano = ObtenerManoDeCliente(BOSS_ID);
+
+        if (!mano.Remove(cardId))
+        {
+            Debug.LogError($"[Servidor] El boss intentó descartar una carta que no tiene (cardId={cardId}).");
+            return;
+        }
+
+        CardData cartaDescartada = CardDatabase.Instance.ObtenerPorId(cardId);
+
+        if (cartaDescartada != null)
+        {
+            discardPile.Add(cartaDescartada);
+        }
+        else
+        {
+            Debug.LogError($"[Servidor] cardId inválido al descartar (boss): {cardId}");
+        }
+
+        Debug.Log($"[Servidor] El boss descartó cardId={cardId}. Le quedan {mano.Count} carta(s).");
+
+        MostrarCartaDescartadaClientRpc(cardId);
+
+        if (turnManager != null && VictoryRules.SeCumple(turnManager.ReglaActiva, mano))
+        {
+            turnManager.DeclararGanador(turnManager.SlotDelBoss);
+            return; // no avanzamos el turno, la partida ya terminó
+        }
+
+        if (turnManager != null)
+        {
+            turnManager.NotificarDescarteRealizado();
+        }
     }
 }

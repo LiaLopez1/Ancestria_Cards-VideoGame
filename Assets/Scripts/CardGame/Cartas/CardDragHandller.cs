@@ -15,11 +15,10 @@ public class CardDragHandler : MonoBehaviour,
     private CardSlot originalSlot;
     private HandManager handManager;
     private CardInteraction cardInteraction;
-    private CardDisplay cardDisplay;
 
-    [Header("Turno")]
-    [Tooltip("Necesario para avisar cuando la carta se descarta de verdad (no solo se suelta en la mano).")]
-    [SerializeField] private TurnManager turnManager;
+    [Header("Red")]
+    [Tooltip("Vive en la escena, no en el prefab - se busca solo si no se asigna.")]
+    [SerializeField] private DeckManager deckManager;
 
   
    
@@ -39,12 +38,10 @@ public class CardDragHandler : MonoBehaviour,
         parentCanvas = GetComponentInParent<Canvas>();
         canvasRect = parentCanvas.GetComponent<RectTransform>();
 
-    
         originalSlot = GetComponentInParent<CardSlot>();
         handManager = GetComponentInParent<HandManager>();
 
         cardInteraction = GetComponent<CardInteraction>();
-        cardDisplay = GetComponent<CardDisplay>();
 
         canvasGroup = GetComponent<CanvasGroup>();
 
@@ -53,13 +50,15 @@ public class CardDragHandler : MonoBehaviour,
             canvasGroup = gameObject.AddComponent<CanvasGroup>();
         }
 
-        if (turnManager == null)
+        // DeckManager vive en la escena, no en el prefab - no se puede
+        // arrastrar en el Inspector del prefab, así que lo buscamos acá.
+        if (deckManager == null)
         {
-            turnManager = FindFirstObjectByType<TurnManager>();
+            deckManager = FindObjectOfType<DeckManager>();
 
-            if (turnManager == null)
+            if (deckManager == null)
             {
-                Debug.LogWarning("[CardDragHandler] No se encontró un TurnManager en la escena.");
+                Debug.LogWarning("[CardDragHandler] No se encontró un DeckManager en la escena.");
             }
         }
     }
@@ -217,11 +216,15 @@ public class CardDragHandler : MonoBehaviour,
     }
 
     /// <summary>
-    /// Ya no recibe un TableManager: recibe el DeckManager, porque el
-    /// descarte tiene que pasar por el servidor (para que sea publico y
-    /// validado), no moverse directamente en este cliente.
+    /// Se llama desde DropZone al soltar la carta sobre la zona de descarte.
+    /// A diferencia de la version local vieja, esto NO pone nada en la mesa
+    /// directamente - solo le pide permiso al servidor
+    /// (DeckManager.SolicitarDescarteServerRpc). La version "oficial" que
+    /// aparece en la mesa de TODOS los jugadores la crea el servidor via
+    /// MostrarCartaDescartadaClientRpc - esta carta local se destruye
+    /// apenas se manda el pedido.
     /// </summary>
-    public void PlaceOnTable(DeckManager deckManager)
+    public void PlaceOnTable(DeckManager deckManagerDestino)
     {
         if (wasPlacedOnTable)
         {
@@ -240,44 +243,43 @@ public class CardDragHandler : MonoBehaviour,
             return;
         }
 
-        if (deckManager != null && !deckManager.CanDiscardNow())
+        DeckManager destino = deckManagerDestino != null ? deckManagerDestino : deckManager;
+
+        if (destino == null)
         {
-            Debug.Log("No puedes descartar en este momento (no es tu turno).");
+            Debug.LogWarning("[CardDragHandler] No se asignó el DeckManager - no se pudo pedir el descarte.");
             return;
         }
 
-        if (cardDisplay == null || cardDisplay.card == null)
+        if (!destino.CanDiscardNow())
         {
-            Debug.LogError("La carta no tiene CardDisplay/CardData asignado, no se puede descartar.");
+            Debug.Log("No puedes descartar ahora (no es tu turno).");
             return;
         }
 
-        if (deckManager == null)
+        CardDisplay display = GetComponent<CardDisplay>();
+
+        if (display == null || display.card == null)
         {
-            Debug.LogError("No se asignó el DeckManager en DropZone.");
+            Debug.LogError("La carta no tiene CardDisplay/CardData asignado - no se puede identificar para el servidor.");
             return;
         }
+
+        int cardId = display.card.cardId;
 
         wasPlacedOnTable = true;
 
         StopAllCoroutines();
         handManager.RemoveSolt(originalSlot);
-
-        // Le pedimos al servidor que confirme el descarte - la version
-        // visible en la mesa (para TODOS los jugadores) la crea el servidor
-        // al aprobar, via DeckManager.MostrarCartaDescartadaClientRpc.
-        deckManager.SolicitarDescarteServerRpc(cardDisplay.card.cardId);
-
         canvasGroup.blocksRaycasts = false;
 
-        if (turnManager != null)
-        {
-            turnManager.CardWasDiscarded();
-        }
-        else
-        {
-            Debug.LogWarning("[CardDragHandler] No se asignó el TurnManager - el turno no va a avanzar.");
-        }
+        // Le pedimos permiso al servidor - si lo acepta, la carta real
+        // aparece en la mesa de TODOS via ClientRpc. Si lo rechaza (por
+        // ejemplo, alguien mintió sobre el turno), solo queda un warning del
+        // lado del servidor - la mano local ya se vació de todas formas,
+        // igual que el patrón que ya usa el robo (optimista, sin esperar
+        // confirmación).
+        destino.SolicitarDescarteServerRpc(cardId);
 
         if (cardInteraction != null)
         {
@@ -286,8 +288,9 @@ public class CardDragHandler : MonoBehaviour,
 
         enabled = false;
 
-        // Esta instancia era solo la representacion en tu mano - la version
-        // "oficial" en la mesa se crea aparte (fresca) para todos.
+        // Esta copia local ya cumplió su función (mostrar el arrastre) - se
+        // destruye, porque la version "oficial" en la mesa la crea el
+        // servidor para todos por igual, no esta instancia.
         Destroy(gameObject);
     }
 }
