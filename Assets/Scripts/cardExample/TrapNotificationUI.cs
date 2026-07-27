@@ -1,0 +1,79 @@
+using System.Collections;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+/// <summary>
+/// Panel de notificación (tipo "toast") que muestra un mensaje como
+/// "Carlos tiene cartas de Protectores" con su ícono, cuando alguien
+/// solicita una categoría. Se oculta solo después de unos segundos.
+///
+/// Vive en la escena de juego (no persiste entre escenas).
+/// </summary>
+public class TrapNotificationUI : MonoBehaviour
+{
+    public static TrapNotificationUI Instance { get; private set; }
+
+    [Header("Panel de notificación")]
+    [SerializeField] private GameObject panelNotificacion;
+    [SerializeField] private TMP_Text mensajeText;
+    [SerializeField] private Image iconoImage;
+
+    [Header("Duración")]
+    [SerializeField] private float duracionVisible = 3f;
+
+    private Coroutine ocultarCoroutine;
+
+    private void Awake()
+    {
+        Instance = this;
+
+        if (panelNotificacion != null)
+        {
+            panelNotificacion.SetActive(false);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
+    }
+
+    /// <summary>Llamado por TrapManager cuando alguien solicita una categoría.</summary>
+    public void MostrarNotificacion(string nombreJugador, string nombreCategoria, Sprite icono)
+    {
+        if (mensajeText != null)
+        {
+            mensajeText.text = $"{nombreJugador} tiene cartas de {nombreCategoria}";
+        }
+
+        if (iconoImage != null)
+        {
+            iconoImage.sprite = icono;
+        }
+
+        if (panelNotificacion != null)
+        {
+            panelNotificacion.SetActive(true);
+        }
+
+        if (ocultarCoroutine != null)
+        {
+            StopCoroutine(ocultarCoroutine);
+        }
+
+        ocultarCoroutine = StartCoroutine(OcultarDespuesDeUnTiempo());
+    }
+
+    private IEnumerator OcultarDespuesDeUnTiempo()
+    {
+        yield return new WaitForSeconds(duracionVisible);
+
+        if (panelNotificacion != null)
+        {
+            panelNotificacion.SetActive(false);
+        }
+
+        ocultarCoroutine = null;
+    }
+}

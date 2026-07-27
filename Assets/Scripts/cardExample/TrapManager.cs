@@ -1,4 +1,4 @@
-/*using Unity.Netcode;
+using Unity.Netcode;
 using UnityEngine;
 
 /// <summary>
@@ -56,7 +56,11 @@ public class TrapManager : NetworkBehaviour
             return;
         }
 
-        PlayerNamePanelsUI.Instance?.MostrarIconoCategoria(slot, icono);
+        string nombreJugador = PlayerNamePanelsUI.Instance != null
+            ? PlayerNamePanelsUI.Instance.ObtenerNombrePorSlot(slot)
+            : $"Jugador {slot}";
+
+        TrapNotificationUI.Instance?.MostrarNotificacion(nombreJugador, categoria.ToString(), icono);
     }
 
     private Sprite ObtenerIconoDeCategoria(CardCategory categoria)
@@ -70,4 +74,4 @@ public class TrapManager : NetworkBehaviour
         }
         return null;
     }
-}*/
+}
