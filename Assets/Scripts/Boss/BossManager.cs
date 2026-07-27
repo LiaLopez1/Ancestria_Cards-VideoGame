@@ -158,6 +158,24 @@ public class BossManager : NetworkBehaviour
         StartCoroutine(EjecutarTurno());
     }
 
+    /// <summary>
+    /// Solo para diagnóstico en consola - convierte una mano (cardIds) en
+    /// nombres legibles, para poder verificar a ojo que BossStrategy elige
+    /// bien. Fácil de sacar más adelante si ya no hace falta.
+    /// </summary>
+    private string NombresDeMano(List<int> mano)
+    {
+        List<string> nombres = new List<string>();
+
+        foreach (int id in mano)
+        {
+            CardData carta = CardDatabase.Instance.ObtenerPorId(id);
+            nombres.Add(carta != null ? $"{carta.cardName} ({carta.category}, id={id})" : $"id={id} (desconocida)");
+        }
+
+        return "[" + string.Join(" | ", nombres) + "]";
+    }
+
     private IEnumerator EjecutarTurno()
     {
         if (deckManager == null || turnManager == null)
@@ -186,6 +204,10 @@ public class BossManager : NetworkBehaviour
 
         // --- Evaluar y descartar ---
         List<int> mano = deckManager.ObtenerManoDelBoss();
+
+        Debug.Log("[Boss][Diagnóstico] Regla activa: " + VictoryRules.ObtenerNombre(turnManager.ReglaActiva)
+            + " | Mano completa: " + NombresDeMano(mano));
+
         int cardIdADescartar = BossStrategy.ElegirCartaADescartar(mano, turnManager.ReglaActiva);
 
         if (cardIdADescartar < 0)
@@ -193,6 +215,9 @@ public class BossManager : NetworkBehaviour
             Debug.LogError("[Boss] BossStrategy no devolvió un cardId válido.");
             yield break;
         }
+
+        CardData cartaElegida = CardDatabase.Instance.ObtenerPorId(cardIdADescartar);
+        Debug.Log("[Boss][Diagnóstico] Elige descartar: " + (cartaElegida != null ? cartaElegida.cardName : "?") + " (cardId=" + cardIdADescartar + ")");
 
         // DescartarCartaDelBoss ya se encarga de: sumar a discardPile,
         // avisar a todos vía MostrarCartaDescartadaClientRpc (aparece en la
