@@ -23,10 +23,11 @@ public enum TurnState
 /// De cara al jugador, el turno YA NO se muestra como texto: se indica con
 /// un highlighter (turnHighlighter) que se reposiciona detras del panel de
 /// nombre del jugador en turno, usando coordenadas fijas por slot
-/// (posicionesHighlighterPorSlot) - el boss no tiene panel de nombre, asi
-/// que el highlighter se oculta durante su turno. El texto (turnMessage)
-/// ahora solo muestra la regla de victoria de la ronda (y
-/// "Repartiendo..."/el nombre del ganador en esos momentos puntuales).
+/// (posicionesHighlighterPorSlot) - el boss tiene su propia posicion fija
+/// (posicionHighlighterBoss), ya que su slot numerico cambia segun cuantos
+/// humanos esten conectados pero su panel en pantalla es siempre el mismo.
+/// El texto (turnMessage) ahora solo muestra la regla de victoria de la
+/// ronda (y "Repartiendo..."/el nombre del ganador en esos momentos puntuales).
 /// </summary>
 public class TurnManager : NetworkBehaviour
 {
@@ -37,8 +38,10 @@ public class TurnManager : NetworkBehaviour
     [Header("Highlighter de turno")]
     [Tooltip("Objeto que se reposiciona detras del panel del jugador en turno.")]
     [SerializeField] private RectTransform turnHighlighter;
-    [Tooltip("Posiciones fijas (ancoradas) por slot: [0]=host, [1]=invitado1, [2]=invitado2 - deben coincidir con los paneles de PlayerNamePanelsUI. El boss no tiene panel de nombre, asi que su turno no tiene posicion aca.")]
+    [Tooltip("Posiciones fijas (ancoradas) por slot: [0]=host, [1]=invitado1, [2]=invitado2 - deben coincidir con los paneles de PlayerNamePanelsUI.")]
     [SerializeField] private Vector2[] posicionesHighlighterPorSlot = new Vector2[3];
+    [Tooltip("Posición fija del panel del boss - a diferencia de los jugadores, el slot del boss cambia según cuántos humanos se conecten (1, 2 o 3), pero su panel en pantalla siempre está en el mismo lugar.")]
+    [SerializeField] private Vector2 posicionHighlighterBoss;
 
     private readonly NetworkVariable<int> turnoActual = new NetworkVariable<int>(0);
     private readonly NetworkVariable<TurnState> estadoActual = new NetworkVariable<TurnState>(TurnState.Dealing);
@@ -210,9 +213,9 @@ public class TurnManager : NetworkBehaviour
     }
 
     /// <summary>
-    /// Mueve el highlighter a la posicion fija del slot en turno, o lo
-    /// oculta mientras se reparte, cuando la partida ya termino, o cuando
-    /// le toca al boss (no tiene panel de nombre que resaltar).
+    /// Mueve el highlighter a la posicion fija del slot en turno (o a la
+    /// posicion fija del boss, si le toca a el) - se oculta solo mientras
+    /// se reparte o cuando la partida ya termino.
     /// </summary>
     private void ActualizarHighlighter()
     {
@@ -222,13 +225,17 @@ public class TurnManager : NetworkBehaviour
             return;
         }
 
-        bool debeMostrarse = !PartidaTerminada
-            && estadoActual.Value != TurnState.Dealing
-            && !EsTurnoDelBoss();
+        bool debeMostrarse = !PartidaTerminada && estadoActual.Value != TurnState.Dealing;
 
         turnHighlighter.gameObject.SetActive(debeMostrarse);
 
         if (!debeMostrarse) return;
+
+        if (EsTurnoDelBoss())
+        {
+            turnHighlighter.anchoredPosition = posicionHighlighterBoss;
+            return;
+        }
 
         int slot = turnoActual.Value;
 

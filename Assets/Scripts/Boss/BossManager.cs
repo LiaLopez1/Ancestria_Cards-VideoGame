@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
@@ -33,6 +34,14 @@ public class BossManager : NetworkBehaviour
     [SerializeField] private Sprite spriteConCuatroCartas;
     [SerializeField] private Sprite spriteConCincoCartas;
 
+    [Header("Identidad")]
+    [Tooltip("Fijo por ahora ('Boss'). Más adelante será la leyenda sorteada de la ronda, mismo patrón que la regla de victoria.")]
+    [SerializeField] private string nombreInicial = "Boss";
+
+    // Sincronizado a todos - así el panel del boss muestra el mismo nombre
+    // en cualquier cliente, sin importar cuándo se conecte.
+    private readonly NetworkVariable<FixedString64Bytes> nombreBoss = new NetworkVariable<FixedString64Bytes>();
+
     // Puramente cosmético - NO revela identidad de ninguna carta, solo si
     // el boss "tiene una de más" (recién robó, todavía no descartó). Se
     // sincroniza a todos porque, a diferencia de la mano real, esto no es
@@ -46,6 +55,18 @@ public class BossManager : NetworkBehaviour
         tieneCincoCartas.OnValueChanged += (anterior, nuevo) => ActualizarSprite(nuevo);
         ActualizarSprite(tieneCincoCartas.Value);
 
+        // Mismo motivo: el nombre debe verse igual en todos los clientes.
+        nombreBoss.OnValueChanged += (anterior, nuevo) => AvisarNombreAlPanel(nuevo.ToString());
+
+        if (IsServer)
+        {
+            nombreBoss.Value = nombreInicial;
+        }
+
+        // Por si el valor ya estaba sincronizado antes de suscribirnos
+        // (por ejemplo, un cliente que se conecta a mitad de partida).
+        AvisarNombreAlPanel(nombreBoss.Value.ToString());
+
         if (!IsServer)
         {
             return; // la LÓGICA del boss no existe del lado del cliente
@@ -54,6 +75,24 @@ public class BossManager : NetworkBehaviour
         if (turnManager != null)
         {
             turnManager.OnBossTurnStarted += JugarTurno;
+        }
+    }
+
+    /// <summary>
+    /// Llamado desde PlayerNamePanelsUI.Awake() por si ese panel todavía no
+    /// existía cuando este objeto de red terminó de spawnear - mismo patrón
+    /// que PlayerCube.ReintentarAvisoDePanel().
+    /// </summary>
+    public void ReintentarAvisoDePanel()
+    {
+        AvisarNombreAlPanel(nombreBoss.Value.ToString());
+    }
+
+    private void AvisarNombreAlPanel(string nombre)
+    {
+        if (PlayerNamePanelsUI.Instance != null && !string.IsNullOrEmpty(nombre))
+        {
+            PlayerNamePanelsUI.Instance.ActualizarNombreBoss(nombre);
         }
     }
 

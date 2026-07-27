@@ -26,6 +26,10 @@ public class PlayerNamePanelsUI : MonoBehaviour
     [SerializeField] private GameObject panelInvitado2;
     [SerializeField] private TMP_Text nombreInvitado2Text;
 
+    [Header("Panel: boss")]
+    [SerializeField] private GameObject panelBoss;
+    [SerializeField] private TMP_Text nombreBossText;
+
     private void Awake()
     {
         Instance = this;
@@ -35,6 +39,7 @@ public class PlayerNamePanelsUI : MonoBehaviour
         if (panelHost != null) panelHost.SetActive(false);
         if (panelInvitado1 != null) panelInvitado1.SetActive(false);
         if (panelInvitado2 != null) panelInvitado2.SetActive(false);
+        if (panelBoss != null) panelBoss.SetActive(false);
 
         // El cubo del host puede spawnear en la escena de menu, ANTES de que
         // esta escena (y este panel) siquiera existan - por eso, apenas
@@ -43,6 +48,13 @@ public class PlayerNamePanelsUI : MonoBehaviour
         foreach (var cubo in FindObjectsOfType<PlayerCube>())
         {
             cubo.ReintentarAvisoDePanel();
+        }
+
+        // Mismo motivo que con los cubos: BossManager puede haber terminado
+        // de spawnear como objeto de red antes de que este panel exista.
+        foreach (var boss in FindObjectsOfType<BossManager>())
+        {
+            boss.ReintentarAvisoDePanel();
         }
     }
 
@@ -71,6 +83,18 @@ public class PlayerNamePanelsUI : MonoBehaviour
     }
 
     /// <summary>
+    /// El boss no tiene slot 0/1/2 como los jugadores - se muestra en su
+    /// propio panel dedicado. Por ahora el nombre es fijo ("Boss"), pero
+    /// queda listo para más adelante mostrar la leyenda sorteada de la
+    /// ronda, mismo patrón que ya existe para la regla de victoria.
+    /// </summary>
+    public void ActualizarNombreBoss(string nombre)
+    {
+        if (nombreBossText != null) nombreBossText.text = nombre;
+        if (panelBoss != null) panelBoss.SetActive(true);
+    }
+
+    /// <summary>
     /// Devuelve el nick ya conocido para ese slot (el mismo que se muestra
     /// en su panel), o un texto generico si todavia no se conoce. Lo usa
     /// TrapManager para armar el mensaje de notificacion de trampas.
@@ -85,5 +109,16 @@ public class PlayerNamePanelsUI : MonoBehaviour
         }
 
         return $"Jugador {slot}";
+    }
+
+    /// <summary>Simétrico a ObtenerNombrePorSlot(), pero para el boss.</summary>
+    public string ObtenerNombreDelBoss()
+    {
+        if (nombreBossText != null && !string.IsNullOrEmpty(nombreBossText.text))
+        {
+            return nombreBossText.text;
+        }
+
+        return "Boss";
     }
 }
