@@ -100,12 +100,12 @@ Material:
     - _AlphaToMask: 0
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
-    - _BorderSoftness: 0.0911
-    - _BorderThickness: 0.357
+    - _BorderSoftness: 0.001
+    - _BorderThickness: 0.363
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
-    - _ColorMask: 15
+    - _ColorMask: 143.8
     - _Cull: 2
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
@@ -121,7 +121,7 @@ Material:
     - _MinIntensity: 1.609
     - _OcclusionStrength: 1
     - _Parallax: 0.005
-    - _PulseSpeed: 2.5
+    - _PulseSpeed: 2.42
     - _QueueOffset: 0
     - _ReceiveShadows: 1
     - _Smoothness: 0.5
