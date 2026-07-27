@@ -5,8 +5,9 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Panel de notificación (tipo "toast") que muestra un mensaje como
-/// "Carlos tiene cartas de Protectores" con su ícono, cuando alguien
-/// solicita una categoría. Se oculta solo después de unos segundos.
+/// "Carlos necesita cartas de Protectores" (pedido) o "Carlos tiene cartas
+/// de Protectores" (mostrado), según la trampa usada. Se oculta solo
+/// después de unos segundos.
 ///
 /// Vive en la escena de juego (no persiste entre escenas).
 /// </summary>
@@ -39,12 +40,17 @@ public class TrapNotificationUI : MonoBehaviour
         if (Instance == this) Instance = null;
     }
 
-    /// <summary>Llamado por TrapManager cuando alguien solicita una categoría.</summary>
-    public void MostrarNotificacion(string nombreJugador, string nombreCategoria, Sprite icono)
+    /// <summary>
+    /// Llamado por TrapManager cuando alguien solicita ("necesita") o
+    /// declara ("tiene") una categoría. <paramref name="tieneCategoria"/>
+    /// decide el verbo del mensaje.
+    /// </summary>
+    public void MostrarNotificacion(string nombreJugador, string nombreCategoria, Sprite icono, bool tieneCategoria)
     {
         if (mensajeText != null)
         {
-            mensajeText.text = $"{nombreJugador} tiene cartas de {nombreCategoria}";
+            string verbo = tieneCategoria ? "tiene" : "necesita";
+            mensajeText.text = $"{nombreJugador} {verbo} cartas de {nombreCategoria}";
         }
 
         if (iconoImage != null)
