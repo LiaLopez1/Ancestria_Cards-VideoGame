@@ -1,19 +1,21 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// El boss como "un jugador más" dentro de la arquitectura de red real:
 /// mismo mazo compartido, misma mano por cliente (con una identidad
 /// reservada, BOSS_ID, dentro de DeckManager), mismo turno (un slot más en
-/// la rotación de TurnManager). Corre ÚNICAMENTE en el servidor - nunca
-/// existe una versión "de cliente" de este script haciendo nada.
+/// la rotación de TurnManager). La lógica de decisión corre ÚNICAMENTE en
+/// el servidor - nunca existe una versión "de cliente" jugando por él.
 ///
-/// Sin representación visual de su mano por ahora (ningún jugador ve la
-/// mano de otro en esta arquitectura, así que el boss tampoco necesita esa
-/// puesta en escena) - su descarte sí aparece en la mesa de todos, porque
-/// usa el mismo ClientRpc público que ya usan los descartes de jugadores.
+/// Sin representación de su mano real por ahora (ningún jugador ve la mano
+/// de otro en esta arquitectura) - pero SÍ hay un indicador visual simple
+/// (que cartas tenga 4 o 5), sincronizado a todos, para que se note cuándo
+/// robó y cuándo descartó sin exponer identidad de ninguna carta.
 /// </summary>
 public class BossManager : NetworkBehaviour
 {
@@ -27,16 +29,70 @@ public class BossManager : NetworkBehaviour
     [Tooltip("Espera entre cada carta durante el reparto inicial (mismo propósito que delayBetweenCards en DeckManager).")]
     [SerializeField] private float delayEntreCartasReparto = 0.25f;
 
+    [Header("Visual (sincronizado a todos los clientes)")]
+    [SerializeField] private Image bossImage;
+    [SerializeField] private Sprite spriteConCuatroCartas;
+    [SerializeField] private Sprite spriteConCincoCartas;
+
+    [Header("Identidad")]
+    [Tooltip("Fijo por ahora ('Boss'). Más adelante será la leyenda sorteada de la ronda, mismo patrón que la regla de victoria.")]
+    [SerializeField] private string nombreInicial = "Boss";
+
+    // Sincronizado a todos - así el panel del boss muestra el mismo nombre
+    // en cualquier cliente, sin importar cuándo se conecte.
+    private readonly NetworkVariable<FixedString64Bytes> nombreBoss = new NetworkVariable<FixedString64Bytes>();
+
+    // Puramente cosmético - NO revela identidad de ninguna carta, solo si
+    // el boss "tiene una de más" (recién robó, todavía no descartó). Se
+    // sincroniza a todos porque, a diferencia de la mano real, esto no es
+    // secreto - es como el contador del mazo (cartasEnMazo en DeckManager).
+    private readonly NetworkVariable<bool> tieneCincoCartas = new NetworkVariable<bool>(false);
+
     public override void OnNetworkSpawn()
     {
+        // El sprite se actualiza en TODOS los clientes, no solo el servidor -
+        // por eso esto va antes del "if (!IsServer) return;".
+        tieneCincoCartas.OnValueChanged += (anterior, nuevo) => ActualizarSprite(nuevo);
+        ActualizarSprite(tieneCincoCartas.Value);
+
+        // Mismo motivo: el nombre debe verse igual en todos los clientes.
+        nombreBoss.OnValueChanged += (anterior, nuevo) => AvisarNombreAlPanel(nuevo.ToString());
+
+        if (IsServer)
+        {
+            nombreBoss.Value = nombreInicial;
+        }
+
+        // Por si el valor ya estaba sincronizado antes de suscribirnos
+        // (por ejemplo, un cliente que se conecta a mitad de partida).
+        AvisarNombreAlPanel(nombreBoss.Value.ToString());
+
         if (!IsServer)
         {
-            return; // el boss no existe del lado del cliente, ni siquiera escucha el evento
+            return; // la LÓGICA del boss no existe del lado del cliente
         }
 
         if (turnManager != null)
         {
             turnManager.OnBossTurnStarted += JugarTurno;
+        }
+    }
+
+    /// <summary>
+    /// Llamado desde PlayerNamePanelsUI.Awake() por si ese panel todavía no
+    /// existía cuando este objeto de red terminó de spawnear - mismo patrón
+    /// que PlayerCube.ReintentarAvisoDePanel().
+    /// </summary>
+    public void ReintentarAvisoDePanel()
+    {
+        AvisarNombreAlPanel(nombreBoss.Value.ToString());
+    }
+
+    private void AvisarNombreAlPanel(string nombre)
+    {
+        if (PlayerNamePanelsUI.Instance != null && !string.IsNullOrEmpty(nombre))
+        {
+            PlayerNamePanelsUI.Instance.ActualizarNombreBoss(nombre);
         }
     }
 
@@ -46,6 +102,16 @@ public class BossManager : NetworkBehaviour
         {
             turnManager.OnBossTurnStarted -= JugarTurno;
         }
+    }
+
+    private void ActualizarSprite(bool cincoCartas)
+    {
+        if (bossImage == null)
+        {
+            return;
+        }
+
+        bossImage.sprite = cincoCartas ? spriteConCincoCartas : spriteConCuatroCartas;
     }
 
     /// <summary>
@@ -92,6 +158,24 @@ public class BossManager : NetworkBehaviour
         StartCoroutine(EjecutarTurno());
     }
 
+    /// <summary>
+    /// Solo para diagnóstico en consola - convierte una mano (cardIds) en
+    /// nombres legibles, para poder verificar a ojo que BossStrategy elige
+    /// bien. Fácil de sacar más adelante si ya no hace falta.
+    /// </summary>
+    private string NombresDeMano(List<int> mano)
+    {
+        List<string> nombres = new List<string>();
+
+        foreach (int id in mano)
+        {
+            CardData carta = CardDatabase.Instance.ObtenerPorId(id);
+            nombres.Add(carta != null ? $"{carta.cardName} ({carta.category}, id={id})" : $"id={id} (desconocida)");
+        }
+
+        return "[" + string.Join(" | ", nombres) + "]";
+    }
+
     private IEnumerator EjecutarTurno()
     {
         if (deckManager == null || turnManager == null)
@@ -113,10 +197,17 @@ public class BossManager : NetworkBehaviour
             yield break;
         }
 
+        // Recién robó - visualmente pasa a tener "una de más".
+        tieneCincoCartas.Value = true;
+
         yield return new WaitForSeconds(delayAntesDeActuar);
 
         // --- Evaluar y descartar ---
         List<int> mano = deckManager.ObtenerManoDelBoss();
+
+        Debug.Log("[Boss][Diagnóstico] Regla activa: " + VictoryRules.ObtenerNombre(turnManager.ReglaActiva)
+            + " | Mano completa: " + NombresDeMano(mano));
+
         int cardIdADescartar = BossStrategy.ElegirCartaADescartar(mano, turnManager.ReglaActiva);
 
         if (cardIdADescartar < 0)
@@ -125,10 +216,16 @@ public class BossManager : NetworkBehaviour
             yield break;
         }
 
+        CardData cartaElegida = CardDatabase.Instance.ObtenerPorId(cardIdADescartar);
+        Debug.Log("[Boss][Diagnóstico] Elige descartar: " + (cartaElegida != null ? cartaElegida.cardName : "?") + " (cardId=" + cardIdADescartar + ")");
+
         // DescartarCartaDelBoss ya se encarga de: sumar a discardPile,
         // avisar a todos vía MostrarCartaDescartadaClientRpc (aparece en la
         // mesa de todos), revisar VictoryRules, y avanzar el turno.
         deckManager.DescartarCartaDelBoss(cardIdADescartar);
+
+        // Recién descartó - vuelve a su cantidad "normal" de cartas.
+        tieneCincoCartas.Value = false;
 
         Debug.Log("[Boss] Termina su turno.");
     }
