@@ -11,8 +11,11 @@ using UnityEngine;
 /// de vuelta y avisa a los clientes que limpien la mesa visual).
 ///
 /// Cada cliente arma su propio mazo VISUAL (la pila boca abajo) segun un
-/// contador sincronizado (cartasEnMazo), no segun las cartas reales - por
-/// eso el mazo visual nunca revela identidad, solo cantidad.
+/// contador sincronizado (cartasVisiblesEnMazo), no segun las cartas reales -
+/// por eso el mazo visual nunca revela identidad, solo cantidad. Este
+/// contador visual tiene un piso de 1 mientras haya algo reciclable en
+/// discardPile, para que siempre quede una carta arrastrable con la que un
+/// jugador humano pueda pedir la siguiente (ver ActualizarContadoresDeMazo).
 ///
 /// El reparto inicial lo hace el servidor, y le manda a cada jugador
 /// UNICAMENTE sus propias cartas via ClientRpc dirigido (no a todos).
@@ -78,6 +81,16 @@ public class DeckManager : NetworkBehaviour
     // para que el mazo visual se vea igual de "alto" en todas las pantallas.
     private readonly NetworkVariable<int> cartasEnMazo = new NetworkVariable<int>(0);
 
+    // Cuantas cartas se MUESTRAN en la pila visual - normalmente igual a
+    // cartasEnMazo, pero con un piso de 1 mientras haya algo reciclable en
+    // discardPile. Sin esto, cuando drawPile llega a 0 la pila visual queda
+    // vacia (0 objetos instanciados) y ningun jugador humano tiene de donde
+    // arrastrar para pedir la siguiente carta - el gesto nunca ocurre, el
+    // ServerRpc nunca se llama, y el reciclado (que SI esta bien implementado
+    // del lado del servidor) nunca llega a dispararse. El boss no sufre esto
+    // porque no depende de arrastrar nada.
+    private readonly NetworkVariable<int> cartasVisiblesEnMazo = new NetworkVariable<int>(0);
+
     // Que cartas (por ID) tiene cada cliente EN SU MANO ahora mismo - no
     // solo cuantas, sino cuales exactamente. Necesario para poder validar
     // el descarte (¿de verdad tienes esa carta?) ademas de reglas de conteo.
@@ -90,13 +103,13 @@ public class DeckManager : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        cartasEnMazo.OnValueChanged += (anterior, nuevo) => ActualizarMazoVisual(nuevo);
+        cartasVisiblesEnMazo.OnValueChanged += (anterior, nuevo) => ActualizarMazoVisual(nuevo);
 
         if (IsServer)
         {
             BuildLogicalDeck();
             ShuffleDeck();
-            cartasEnMazo.Value = drawPile.Count;
+            ActualizarContadoresDeMazo();
         }
 
         // El boton de iniciar partida solo lo puede usar el host.
@@ -106,9 +119,9 @@ public class DeckManager : NetworkBehaviour
         }
 
         // Todos (incluido el host) arman su propio mazo visual con el
-        // conteo actual - el host lo hace de una porque cartasEnMazo.Value
+        // conteo actual - el host lo hace de una porque cartasVisiblesEnMazo.Value
         // ya quedo asignado arriba antes de llegar aqui.
-        ActualizarMazoVisual(cartasEnMazo.Value);
+        ActualizarMazoVisual(cartasVisiblesEnMazo.Value);
     }
 
     /// <summary>
@@ -156,6 +169,21 @@ public class DeckManager : NetworkBehaviour
         }
 
         Debug.Log($"[Servidor] Partida iniciada. Repartiendo a {cantidadJugadores} jugador(es).");
+    }
+
+    /// <summary>
+    /// SOLO debe llamarse desde el servidor. Actualiza cartasEnMazo (el
+    /// conteo real) y cartasVisiblesEnMazo (el que usa la pila en pantalla,
+    /// con piso de 1 mientras haya algo reciclable) juntos, para que nunca
+    /// queden desincronizados.
+    /// </summary>
+    private void ActualizarContadoresDeMazo()
+    {
+        cartasEnMazo.Value = drawPile.Count;
+
+        cartasVisiblesEnMazo.Value = drawPile.Count > 0
+            ? drawPile.Count
+            : (discardPile.Count > 0 ? 1 : 0);
     }
 
     private void BuildLogicalDeck()
@@ -266,7 +294,7 @@ public class DeckManager : NetworkBehaviour
         CardData drawnCard = drawPile[topCardIndex];
         drawPile.RemoveAt(topCardIndex);
 
-        cartasEnMazo.Value = drawPile.Count;
+        ActualizarContadoresDeMazo();
 
         Debug.Log("[Servidor] Carta robada: " + drawnCard.cardName + " | Cartas restantes: " + drawPile.Count);
 
@@ -293,7 +321,7 @@ public class DeckManager : NetworkBehaviour
 
         ShuffleDeck();
 
-        cartasEnMazo.Value = drawPile.Count;
+        ActualizarContadoresDeMazo();
 
         ReiniciarMesaDeDescarteClientRpc();
     }

@@ -998,7 +998,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 280, y: -306.66663}
+  m_AnchoredPosition: {x: 280, y: -426}
   m_SizeDelta: {x: 300, y: 70}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &428479928
@@ -2041,11 +2041,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2373584872502172541, guid: abb61cf0b24e8f748b28d02bc8ecc329, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -682
+      value: -680
       objectReference: {fileID: 0}
     - target: {fileID: 2373584872502172541, guid: abb61cf0b24e8f748b28d02bc8ecc329, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -4
+      value: -6
       objectReference: {fileID: 0}
     - target: {fileID: 2373584872502172541, guid: abb61cf0b24e8f748b28d02bc8ecc329, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -2685,10 +2685,10 @@ MonoBehaviour:
   turnMessage: {fileID: 1360602064}
   turnHighlighter: {fileID: 648538554}
   posicionesHighlighterPorSlot:
-  - {x: -680, y: 353}
-  - {x: -680, y: 233}
-  - {x: -680, y: 113}
-  posicionHighlighterBoss: {x: -680, y: -4}
+  - {x: -680, y: 234}
+  - {x: -680, y: 114}
+  - {x: -680, y: -6}
+  posicionHighlighterBoss: {x: -680, y: 354}
 --- !u!114 &979683348
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3044,7 +3044,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 280, y: -186.66663}
+  m_AnchoredPosition: {x: 280, y: -306}
   m_SizeDelta: {x: 300, y: 70}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1274408071
@@ -4223,7 +4223,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 280, y: -426.66675}
+  m_AnchoredPosition: {x: 280, y: -546}
   m_SizeDelta: {x: 300, y: 70}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1485049086
@@ -5993,7 +5993,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 280, y: -546}
+  m_AnchoredPosition: {x: 280, y: -186}
   m_SizeDelta: {x: 300, y: 70}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2111280159
