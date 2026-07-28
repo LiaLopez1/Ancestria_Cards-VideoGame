@@ -13,12 +13,22 @@ using UnityEngine.UI;
 /// el servidor - nunca existe una versión "de cliente" jugando por él.
 ///
 /// Sin representación de su mano real por ahora (ningún jugador ve la mano
-/// de otro en esta arquitectura) - pero SÍ hay un indicador visual simple
-/// (que cartas tenga 4 o 5), sincronizado a todos, para que se note cuándo
-/// robó y cuándo descartó sin exponer identidad de ninguna carta.
+/// de otro en esta arquitectura) - pero SÍ hay dos pares de sprites
+/// sincronizados a todos, sin exponer identidad de ninguna carta:
+/// - En SU TURNO: 4/5 cartas (roba/descarta).
+/// - FUERA de su turno: revisando cartas / mirando oponentes - alterna solo,
+///   y de esto depende cuánta sospecha suma un jugador que hace trampa en
+///   ese momento (ver SuspicionManager).
 /// </summary>
 public class BossManager : NetworkBehaviour
 {
+    /// <summary>En qué está "ocupado" el boss mientras NO es su turno.</summary>
+    public enum EstadoAtencionBoss
+    {
+        RevisandoCartas,
+        MirandoOponentes
+    }
+
     [Header("Referencias")]
     [SerializeField] private DeckManager deckManager;
     [SerializeField] private TurnManager turnManager;
@@ -29,10 +39,17 @@ public class BossManager : NetworkBehaviour
     [Tooltip("Espera entre cada carta durante el reparto inicial (mismo propósito que delayBetweenCards en DeckManager).")]
     [SerializeField] private float delayEntreCartasReparto = 0.25f;
 
-    [Header("Visual (sincronizado a todos los clientes)")]
+    [Header("Visual: en su turno (sincronizado a todos)")]
     [SerializeField] private Image bossImage;
     [SerializeField] private Sprite spriteConCuatroCartas;
     [SerializeField] private Sprite spriteConCincoCartas;
+
+    [Header("Visual: fuera de su turno - estado de atención")]
+    [SerializeField] private Sprite spriteRevisandoCartas;
+    [SerializeField] private Sprite spriteMirandoOponentes;
+    [Tooltip("Rango de segundos entre cada cambio de atención (aleatorio dentro de este rango).")]
+    [SerializeField] private float intervaloMinimoAtencion = 2f;
+    [SerializeField] private float intervaloMaximoAtencion = 5f;
 
     [Header("Identidad")]
     [Tooltip("Fijo por ahora ('Boss'). Más adelante será la leyenda sorteada de la ronda, mismo patrón que la regla de victoria.")]
@@ -48,12 +65,29 @@ public class BossManager : NetworkBehaviour
     // secreto - es como el contador del mazo (cartasEnMazo en DeckManager).
     private readonly NetworkVariable<bool> tieneCincoCartas = new NetworkVariable<bool>(false);
 
+    // Igual de cosmético, pero relevante para la mecánica de sospecha:
+    // SuspicionManager consulta AtencionActual para saber cuánto sumar
+    // cuando alguien hace trampa en ese instante.
+    private readonly NetworkVariable<EstadoAtencionBoss> atencionActual =
+        new NetworkVariable<EstadoAtencionBoss>(EstadoAtencionBoss.MirandoOponentes);
+
+    public EstadoAtencionBoss AtencionActual => atencionActual.Value;
+
     public override void OnNetworkSpawn()
     {
         // El sprite se actualiza en TODOS los clientes, no solo el servidor -
-        // por eso esto va antes del "if (!IsServer) return;".
-        tieneCincoCartas.OnValueChanged += (anterior, nuevo) => ActualizarSprite(nuevo);
-        ActualizarSprite(tieneCincoCartas.Value);
+        // por eso esto va antes del "if (!IsServer) return;". Se recalcula
+        // cuando cambia CUALQUIERA de las tres cosas que lo afectan: si tiene
+        // 5 cartas, su estado de atención, o de quién es el turno ahora.
+        tieneCincoCartas.OnValueChanged += (anterior, nuevo) => ActualizarSpriteBoss();
+        atencionActual.OnValueChanged += (anterior, nuevo) => ActualizarSpriteBoss();
+
+        if (turnManager != null)
+        {
+            turnManager.OnEstadoTurnoCambio += ActualizarSpriteBoss;
+        }
+
+        ActualizarSpriteBoss();
 
         // Mismo motivo: el nombre debe verse igual en todos los clientes.
         nombreBoss.OnValueChanged += (anterior, nuevo) => AvisarNombreAlPanel(nuevo.ToString());
@@ -76,6 +110,41 @@ public class BossManager : NetworkBehaviour
         {
             turnManager.OnBossTurnStarted += JugarTurno;
         }
+
+        StartCoroutine(AlternarAtencionMientrasNoEsSuTurno());
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        if (turnManager != null)
+        {
+            turnManager.OnBossTurnStarted -= JugarTurno;
+            turnManager.OnEstadoTurnoCambio -= ActualizarSpriteBoss;
+        }
+    }
+
+    /// <summary>
+    /// SOLO el servidor la corre. Cada tanto (intervalo aleatorio), si NO es
+    /// el turno del boss, alterna su estado de atención - se pausa sola
+    /// durante su propio turno (ahí ya está "ocupado" robando/descartando,
+    /// mostrando el otro par de sprites).
+    /// </summary>
+    private IEnumerator AlternarAtencionMientrasNoEsSuTurno()
+    {
+        while (true)
+        {
+            float espera = UnityEngine.Random.Range(intervaloMinimoAtencion, intervaloMaximoAtencion);
+            yield return new WaitForSeconds(espera);
+
+            if (turnManager != null && turnManager.EsTurnoDelBoss())
+            {
+                continue; // ocupado en su propio turno - no alterna
+            }
+
+            atencionActual.Value = atencionActual.Value == EstadoAtencionBoss.RevisandoCartas
+                ? EstadoAtencionBoss.MirandoOponentes
+                : EstadoAtencionBoss.RevisandoCartas;
+        }
     }
 
     /// <summary>
@@ -96,22 +165,28 @@ public class BossManager : NetworkBehaviour
         }
     }
 
-    public override void OnNetworkDespawn()
+    /// <summary>
+    /// Decide qué sprite mostrar: si es su turno, el par de robar/descartar;
+    /// si no, el par de atención (revisando/mirando) - un solo Image, pero
+    /// la fuente depende de en qué "fase" está el boss ahora mismo.
+    /// </summary>
+    private void ActualizarSpriteBoss()
     {
-        if (turnManager != null)
-        {
-            turnManager.OnBossTurnStarted -= JugarTurno;
-        }
-    }
-
-    private void ActualizarSprite(bool cincoCartas)
-    {
-        if (bossImage == null)
+        if (bossImage == null || turnManager == null)
         {
             return;
         }
 
-        bossImage.sprite = cincoCartas ? spriteConCincoCartas : spriteConCuatroCartas;
+        if (turnManager.EsTurnoDelBoss())
+        {
+            bossImage.sprite = tieneCincoCartas.Value ? spriteConCincoCartas : spriteConCuatroCartas;
+        }
+        else
+        {
+            bossImage.sprite = atencionActual.Value == EstadoAtencionBoss.RevisandoCartas
+                ? spriteRevisandoCartas
+                : spriteMirandoOponentes;
+        }
     }
 
     /// <summary>

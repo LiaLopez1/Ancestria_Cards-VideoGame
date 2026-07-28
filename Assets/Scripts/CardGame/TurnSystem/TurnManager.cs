@@ -77,6 +77,15 @@ public class TurnManager : NetworkBehaviour
     /// </summary>
     public event Action OnBossTurnStarted;
 
+        /// <summary>
+    /// A diferencia de OnBossTurnStarted (que SOLO se dispara en el
+    /// servidor), este se dispara en TODOS los clientes cada vez que cambia
+    /// el turno o el estado - lo usa BossManager para saber, del lado de
+    /// cualquier cliente, cuándo recalcular qué sprite mostrar (turno propio
+    /// vs. estado de atención).
+    /// </summary>
+    public event Action OnEstadoTurnoCambio;
+
     public override void OnNetworkSpawn()
     {
         turnoActual.OnValueChanged += (anterior, nuevo) => ActualizarHighlighter();
