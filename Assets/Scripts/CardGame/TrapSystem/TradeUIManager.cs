@@ -60,6 +60,18 @@ public class TradeUIManager : MonoBehaviour
     // porque en este cliente solo uno de los dos roles puede estar activo).
     private System.Action<int> manejadorSeleccionActual;
 
+    // true desde que se elige con quien intercambiar (el "punto de
+    // compromiso") hasta que CerrarTodo() se ejecuta - mientras tanto,
+    // TrapsPanelUI usa esto para volver no interactuable el boton global
+    // de trampas, para no poder abrir nada mas a mitad de un intercambio.
+    private bool intercambioEnProgreso;
+
+    /// <summary>¿Ya se eligio con quien intercambiar y el proceso sigue en curso? Lo usa TrapsPanelUI.</summary>
+    public bool IntercambioEnProgreso => intercambioEnProgreso;
+
+    /// <summary>¿El panel de seleccionar jugador esta abierto ahora mismo? Lo usa TrapsPanelUI para saber si debe cerrarlo tambien.</summary>
+    public bool PanelSeleccionJugadorAbierto => panelSeleccionJugador != null && panelSeleccionJugador.activeSelf;
+
     private void Awake()
     {
         if (panelSeleccionJugador != null) panelSeleccionJugador.SetActive(false);
@@ -141,11 +153,20 @@ public class TradeUIManager : MonoBehaviour
 
     private void SeleccionarJugador(int slot)
     {
+        // A partir de aca el intercambio "arranca en serio" - se bloquea el
+        // boton global de trampas hasta que CerrarTodo() se ejecute.
+        intercambioEnProgreso = true;
+
         tradeManager.SolicitarIntercambioConSlot(slot);
         CerrarPanelSeleccionJugador();
     }
 
-    private void CerrarPanelSeleccionJugador()
+    /// <summary>
+    /// Cierra el panel de seleccionar jugador SIN comprometerse a nada -
+    /// lo usa TrapsPanelUI para cerrar este panel junto con el resto,
+    /// mientras todavia no se eligio a nadie.
+    /// </summary>
+    public void CerrarPanelSeleccionJugador()
     {
         if (panelSeleccionJugador != null)
         {
@@ -177,7 +198,7 @@ public class TradeUIManager : MonoBehaviour
     {
         if (mensajeIniciadorText != null)
         {
-            mensajeIniciadorText.text = "Selecciona la carta que quieres intercambiar.";
+            mensajeIniciadorText.text = "Elije con quien intercambiar.";
         }
 
         if (panelIniciador != null)
@@ -235,6 +256,8 @@ public class TradeUIManager : MonoBehaviour
 
     private void CerrarPanelIniciador()
     {
+        intercambioEnProgreso = false;
+
         DesuscribirSeleccion();
         handManager.DeshabilitarSeleccionParaIntercambio();
 
@@ -253,7 +276,7 @@ public class TradeUIManager : MonoBehaviour
     {
         if (mensajePropuestaText != null)
         {
-            mensajePropuestaText.text = $"{nombreIniciador} quiere intercambiar una carta contigo. ¿Aceptas?";
+            mensajePropuestaText.text = $"{nombreIniciador} quiere intercambiar contigo.";
         }
 
         if (panelPropuesta != null)
@@ -281,7 +304,7 @@ public class TradeUIManager : MonoBehaviour
     {
         if (mensajeObjetivoText != null)
         {
-            mensajeObjetivoText.text = "Selecciona la carta que quieres intercambiar.";
+            mensajeObjetivoText.text = "Selecciona una carta para intercambiar.";
         }
 
         if (botonConfirmar != null)

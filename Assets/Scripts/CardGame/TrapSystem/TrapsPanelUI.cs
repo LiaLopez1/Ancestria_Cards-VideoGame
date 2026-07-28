@@ -4,10 +4,13 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Controla el panel de trampas: se abre/cierra con una animacion tipo
-/// "pop-up" (escala de 0 a 1 con un poco de rebote). Por ahora solo maneja
-/// mostrar/ocultar el panel - los botones de cada trampa individual (que
-/// van dentro de este panel) se conectan a su propia logica mas adelante,
-/// cuando definamos que hace cada trampa.
+/// "pop-up" (escala de 0 a 1 con un poco de rebote). Tambien se encarga de
+/// cerrar cualquier sub-panel (como el de categorias, Pedir/Decir, o el de
+/// elegir companero de intercambio) que haya quedado abierto - sin esto,
+/// un sub-panel podia quedar huerfano en pantalla si el jugador volvia a
+/// apretar el boton global de "Trampas". Si el panel de elegir companero
+/// se cierra ASI (sin haber llegado a elegir a nadie), tambien cancela el
+/// aumento de sospecha que habia arrancado al apretar "Intercambio".
 ///
 /// Es puramente local a la pantalla de cada jugador (no tiene nada de red
 /// todavia) - cada jugador ve y controla su propio panel.
@@ -16,6 +19,14 @@ public class TrapsPanelUI : MonoBehaviour
 {
     [Header("Panel de trampas")]
     [SerializeField] private GameObject panelTrampas;
+
+    [Header("Boton global (para poder des/habilitarlo)")]
+    [SerializeField] private Button botonTrampas;
+
+    [Header("Sub-paneles que tambien hay que cerrar (para no dejar ninguno huerfano)")]
+    [SerializeField] private CategoryRequestPanelUI categoryRequestPanelUI;
+    [SerializeField] private TradeUIManager tradeUIManager;
+    [SerializeField] private SuspicionManager suspicionManager;
 
     [Header("Animación pop-up")]
     [SerializeField] private float duracionAnimacion = 0.25f;
@@ -38,7 +49,15 @@ public class TrapsPanelUI : MonoBehaviour
     /// <summary>Conectar al OnClick() del botón principal de "Trampas".</summary>
     public void OnBotonTrampasPressed()
     {
-        if (panelVisible)
+        // Si CUALQUIERA de los dos esta abierto (el menu principal, o algun
+        // sub-panel como el de categorias o el de elegir con quien
+        // intercambiar), hay que cerrar todo - nunca reabrir el menu
+        // principal mientras algo mas siga en pantalla.
+        bool haySubPanelAbierto =
+            (categoryRequestPanelUI != null && categoryRequestPanelUI.EstaAbierto) ||
+            (tradeUIManager != null && tradeUIManager.PanelSeleccionJugadorAbierto);
+
+        if (panelVisible || haySubPanelAbierto)
         {
             CerrarPanel();
         }
@@ -51,12 +70,44 @@ public class TrapsPanelUI : MonoBehaviour
     /// <summary>Conectar opcionalmente a un botón de "Cerrar" dentro del panel.</summary>
     public void CerrarPanel()
     {
+        // Hay que chequear esto ANTES de cerrar nada: si el panel de elegir
+        // companero estaba abierto y todavia no hubo compromiso (no se
+        // eligio a nadie), hay que cancelar tambien el aumento de sospecha
+        // que arranco al apretar "Intercambio" - si no, seguiria subiendo
+        // para siempre aunque el intercambio nunca haya arrancado de verdad.
+        bool debeCancelarSospecha = tradeUIManager != null
+            && tradeUIManager.PanelSeleccionJugadorAbierto
+            && !tradeUIManager.IntercambioEnProgreso;
+
+        // Esto corre SIEMPRE, sin importar el estado de panelVisible, para
+        // que un sub-panel que haya quedado huerfano (main panel ya cerrado,
+        // pero categorias/seleccion de jugador todavia abiertos) se cierre igual.
+        categoryRequestPanelUI?.Cerrar();
+        tradeUIManager?.CerrarPanelSeleccionJugador();
+
+        if (debeCancelarSospecha)
+        {
+            suspicionManager?.CancelarIntercambioRpc();
+        }
+
         if (!panelVisible) return;
 
         panelVisible = false;
 
         if (animacionActual != null) StopCoroutine(animacionActual);
         animacionActual = StartCoroutine(AnimarEscala(1f, 0f, ocultarAlTerminar: true));
+    }
+
+    private void Update()
+    {
+        // El boton global se vuelve no interactuable desde que se elige con
+        // quien intercambiar (el "punto de compromiso") hasta que el
+        // intercambio termina - evita abrir cualquier otra trampa a mitad
+        // de un intercambio ya en curso.
+        if (botonTrampas != null)
+        {
+            botonTrampas.interactable = !(tradeUIManager != null && tradeUIManager.IntercambioEnProgreso);
+        }
     }
 
     private void AbrirPanel()
