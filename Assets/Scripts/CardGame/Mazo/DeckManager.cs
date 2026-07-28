@@ -652,6 +652,44 @@ public class DeckManager : NetworkBehaviour
         ObtenerManoDeCliente(clientId).Add(cardId);
     }
 
+    // ---------- Intercambio entre jugadores (usado por TradeManager) ----------
+
+    /// <summary>¿Ese cliente tiene esa carta en su mano ahora mismo? Válido en el servidor.</summary>
+    public bool ClienteTieneCarta(ulong clientId, int cardId)
+    {
+        return manoPorCliente.TryGetValue(clientId, out List<int> mano) && mano.Contains(cardId);
+    }
+
+    /// <summary>
+    /// SOLO debe llamarse desde el servidor (TradeManager), ya validado que
+    /// ambos clientes tienen la carta que estan ofreciendo. Intercambia las
+    /// cartas en manoPorCliente - no toca drawPile ni discardPile, porque
+    /// estas cartas nunca salen de manos de jugadores. Devuelve false si en
+    /// el momento de ejecutar, alguno de los dos ya no tiene la carta que
+    /// habia ofrecido (por ejemplo, si alcanzo a descartarla mientras se
+    /// esperaba la respuesta del otro).
+    /// </summary>
+    public bool EjecutarIntercambio(ulong clienteA, int cardIdA, ulong clienteB, int cardIdB)
+    {
+        if (!ClienteTieneCarta(clienteA, cardIdA) || !ClienteTieneCarta(clienteB, cardIdB))
+        {
+            return false;
+        }
+
+        List<int> manoA = ObtenerManoDeCliente(clienteA);
+        List<int> manoB = ObtenerManoDeCliente(clienteB);
+
+        manoA.Remove(cardIdA);
+        manoB.Remove(cardIdB);
+
+        manoA.Add(cardIdB);
+        manoB.Add(cardIdA);
+
+        Debug.Log($"[Servidor] Intercambio completado entre {clienteA} y {clienteB} (cardId {cardIdA} <-> cardId {cardIdB}).");
+
+        return true;
+    }
+
     // ---------- Boss: mismos mecanismos que un jugador, sin ServerRpc ----------
     // El boss corre del lado del servidor (BossManager), así que no necesita
     // pedir permiso por red como un cliente real - pero SÍ reusa exactamente
