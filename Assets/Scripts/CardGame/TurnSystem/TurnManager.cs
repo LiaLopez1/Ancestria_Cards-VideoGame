@@ -125,6 +125,19 @@ public class TurnManager : NetworkBehaviour
         return slotBoss.Value >= 0 && EsTurnoDelSlot(slotBoss.Value);
     }
 
+    /// <summary>
+    /// ¿Ese slot puede pedir un intercambio ahora mismo? A diferencia de
+    /// CanDiscard()/EsMiTurno(), esto NO depende de PlayerCube.MiSlot (que
+    /// solo es valido para "este" cliente) - por eso el SERVIDOR puede
+    /// llamarlo pasando el slot del cliente que hizo el pedido, para
+    /// validar a cualquiera, no solo a si mismo. La ventana es la misma que
+    /// CanDiscard(): ya robaste, todavia no descartaste.
+    /// </summary>
+    public bool PuedeSolicitarIntercambio(int slot)
+    {
+        return EsTurnoDelSlot(slot) && estadoActual.Value == TurnState.WaitingToDiscard;
+    }
+
     public bool CanDraw()
     {
         return EsMiTurno() && estadoActual.Value == TurnState.WaitingToDraw && handManager.GetCardCount() == 4;
