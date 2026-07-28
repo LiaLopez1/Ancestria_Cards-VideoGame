@@ -38,7 +38,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 2.5, y: 0}
-  m_SizeDelta: {x: 210, y: 280}
+  m_SizeDelta: {x: 203.02, y: 280}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &5849948926493583240
 CanvasRenderer:
@@ -68,8 +68,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
-  m_Type: 1
+  m_Sprite: {fileID: 21300000, guid: 634764260fd2e2145952faa2797449cf, type: 3}
+  m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -102,6 +102,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 06140e1946cd9b94aa66e044b0669f66, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DeckCardDrag
+  returnDuration: 0.2
 --- !u!1 &9080689041263919224
 GameObject:
   m_ObjectHideFlags: 0
@@ -136,8 +137,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 1}
-  m_SizeDelta: {x: 180, y: 250.18}
+  m_AnchoredPosition: {x: 0.5, y: -3.9199982}
+  m_SizeDelta: {x: 123.3, y: 99}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1766346772014252591
 CanvasRenderer:
@@ -167,7 +168,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: 21300000, guid: 19920b81bc536c544b49a50a72794ac2, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
