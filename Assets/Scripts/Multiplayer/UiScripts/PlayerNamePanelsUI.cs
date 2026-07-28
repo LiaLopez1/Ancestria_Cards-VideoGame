@@ -26,15 +26,13 @@ public class PlayerNamePanelsUI : MonoBehaviour
     [SerializeField] private GameObject panelInvitado2;
     [SerializeField] private TMP_Text nombreInvitado2Text;
 
-    [Header("Panel: boss (leyenda de esta partida)")]
-    [Tooltip("Se activa y se completa desde afuera (quien resuelva qué leyenda le tocó a esta partida) - por ahora solo existe el lugar, sin lógica propia.")]
+    [Header("Panel: boss")]
     [SerializeField] private GameObject panelBoss;
-    [SerializeField] private TMP_Text nombreLeyendaText;
+    [SerializeField] private TMP_Text nombreBossText;
 
     private void Awake()
     {
         Instance = this;
-        Debug.Log($"[DEBUG PlayerNamePanelsUI] Awake ejecutado. panelHost={(panelHost != null ? panelHost.name : "NULL")}, panelInvitado1={(panelInvitado1 != null ? panelInvitado1.name : "NULL")}, panelInvitado2={(panelInvitado2 != null ? panelInvitado2.name : "NULL")}");
 
         // Arrancan ocultos: solo se muestran cuando ese slot realmente tiene
         // un jugador conectado con su nick ya conocido.
@@ -51,6 +49,13 @@ public class PlayerNamePanelsUI : MonoBehaviour
         {
             cubo.ReintentarAvisoDePanel();
         }
+
+        // Mismo motivo que con los cubos: BossManager puede haber terminado
+        // de spawnear como objeto de red antes de que este panel exista.
+        foreach (var boss in FindObjectsOfType<BossManager>())
+        {
+            boss.ReintentarAvisoDePanel();
+        }
     }
 
     private void OnDestroy()
@@ -60,28 +65,40 @@ public class PlayerNamePanelsUI : MonoBehaviour
 
     public void ActualizarNombre(int slot, string nombre)
     {
-        Debug.Log($"[DEBUG PlayerNamePanelsUI] ActualizarNombre llamado: slot={slot}, nombre='{nombre}'");
-
         if (slot == 0)
         {
             if (nombreHostText != null) nombreHostText.text = nombre;
             if (panelHost != null) panelHost.SetActive(true);
-            Debug.Log($"[DEBUG PlayerNamePanelsUI] panelHost activado: {panelHost != null}");
         }
         else if (slot == 1)
         {
             if (nombreInvitado1Text != null) nombreInvitado1Text.text = nombre;
             if (panelInvitado1 != null) panelInvitado1.SetActive(true);
-            Debug.Log($"[DEBUG PlayerNamePanelsUI] panelInvitado1 activado: {panelInvitado1 != null}");
         }
         else
         {
             if (nombreInvitado2Text != null) nombreInvitado2Text.text = nombre;
             if (panelInvitado2 != null) panelInvitado2.SetActive(true);
-            Debug.Log($"[DEBUG PlayerNamePanelsUI] panelInvitado2 activado: {panelInvitado2 != null}");
         }
     }
 
+    /// <summary>
+    /// El boss no tiene slot 0/1/2 como los jugadores - se muestra en su
+    /// propio panel dedicado. Por ahora el nombre es fijo ("Boss"), pero
+    /// queda listo para más adelante mostrar la leyenda sorteada de la
+    /// ronda, mismo patrón que ya existe para la regla de victoria.
+    /// </summary>
+    public void ActualizarNombreBoss(string nombre)
+    {
+        if (nombreBossText != null) nombreBossText.text = nombre;
+        if (panelBoss != null) panelBoss.SetActive(true);
+    }
+
+    /// <summary>
+    /// Devuelve el nick ya conocido para ese slot (el mismo que se muestra
+    /// en su panel), o un texto generico si todavia no se conoce. Lo usa
+    /// TrapManager para armar el mensaje de notificacion de trampas.
+    /// </summary>
     public string ObtenerNombrePorSlot(int slot)
     {
         TMP_Text texto = slot == 0 ? nombreHostText : slot == 1 ? nombreInvitado1Text : nombreInvitado2Text;
@@ -92,5 +109,16 @@ public class PlayerNamePanelsUI : MonoBehaviour
         }
 
         return $"Jugador {slot}";
+    }
+
+    /// <summary>Simétrico a ObtenerNombrePorSlot(), pero para el boss.</summary>
+    public string ObtenerNombreDelBoss()
+    {
+        if (nombreBossText != null && !string.IsNullOrEmpty(nombreBossText.text))
+        {
+            return nombreBossText.text;
+        }
+
+        return "Boss";
     }
 }
