@@ -410,6 +410,16 @@ public class HandManager : MonoBehaviour
         if (cartaQueSeVaRect != null)
         {
             cartaQueSeVaRect.SetParent(handRectTransform, true);
+
+            // CardInteraction memorizo su "posicion normal" relativa al
+            // CardSlot anterior - al reparentar eso queda obsoleto, y si
+            // sigue activo se pelearia cada frame con esta animacion de
+            // salida. Como la carta se destruye en instantes, la apagamos.
+            CardInteraction interaccionSaliente = cartaQueSeVaRect.GetComponent<CardInteraction>();
+            if (interaccionSaliente != null)
+            {
+                interaccionSaliente.enabled = false;
+            }
         }
 
         if (slotQueSeVa != null)
@@ -466,8 +476,15 @@ public class HandManager : MonoBehaviour
     private IEnumerator AnimarEntrada(RectTransform carta)
     {
         Vector2 destino = carta.anchoredPosition;
-        Vector2 inicio = destino + new Vector2(0f, -offsetAnimacionIntercambio);
 
+        // Esperamos un frame para que CardInteraction.Start() ya haya
+        // corrido y capturado ESTA posicion (destino) como su "posicion
+        // normal" - si desplazaramos la carta ANTES de eso, CardInteraction
+        // memorizaria la posicion desplazada como si fuera la normal, y la
+        // carta quedaria desfasada para siempre despues de la animacion.
+        yield return null;
+
+        Vector2 inicio = destino + new Vector2(0f, -offsetAnimacionIntercambio);
         carta.anchoredPosition = inicio;
 
         float tiempoTranscurrido = 0f;
