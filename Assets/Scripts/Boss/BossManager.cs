@@ -73,6 +73,11 @@ public class BossManager : NetworkBehaviour
 
     public EstadoAtencionBoss AtencionActual => atencionActual.Value;
 
+    // Referencia a la corrutina de alternancia de atencion, para poder
+    // reiniciarla limpio si IniciarManoInicial() se llama de nuevo (una
+    // ronda nueva) sin dejar una copia vieja corriendo en paralelo.
+    private Coroutine corrutinaAtencion;
+
     public override void OnNetworkSpawn()
     {
         // El sprite se actualiza en TODOS los clientes, no solo el servidor -
@@ -110,8 +115,6 @@ public class BossManager : NetworkBehaviour
         {
             turnManager.OnBossTurnStarted += JugarTurno;
         }
-
-        StartCoroutine(AlternarAtencionMientrasNoEsSuTurno());
     }
 
     public override void OnNetworkDespawn()
@@ -124,10 +127,12 @@ public class BossManager : NetworkBehaviour
     }
 
     /// <summary>
-    /// SOLO el servidor la corre. Cada tanto (intervalo aleatorio), si NO es
-    /// el turno del boss, alterna su estado de atención - se pausa sola
-    /// durante su propio turno (ahí ya está "ocupado" robando/descartando,
-    /// mostrando el otro par de sprites).
+    /// SOLO el servidor la corre, y SOLO arranca desde que la partida
+    /// realmente empieza (IniciarManoInicial) - antes de eso el boss se
+    /// queda fijo en "Mirando oponentes". Cada tanto (intervalo aleatorio),
+    /// si NO es el turno del boss, alterna su estado de atención - se pausa
+    /// sola durante su propio turno (ahí ya está "ocupado" robando/
+    /// descartando, mostrando el otro par de sprites).
     /// </summary>
     private IEnumerator AlternarAtencionMientrasNoEsSuTurno()
     {
@@ -200,6 +205,19 @@ public class BossManager : NetworkBehaviour
         {
             return;
         }
+
+        // Recien ahora arranca de verdad la partida - nos aseguramos de
+        // empezar (o volver a empezar, si es una ronda nueva) quieto en
+        // "Mirando oponentes", y ahi si arrancamos el ciclo de alternancia.
+        // Antes de este punto, el boss se queda fijo en ese estado inicial.
+        atencionActual.Value = EstadoAtencionBoss.MirandoOponentes;
+
+        if (corrutinaAtencion != null)
+        {
+            StopCoroutine(corrutinaAtencion);
+        }
+
+        corrutinaAtencion = StartCoroutine(AlternarAtencionMientrasNoEsSuTurno());
 
         StartCoroutine(RepartirManoInicial());
     }

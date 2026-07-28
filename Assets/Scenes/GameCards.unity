@@ -890,6 +890,18 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+      - m_Target: {fileID: 391290177}
+        m_TargetAssemblyTypeName: SuspicionManager, Assembly-CSharp
+        m_MethodName: SolicitarTrampaDecirRpc
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &163152307
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3251,7 +3263,7 @@ Canvas:
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 1
   m_TargetDisplay: 0
 --- !u!224 &766013682
 RectTransform:
@@ -3700,6 +3712,18 @@ MonoBehaviour:
       - m_Target: {fileID: 789628225}
         m_TargetAssemblyTypeName: CategoryRequestPanelUI, Assembly-CSharp
         m_MethodName: OnPedirTransformadosPressed
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 391290177}
+        m_TargetAssemblyTypeName: SuspicionManager, Assembly-CSharp
+        m_MethodName: SolicitarTrampaDecirRpc
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -4315,10 +4339,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 2019193017}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: 1462.66, y: 844}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1067856144
 MonoBehaviour:
@@ -4548,9 +4572,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1124723463}
+  - component: {fileID: 1124723464}
   - component: {fileID: 1124723465}
   - component: {fileID: 1124723466}
-  - component: {fileID: 1124723464}
   m_Layer: 0
   m_Name: TradeManager
   m_TagString: Untagged
@@ -4694,6 +4718,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TrapsPanelUI
   panelTrampas: {fileID: 1485049086}
+  botonTrampas: {fileID: 1849672994}
+  categoryRequestPanelUI: {fileID: 789628225}
+  tradeUIManager: {fileID: 1124723466}
+  suspicionManager: {fileID: 391290177}
   duracionAnimacion: 0.25
   curvaEscala:
     serializedVersion: 2
@@ -5040,18 +5068,6 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-      - m_Target: {fileID: 391290177}
-        m_TargetAssemblyTypeName: SuspicionManager, Assembly-CSharp
-        m_MethodName: SolicitarTrampaDecirRpc
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
 --- !u!114 &1274408074
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5263,18 +5279,6 @@ MonoBehaviour:
       - m_Target: {fileID: 789628225}
         m_TargetAssemblyTypeName: CategoryRequestPanelUI, Assembly-CSharp
         m_MethodName: Abrir
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-      - m_Target: {fileID: 391290177}
-        m_TargetAssemblyTypeName: SuspicionManager, Assembly-CSharp
-        m_MethodName: SolicitarTrampaPedirRpc
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -5682,6 +5686,18 @@ MonoBehaviour:
       - m_Target: {fileID: 789628225}
         m_TargetAssemblyTypeName: CategoryRequestPanelUI, Assembly-CSharp
         m_MethodName: OnPedirProtectoresPressed
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 391290177}
+        m_TargetAssemblyTypeName: SuspicionManager, Assembly-CSharp
+        m_MethodName: SolicitarTrampaDecirRpc
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -6797,10 +6813,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 2019193017}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: 1465.9, y: 842}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1539954059
 MonoBehaviour:
@@ -7804,10 +7820,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 2019193017}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: 1461.7, y: 845}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1827690989
 MonoBehaviour:
@@ -8434,7 +8450,7 @@ Canvas:
   m_AdditionalShaderChannelsFlag: 0
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 3
   m_TargetDisplay: 0
 --- !u!224 &2019193017
 RectTransform:
@@ -8792,6 +8808,18 @@ MonoBehaviour:
       - m_Target: {fileID: 789628225}
         m_TargetAssemblyTypeName: CategoryRequestPanelUI, Assembly-CSharp
         m_MethodName: OnPedirAparicionesPressed
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 391290177}
+        m_TargetAssemblyTypeName: SuspicionManager, Assembly-CSharp
+        m_MethodName: SolicitarTrampaDecirRpc
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
