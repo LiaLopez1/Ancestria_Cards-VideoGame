@@ -15,5 +15,6 @@ MonoBehaviour:
   cardId: 14
   cardName: LA MUELONA
   category: 2
-  icono: {fileID: 0}
-  character: {fileID: 0}
+  icono: {fileID: 21300000, guid: 77a3887a5a7ed7f4e963782074783d0a, type: 3}
+  character: {fileID: 21300000, guid: f670f731e11ea1349abcc985243fe0ae, type: 3}
+  Fondo: {fileID: 21300000, guid: 5755aa1253123764481cddff53aedd4c, type: 3}

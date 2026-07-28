@@ -35,6 +35,7 @@ public class CardData : ScriptableObject
     public CardCategory category;
     public Sprite icono;
     public Sprite character;
+    public Sprite Fondo;
 
     //public CardColor color;
 

@@ -10,15 +10,17 @@ public class CardDisplay : MonoBehaviour
     //public TMP_Text textCategoria;
     public Image categoryIcon;
     public Image characterImg;
+    public Image FondoImg;
 
 
     void Start()
     {
         card.Print();
         textNombre.text = card.cardName;
-        categoryIcon.sprite = card.character;
+        categoryIcon.sprite = card.icono;
         //textCategoria.text = card.category.ToString(); // esto despues se cambia a unn ícono   
-        characterImg.sprite = card.icono; 
+        characterImg.sprite = card.character;
+        FondoImg.sprite = card.Fondo; 
       
 
 

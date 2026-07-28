@@ -15,5 +15,6 @@ MonoBehaviour:
   cardId: 10
   cardName: EL HORASQUIN DEL MONTE
   category: 0
-  icono: {fileID: 0}
-  character: {fileID: 0}
+  icono: {fileID: 21300000, guid: 3fa8b25c33103d840815484482e46ed1, type: 3}
+  character: {fileID: 21300000, guid: a7be00b3a46ca1c449ec0cbfdcc6bc6f, type: 3}
+  Fondo: {fileID: 21300000, guid: 4b98093f8173d6648a3688914e5bd0d0, type: 3}

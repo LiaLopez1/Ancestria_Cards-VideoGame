@@ -15,5 +15,6 @@ MonoBehaviour:
   cardId: 8
   cardName: "BACH\xDAE"
   category: 0
-  icono: {fileID: 0}
-  character: {fileID: 0}
+  icono: {fileID: 21300000, guid: 3fa8b25c33103d840815484482e46ed1, type: 3}
+  character: {fileID: 21300000, guid: b381ef1495787144fba52aab1421bf67, type: 3}
+  Fondo: {fileID: 21300000, guid: 4b98093f8173d6648a3688914e5bd0d0, type: 3}

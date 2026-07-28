@@ -12,7 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e31101a804144e3468dbb82b7f9fc61f, type: 3}
   m_Name: ElSombreron
   m_EditorClassIdentifier: Assembly-CSharp::CardData
-  cardName: EL SOMBRERON
+  cardId: 0
+  cardName: LA TUNDA
   category: 3
-  icono: {fileID: 0}
-  character: {fileID: 0}
+  icono: {fileID: 21300000, guid: ce73a743d4c50264abfafd94386af3fa, type: 3}
+  character: {fileID: 21300000, guid: 1888479dca9edc14fa5875a01a37aed4, type: 3}
+  Fondo: {fileID: 21300000, guid: 286768deaa84e3e4eaca77bb75f9b8c1, type: 3}

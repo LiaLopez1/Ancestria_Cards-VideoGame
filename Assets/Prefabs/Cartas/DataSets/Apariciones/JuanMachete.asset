@@ -15,5 +15,6 @@ MonoBehaviour:
   cardId: 1
   cardName: JUAN MACHETE
   category: 3
-  icono: {fileID: 0}
-  character: {fileID: 0}
+  icono: {fileID: 21300000, guid: ce73a743d4c50264abfafd94386af3fa, type: 3}
+  character: {fileID: 21300000, guid: 6e03a3414bd510f488e0d5ca6905181c, type: 3}
+  Fondo: {fileID: 21300000, guid: 286768deaa84e3e4eaca77bb75f9b8c1, type: 3}

@@ -15,5 +15,6 @@ MonoBehaviour:
   cardId: 7
   cardName: LA PATASOLA
   category: 1
-  icono: {fileID: 0}
-  character: {fileID: 0}
+  icono: {fileID: 21300000, guid: 6af66468417a161449044c59584f4831, type: 3}
+  character: {fileID: 21300000, guid: a78843c30020a6947893585d1addef97, type: 3}
+  Fondo: {fileID: 21300000, guid: 69f99a35091f4aa4a8f8539db5a7c09d, type: 3}
