@@ -34,6 +34,8 @@ public class TurnManager : NetworkBehaviour
     [Header("Referencias")]
     [SerializeField] private HandManager handManager;
     [SerializeField] private TMP_Text turnMessage;
+    [Tooltip("Ahora es quien decide victoria/derrota - TurnManager solo le pregunta si la partida ya terminó.")]
+    [SerializeField] private GameManager gameManager;
 
     [Header("Highlighter de turno")]
     [Tooltip("Objeto que se reposiciona detras del panel del jugador en turno.")]
@@ -51,9 +53,6 @@ public class TurnManager : NetworkBehaviour
     // que regla esta activa esta ronda.
     private readonly NetworkVariable<int> indiceReglaActual = new NetworkVariable<int>(0);
 
-    // -1 = todavia nadie ha ganado.
-    private readonly NetworkVariable<int> slotGanador = new NetworkVariable<int>(-1);
-
     // El boss siempre ocupa el slot inmediatamente despues del ultimo
     // jugador humano (si hay 2 jugadores conectados, slots 0 y 1, el boss
     // es el slot 2) - sincronizado para que todos los clientes puedan
@@ -65,9 +64,10 @@ public class TurnManager : NetworkBehaviour
 
     public VictoryRuleType ReglaActiva => VictoryRules.ReglasDisponibles[indiceReglaActual.Value];
 
-    public bool PartidaTerminada => slotGanador.Value != -1;
-
     public int SlotDelBoss => slotBoss.Value;
+
+    /// <summary>Atajo para no repetir el null-check de gameManager en todos lados.</summary>
+    private bool PartidaTerminada => gameManager != null && gameManager.PartidaTerminada;
 
     /// <summary>
     /// Se dispara SOLO en el servidor, cuando el turno le llega al boss.
@@ -88,10 +88,14 @@ public class TurnManager : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        turnoActual.OnValueChanged += (anterior, nuevo) => ActualizarHighlighter();
-        estadoActual.OnValueChanged += (anterior, nuevo) => { ActualizarMensaje(); ActualizarHighlighter(); };
-        slotGanador.OnValueChanged += (anterior, nuevo) => { ActualizarMensaje(); ActualizarHighlighter(); };
-        slotBoss.OnValueChanged += (anterior, nuevo) => { ActualizarMensaje(); ActualizarHighlighter(); };
+        turnoActual.OnValueChanged += (anterior, nuevo) => { ActualizarHighlighter(); OnEstadoTurnoCambio?.Invoke(); };
+        estadoActual.OnValueChanged += (anterior, nuevo) => { ActualizarMensaje(); ActualizarHighlighter(); OnEstadoTurnoCambio?.Invoke(); };
+        slotBoss.OnValueChanged += (anterior, nuevo) => { ActualizarMensaje(); ActualizarHighlighter(); OnEstadoTurnoCambio?.Invoke(); };
+
+        if (gameManager != null)
+        {
+            gameManager.OnResultadoCambio += (nuevo) => { ActualizarMensaje(); ActualizarHighlighter(); OnEstadoTurnoCambio?.Invoke(); };
+        }
 
         ActualizarMensaje();
         ActualizarHighlighter();
@@ -108,7 +112,7 @@ public class TurnManager : NetworkBehaviour
 
         cantidadJugadores = Mathf.Max(1, totalJugadoresConectados);
         turnoActual.Value = 0;
-        slotGanador.Value = -1;
+        gameManager?.ReiniciarResultado();
         slotBoss.Value = cantidadJugadores; // el boss va justo despues del ultimo humano
         indiceReglaActual.Value = UnityEngine.Random.Range(0, VictoryRules.ReglasDisponibles.Length);
         estadoActual.Value = TurnState.WaitingToDraw;
@@ -157,19 +161,6 @@ public class TurnManager : NetworkBehaviour
         return EsMiTurno() && estadoActual.Value == TurnState.WaitingToDiscard && handManager.GetCardCount() == 5;
     }
 
-    /// <summary>
-    /// SOLO el servidor llama esto, cuando DeckManager detecta (despues de
-    /// un descarte) que la mano de un jugador cumple la regla activa.
-    /// </summary>
-    public void DeclararGanador(int slot)
-    {
-        if (!IsServer || PartidaTerminada) return;
-
-        slotGanador.Value = slot;
-
-        Debug.Log($"[Servidor] ¡Slot {slot} ganó cumpliendo la regla '{VictoryRules.ObtenerNombre(ReglaActiva)}'!");
-    }
-
     /// <summary>SOLO el servidor llama esto, despues de validar un robo.</summary>
     public void NotificarRoboRealizado()
     {
@@ -200,24 +191,9 @@ public class TurnManager : NetworkBehaviour
 
         if (PartidaTerminada)
         {
-            string nombreGanador;
-
-            if (slotGanador.Value == slotBoss.Value)
-            {
-                nombreGanador = "El Boss";
-            }
-            else if (PlayerNamePanelsUI.Instance != null)
-            {
-                nombreGanador = PlayerNamePanelsUI.Instance.ObtenerNombrePorSlot(slotGanador.Value);
-            }
-            else
-            {
-                nombreGanador = $"Jugador {slotGanador.Value}";
-            }
-
-            mensaje = $"{nombreGanador} ha ganado esta ronda";
-
-            Debug.Log("Partida terminada: " + mensaje);
+            // El panel correspondiente (GameManager) ya muestra el
+            // resultado - este texto de "regla activa" deja de tener sentido.
+            mensaje = string.Empty;
         }
         else if (estadoActual.Value == TurnState.Dealing)
         {

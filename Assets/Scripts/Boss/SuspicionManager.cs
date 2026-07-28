@@ -22,6 +22,7 @@ public class SuspicionManager : NetworkBehaviour
 {
     [Header("Referencias")]
     [SerializeField] private BossManager bossManager;
+    [SerializeField] private GameManager gameManager;
 
     [Header("Configuración")]
     [SerializeField] private float sospechaMaxima = 10f;
@@ -149,8 +150,17 @@ public class SuspicionManager : NetworkBehaviour
 
         nivelSospecha.Value = Mathf.Min(sospechaMaxima, nivelSospecha.Value + cantidad);
 
-        // TODO: qué pasa cuando llega al máximo (¿el boss "atrapa" a los
-        // jugadores? ¿pierden automáticamente?) - todavía no definido, este
-        // prototipo solo prueba que la barra suba correctamente.
+        Debug.Log($"[Sospecha] +{cantidad} (total: {nivelSospecha.Value}/{sospechaMaxima})");
+
+        if (nivelSospecha.Value >= sospechaMaxima)
+        {
+            if (gameManager == null)
+            {
+                Debug.LogError("[SuspicionManager] La barra llegó al máximo, pero no se asignó GameManager en el Inspector - no se puede declarar la derrota.");
+                return;
+            }
+
+            gameManager.DeclararDerrotaPorSospecha();
+        }
     }
 }

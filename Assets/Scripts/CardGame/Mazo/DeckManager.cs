@@ -44,6 +44,10 @@ public class DeckManager : NetworkBehaviour
     [Header("Turno")]
     [SerializeField] private TurnManager turnManager;
 
+    [Header("Resultado de la partida")]
+    [Tooltip("Ahora es quien decide victoria/derrota - reemplaza a turnManager.DeclararGanador().")]
+    [SerializeField] private GameManager gameManager;
+
     [Header("Boss")]
     [Tooltip("Se le avisa cuando la partida arranca, para que reparta su mano inicial igual que a un jugador más.")]
     [SerializeField] private BossManager bossManager;
@@ -579,7 +583,15 @@ public class DeckManager : NetworkBehaviour
         {
             if (NetworkBootstrap.Instance.TryObtenerSlot(clienteSolicitante, out int slotGanador))
             {
-                turnManager.DeclararGanador(slotGanador);
+                if (gameManager == null)
+                {
+                    Debug.LogError("[DeckManager] Un jugador cumplió la regla de victoria, pero no se asignó GameManager en el Inspector.");
+                }
+                else
+                {
+                    gameManager.DeclararVictoriaJugador(slotGanador);
+                }
+
                 return; // no avanzamos el turno, la partida ya termino
             }
         }
@@ -794,7 +806,15 @@ public class DeckManager : NetworkBehaviour
 
         if (turnManager != null && VictoryRules.SeCumple(turnManager.ReglaActiva, mano))
         {
-            turnManager.DeclararGanador(turnManager.SlotDelBoss);
+            if (gameManager == null)
+            {
+                Debug.LogError("[DeckManager] El boss cumplió la regla de victoria, pero no se asignó GameManager en el Inspector.");
+            }
+            else
+            {
+                gameManager.DeclararVictoriaBoss();
+            }
+
             return; // no avanzamos el turno, la partida ya terminó
         }
 

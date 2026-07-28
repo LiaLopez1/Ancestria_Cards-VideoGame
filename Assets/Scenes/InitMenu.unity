@@ -728,7 +728,7 @@ MonoBehaviour:
   colorProgresoFinal: {r: 0, g: 1, b: 0, a: 1}
   velocidadAnimacionSlider: 1.5
   intervaloBusquedaSalas: 3
-  gameSceneName: PruebaBoss3
+  gameSceneName: GameCards
 --- !u!4 &319316183
 Transform:
   m_ObjectHideFlags: 0
