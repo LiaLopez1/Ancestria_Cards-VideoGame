@@ -16,6 +16,8 @@ public class CardDragHandler : MonoBehaviour,
     private HandManager handManager;
     private CardInteraction cardInteraction;
 
+    public SoundData moveSound;
+
     [Header("Red")]
     [Tooltip("Vive en la escena, no en el prefab - se busca solo si no se asigna.")]
     [SerializeField] private DeckManager deckManager;
@@ -54,7 +56,7 @@ public class CardDragHandler : MonoBehaviour,
         // arrastrar en el Inspector del prefab, así que lo buscamos acá.
         if (deckManager == null)
         {
-            deckManager = FindObjectOfType<DeckManager>();
+            deckManager = Object.FindFirstObjectByType<DeckManager>();
 
             if (deckManager == null)
             {
@@ -65,6 +67,8 @@ public class CardDragHandler : MonoBehaviour,
 
     public void OnBeginDrag(PointerEventData eventData)
     {
+
+        moveSound.Play();
         wasPlacedOnTable = false;
 
         if (returnCoroutine != null)

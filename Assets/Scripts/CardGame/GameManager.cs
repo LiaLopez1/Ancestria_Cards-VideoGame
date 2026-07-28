@@ -34,6 +34,8 @@ public class GameManager : NetworkBehaviour
     [Header("Texto del panel de victoria (opcional)")]
     [SerializeField] private TMP_Text textoNombreGanador;
 
+    public AudioClip musicPruba;
+
     private readonly NetworkVariable<ResultadoPartida> resultado =
         new NetworkVariable<ResultadoPartida>(ResultadoPartida.EnCurso);
 
@@ -48,6 +50,10 @@ public class GameManager : NetworkBehaviour
     /// <summary>Se dispara en TODOS los clientes cada vez que cambia el resultado.</summary>
     public event Action<ResultadoPartida> OnResultadoCambio;
 
+    void Start()
+    {
+        AudioManager.Instance.PlayMusic(musicPruba);
+    }
     public override void OnNetworkSpawn()
     {
         resultado.OnValueChanged += (anterior, nuevo) =>
