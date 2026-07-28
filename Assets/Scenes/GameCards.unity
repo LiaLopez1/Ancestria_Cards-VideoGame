@@ -3915,10 +3915,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TradeManager
   ShowTopMostFoldoutHeaderGroup: 1
-  deckManager: {fileID: 0}
-  turnManager: {fileID: 0}
-  handManager: {fileID: 0}
-  tradeUI: {fileID: 0}
+  deckManager: {fileID: 2066499337}
+  turnManager: {fileID: 979683347}
+  handManager: {fileID: 1437311224}
+  tradeUI: {fileID: 1124723466}
 --- !u!114 &1124723466
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3933,6 +3933,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TradeUIManager
   tradeManager: {fileID: 1124723465}
   handManager: {fileID: 1437311224}
+  turnManager: {fileID: 979683347}
+  botonIntercambio: {fileID: 340172016}
   panelSeleccionJugador: {fileID: 662346141}
   contenedorBotonesJugador: {fileID: 8114156492905471673}
   botonJugadorPrefab: {fileID: 1175748712994696289, guid: 6048be8a9e0c64e46a9a6e439b9e29a1, type: 3}

@@ -22,6 +22,11 @@ public class TradeUIManager : MonoBehaviour
     [Header("Referencias")]
     [SerializeField] private TradeManager tradeManager;
     [SerializeField] private HandManager handManager;
+    [SerializeField] private TurnManager turnManager;
+
+    [Header("Boton \"Intercambio\" (panel de trampas)")]
+    [Tooltip("Se vuelve no interactuable automaticamente fuera de la ventana en la que se puede pedir un intercambio (misma condicion que CanDiscard: ya robaste, todavia no descartaste).")]
+    [SerializeField] private Button botonIntercambio;
 
     // ---------------- Panel: seleccionar jugador ----------------
     [Header("Panel: seleccionar jugador")]
@@ -69,6 +74,19 @@ public class TradeUIManager : MonoBehaviour
         {
             botonConfirmar.onClick.AddListener(ConfirmarSeleccionObjetivo);
             botonConfirmar.interactable = false;
+        }
+    }
+
+    private void Update()
+    {
+        // El boton "Intercambio" solo debe poder apretarse en la misma
+        // ventana en la que se puede descartar (ya robaste, todavia no
+        // descartaste) - se revisa cada frame porque CanDiscard() depende
+        // de NetworkVariables que cambian del lado del servidor, no hay
+        // un evento local al que suscribirse aca.
+        if (botonIntercambio != null)
+        {
+            botonIntercambio.interactable = turnManager != null && turnManager.CanDiscard();
         }
     }
 
