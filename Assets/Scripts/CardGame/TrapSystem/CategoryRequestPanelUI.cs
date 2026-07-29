@@ -17,6 +17,9 @@ public class CategoryRequestPanelUI : MonoBehaviour
     [SerializeField] private GameObject panelCategorias;
     [SerializeField] private TrapManager trapManager;
 
+    /// <summary>¿Este panel esta abierto ahora mismo? Lo usa TrapsPanelUI para saber si debe cerrarlo tambien.</summary>
+    public bool EstaAbierto => panelCategorias != null && panelCategorias.activeSelf;
+
     // Modo actual: decide si al elegir una categoria se "pide" (necesita)
     // o se "muestra" (tiene). Lo fija el boton externo que abrio el panel.
     private bool modoMostrar;

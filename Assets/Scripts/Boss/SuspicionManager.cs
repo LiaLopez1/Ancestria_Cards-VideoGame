@@ -113,10 +113,40 @@ public class SuspicionManager : NetworkBehaviour
     [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
     public void AceptarIntercambioRpc()
     {
-        if (!intercambioEnCurso.Value)
+        if (!DetenerIncrementoSiEstaEnCurso())
         {
             Debug.LogWarning("[SuspicionManager] No hay ningún intercambio en curso para aceptar.");
             return;
+        }
+
+        Debug.Log($"[Sospecha] Intercambio aceptado - deja de subir. Total: {nivelSospecha.Value}/{sospechaMaxima}");
+    }
+
+    /// <summary>
+    /// Llamado cuando el jugador cierra el flujo de intercambio ANTES de
+    /// llegar a elegir con quien (por ejemplo, cerrando el panel de elegir
+    /// compañero desde el botón global de trampas). El aumento de sospecha
+    /// debe frenarse igual que si se hubiera "aceptado" - si no, seguiría
+    /// subiendo para siempre aunque el intercambio nunca haya arrancado
+    /// de verdad.
+    /// </summary>
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+    public void CancelarIntercambioRpc()
+    {
+        if (!DetenerIncrementoSiEstaEnCurso())
+        {
+            return; // no habia nada en curso - no hace falta advertir nada
+        }
+
+        Debug.Log($"[Sospecha] Intercambio cancelado antes de elegir compañero - deja de subir. Total: {nivelSospecha.Value}/{sospechaMaxima}");
+    }
+
+    /// <summary>Para tanto Aceptar como Cancelar - detiene el incremento si habia uno en curso. Devuelve false si no habia nada que detener.</summary>
+    private bool DetenerIncrementoSiEstaEnCurso()
+    {
+        if (!intercambioEnCurso.Value)
+        {
+            return false;
         }
 
         if (corrutinaIntercambio != null)
@@ -126,8 +156,7 @@ public class SuspicionManager : NetworkBehaviour
         }
 
         intercambioEnCurso.Value = false;
-
-        Debug.Log($"[Sospecha] Intercambio aceptado - deja de subir. Total: {nivelSospecha.Value}/{sospechaMaxima}");
+        return true;
     }
 
     private IEnumerator IncrementarSospechaMientrasIntercambia()

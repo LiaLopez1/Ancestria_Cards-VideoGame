@@ -70,18 +70,19 @@ public class PlayFabAuthManager : MonoBehaviour
         OnLoginFailed?.Invoke(error.ErrorMessage);
     }
 
+    /// <summary>
+    /// El nick es "oneshot" (se pide siempre, se pisa cada partida) y
+    /// nada en el proyecto lo lee de vuelta desde PlayFab - por eso NO usamos
+    /// UpdateUserTitleDisplayName: esa API exige que el nombre sea único en
+    /// TODO el título de PlayFab (entre TODAS las cuentas), lo cual no tiene
+    /// sentido para un nick cosmético y descartable, y bloqueaba a cualquier
+    /// jugador que quisiera usar un nick que otra PC ya haya usado antes.
+    /// Lo guardamos puramente local, sin llamada de red.
+    /// </summary>
     public void SetDisplayName(string newName)
     {
-        var request = new UpdateUserTitleDisplayNameRequest { DisplayName = newName };
-
-        PlayFabClientAPI.UpdateUserTitleDisplayName(request,
-            result =>
-            {
-                DisplayName = result.DisplayName;
-                Debug.Log($"[PlayFab] DisplayName actualizado: {DisplayName}");
-                OnDisplayNameUpdated?.Invoke();
-            },
-            error => Debug.LogError($"[PlayFab] Error al actualizar nombre: {error.GenerateErrorReport()}")
-        );
+        DisplayName = newName;
+        Debug.Log($"[PlayFab] DisplayName actualizado (local, sin llamada a PlayFab): {DisplayName}");
+        OnDisplayNameUpdated?.Invoke();
     }
 }
