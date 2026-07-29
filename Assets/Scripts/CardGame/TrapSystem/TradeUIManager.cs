@@ -56,6 +56,12 @@ public class TradeUIManager : MonoBehaviour
     [SerializeField] private TMP_Text mensajeObjetivoText;
     [SerializeField] private Button botonConfirmar;
 
+    [Header("Audio")]
+    [SerializeField] private SoundData ChangeCardSound;
+    [SerializeField] private SoundData selectCartaSound;
+    [SerializeField] private SoundData Notification;
+
+
     // Se reutiliza para el Panel A y el Panel C (nunca los dos a la vez,
     // porque en este cliente solo uno de los dos roles puede estar activo).
     private System.Action<int> manejadorSeleccionActual;
@@ -206,6 +212,8 @@ public class TradeUIManager : MonoBehaviour
             panelIniciador.SetActive(true);
         }
 
+        selectCartaSound.Play();
+
         handManager.HabilitarSeleccionParaIntercambio();
 
         manejadorSeleccionActual = ManejarCartaElegidaIniciador;
@@ -283,6 +291,8 @@ public class TradeUIManager : MonoBehaviour
         {
             panelPropuesta.SetActive(true);
         }
+
+        Notification.Play();
     }
 
     private void ResponderPropuesta(bool acepta)
@@ -317,6 +327,7 @@ public class TradeUIManager : MonoBehaviour
             panelObjetivo.SetActive(true);
         }
 
+        selectCartaSound.Play();
         handManager.HabilitarSeleccionParaIntercambio();
 
         manejadorSeleccionActual = ManejarCartaElegidaObjetivo;
@@ -341,6 +352,7 @@ public class TradeUIManager : MonoBehaviour
             Debug.LogWarning("[TradeUIManager] Se apreto Confirmar sin ninguna carta seleccionada.");
             return;
         }
+        ChangeCardSound.Play(); // Sonido al confirmar el intercabio
 
         if (botonConfirmar != null)
         {

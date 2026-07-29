@@ -50,10 +50,7 @@ public class GameManager : NetworkBehaviour
     /// <summary>Se dispara en TODOS los clientes cada vez que cambia el resultado.</summary>
     public event Action<ResultadoPartida> OnResultadoCambio;
 
-    void Start()
-    {
-        AudioManager.Instance.PlayMusic(musicPruba);
-    }
+
     public override void OnNetworkSpawn()
     {
         resultado.OnValueChanged += (anterior, nuevo) =>

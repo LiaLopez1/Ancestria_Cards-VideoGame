@@ -2,31 +2,95 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Audio;
+using UnityEngine.SceneManagement;
 
 public class AudioManager : MonoBehaviour
 {
     public static AudioManager Instance { get; private set; }
 
+    [Header("Mixer Groups")]
     [SerializeField] private AudioMixerGroup musicGroup;
     [SerializeField] private AudioMixerGroup sfxGroup;
-    [SerializeField] private AudioSource musicSource;
 
+    [Header("Música (crossfade con 2 fuentes, se crean solas)")]
+    [Tooltip("Duración por defecto del crossfade al cambiar de música. 0 = corte instantáneo.")]
+    [SerializeField] private float defaultFadeDuration = 0.4f;
+
+    private AudioSource musicSourceA;
+    private AudioSource musicSourceB;
+    private AudioSource activeMusicSource;
+    private Coroutine crossfadeRoutine;
+
+    [Header("Pool de SFX")]
     [SerializeField] private int poolSize = 10;
     private Queue<AudioSource> sfxPool;
 
-    // Referencia a la coroutine de crossfade activa, para poder cancelarla
-    // si se llama PlayMusic de nuevo antes de que termine la anterior.
-    private Coroutine musicFadeRoutine;
-
-    void Awake()
+    [System.Serializable]
+    public struct SceneMusicEntry
     {
-        if (Instance != null) { Destroy(gameObject); return; }
-        Instance = this;
-        DontDestroyOnLoad(gameObject);
-        InitPool();
+        [Tooltip("Debe coincidir EXACTAMENTE con el nombre de la escena (el que aparece en Build Settings).")]
+        public string sceneName;
+        public SoundData music;
     }
 
-    void InitPool()
+    [Header("Música por escena")]
+    [Tooltip("Al cargar cada escena, se busca aquí el SoundData correspondiente y se reproduce de inmediato.")]
+    [SerializeField] private List<SceneMusicEntry> sceneMusicMap;
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            // Ya existe un AudioManager (viene de DontDestroyOnLoad de la escena anterior).
+            // Este duplicado se destruye antes de tocar nada más.
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+
+        InitPool();
+        InitMusicSources();
+
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void Start()
+    {
+        // La escena inicial ya terminó de cargar antes de que Awake() se suscribiera
+        // al evento sceneLoaded, así que la disparamos manualmente una vez al arrancar.
+        HandleSceneMusic(SceneManager.GetActiveScene().name);
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        HandleSceneMusic(scene.name);
+    }
+
+    private void HandleSceneMusic(string sceneName)
+    {
+        for (int i = 0; i < sceneMusicMap.Count; i++)
+        {
+            if (sceneMusicMap[i].sceneName == sceneName)
+            {
+                PlayMusic(sceneMusicMap[i].music); // usa defaultFadeDuration
+                return;
+            }
+        }
+
+        Debug.LogWarning($"AudioManager: no hay música asignada para la escena '{sceneName}'.");
+    }
+
+    // ---------------- SFX ----------------
+
+    private void InitPool()
     {
         sfxPool = new Queue<AudioSource>();
         for (int i = 0; i < poolSize; i++)
@@ -46,106 +110,118 @@ public class AudioManager : MonoBehaviour
         src.volume = volume;
         src.pitch = pitch;
         src.Play();
-        sfxPool.Enqueue(src); // vuelve a la cola, se reutiliza cuando termine
+        sfxPool.Enqueue(src);
+    }
+
+    // ---------------- Música (crossfade con 2 fuentes) ----------------
+
+    private void InitMusicSources()
+    {
+        musicSourceA = gameObject.AddComponent<AudioSource>();
+        musicSourceB = gameObject.AddComponent<AudioSource>();
+
+        foreach (var src in new[] { musicSourceA, musicSourceB })
+        {
+            src.outputAudioMixerGroup = musicGroup;
+            src.playOnAwake = false;
+            src.loop = true;
+            src.volume = 0f;
+        }
+
+        activeMusicSource = musicSourceA;
     }
 
     /// <summary>
-    /// Reproduce música con crossfade. Si ya hay una canción sonando, primero
-    /// hace fade-out y después fade-in de la nueva. Si no hay nada sonando
-    /// (ej. al entrar a la partida), arranca la nueva canción de inmediato
-    /// y solo hace fade-in, sin esperar un fade-out innecesario.
+    /// Reproduce música con crossfade: la fuente entrante empieza en volumen 0 y sube
+    /// mientras la saliente baja, ambas al mismo tiempo (no hay silencio entre medio).
+    /// fadeDuration = 0 -> corte instantáneo (comportamiento anterior).
     /// </summary>
-    public void PlayMusic(AudioClip clip, bool loop = true, float fadeTime = 1f)
+    public void PlayMusic(SoundData data, float fadeDuration = -1f)
     {
-        if (clip == null) return;
-
-        // Si ya está sonando exactamente el mismo clip, no hacemos nada.
-        if (musicSource.isPlaying && musicSource.clip == clip) return;
-
-        // Cancelamos cualquier fade que esté corriendo para que no se pisen.
-        if (musicFadeRoutine != null)
+        if (data == null)
         {
-            StopCoroutine(musicFadeRoutine);
-            musicFadeRoutine = null;
+            Debug.LogWarning("AudioManager.PlayMusic: SoundData nulo.");
+            return;
         }
 
-        bool thereIsMusicPlaying = musicSource.isPlaying && musicSource.clip != null;
+        AudioClip clip = data.GetClip();
+        if (clip == null) return;
 
-        if (thereIsMusicPlaying)
+        // Ya está sonando exactamente este clip: no reiniciamos.
+        if (activeMusicSource.isPlaying && activeMusicSource.clip == clip) return;
+
+        float duration = fadeDuration >= 0f ? fadeDuration : defaultFadeDuration;
+
+        AudioSource outgoing = activeMusicSource;
+        AudioSource incoming = (activeMusicSource == musicSourceA) ? musicSourceB : musicSourceA;
+
+        incoming.clip = clip;
+        incoming.volume = duration <= 0f ? data.volume : 0f;
+        incoming.Play();
+
+        if (crossfadeRoutine != null) StopCoroutine(crossfadeRoutine);
+
+        if (duration <= 0f)
         {
-            musicFadeRoutine = StartCoroutine(CrossfadeMusic(clip, loop, fadeTime));
+            // Corte instantáneo: la saliente se detiene ya mismo.
+            outgoing.Stop();
         }
         else
         {
-            // Nada sonando: arrancamos ya mismo, solo con fade-in.
-            musicFadeRoutine = StartCoroutine(FadeInMusic(clip, loop, fadeTime));
+            crossfadeRoutine = StartCoroutine(CrossfadeRoutine(outgoing, incoming, data.volume, duration));
+        }
+
+        activeMusicSource = incoming;
+    }
+
+    private IEnumerator CrossfadeRoutine(AudioSource outgoing, AudioSource incoming, float targetVolume, float duration)
+    {
+        float outgoingStartVolume = outgoing.volume;
+        float t = 0f;
+
+        while (t < duration)
+        {
+            t += Time.deltaTime;
+            float p = t / duration;
+            outgoing.volume = Mathf.Lerp(outgoingStartVolume, 0f, p);
+            incoming.volume = Mathf.Lerp(0f, targetVolume, p);
+            yield return null;
+        }
+
+        outgoing.Stop();
+        outgoing.volume = 0f;
+        incoming.volume = targetVolume;
+        crossfadeRoutine = null;
+    }
+
+    public void StopMusic(float fadeDuration = -1f)
+    {
+        float duration = fadeDuration >= 0f ? fadeDuration : defaultFadeDuration;
+
+        if (crossfadeRoutine != null) StopCoroutine(crossfadeRoutine);
+
+        if (duration <= 0f)
+        {
+            activeMusicSource.Stop();
+        }
+        else
+        {
+            crossfadeRoutine = StartCoroutine(FadeOutAndStop(activeMusicSource, duration));
         }
     }
 
-    private IEnumerator CrossfadeMusic(AudioClip newClip, bool loop, float fadeTime)
+    private IEnumerator FadeOutAndStop(AudioSource source, float duration)
     {
-        float startVol = musicSource.volume;
-
-        // Fade-out del clip actual
-        for (float t = 0; t < fadeTime; t += Time.deltaTime)
+        float startVolume = source.volume;
+        float t = 0f;
+        while (t < duration)
         {
-            musicSource.volume = Mathf.Lerp(startVol, 0f, t / fadeTime);
+            t += Time.deltaTime;
+            source.volume = Mathf.Lerp(startVolume, 0f, t / duration);
             yield return null;
         }
-        musicSource.volume = 0f;
-
-        // Cambio de clip
-        musicSource.clip = newClip;
-        musicSource.loop = loop;
-        musicSource.Play();
-
-        // Fade-in del clip nuevo
-        for (float t = 0; t < fadeTime; t += Time.deltaTime)
-        {
-            musicSource.volume = Mathf.Lerp(0f, startVol, t / fadeTime);
-            yield return null;
-        }
-        musicSource.volume = startVol;
-        musicFadeRoutine = null;
-    }
-
-    private IEnumerator FadeInMusic(AudioClip newClip, bool loop, float fadeTime)
-    {
-        float targetVol = musicSource.volume > 0f ? musicSource.volume : 1f;
-
-        musicSource.clip = newClip;
-        musicSource.loop = loop;
-        musicSource.volume = 0f;
-        musicSource.Play(); // arranca de inmediato, sin esperar
-
-        for (float t = 0; t < fadeTime; t += Time.deltaTime)
-        {
-            musicSource.volume = Mathf.Lerp(0f, targetVol, t / fadeTime);
-            yield return null;
-        }
-        musicSource.volume = targetVol;
-        musicFadeRoutine = null;
-    }
-
-    /// <summary>
-    /// Corta la música con fade-out (útil para pausar/salir de la partida).
-    /// </summary>
-    public void StopMusic(float fadeTime = 1f)
-    {
-        if (musicFadeRoutine != null) StopCoroutine(musicFadeRoutine);
-        musicFadeRoutine = StartCoroutine(FadeOutAndStop(fadeTime));
-    }
-
-    private IEnumerator FadeOutAndStop(float fadeTime)
-    {
-        float startVol = musicSource.volume;
-        for (float t = 0; t < fadeTime; t += Time.deltaTime)
-        {
-            musicSource.volume = Mathf.Lerp(startVol, 0f, t / fadeTime);
-            yield return null;
-        }
-        musicSource.Stop();
-        musicSource.volume = startVol; // restauramos para la próxima vez que suene
-        musicFadeRoutine = null;
+        source.Stop();
+        source.volume = 0f;
+        crossfadeRoutine = null;
     }
 }

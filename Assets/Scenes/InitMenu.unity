@@ -8287,6 +8287,11 @@ MonoBehaviour:
   sfxGroup: {fileID: 5893586718415447225, guid: cf37b6833b6a8c640ad4fd4893af9a6b, type: 2}
   musicSource: {fileID: 1255553112}
   poolSize: 10
+  sceneMusicMap:
+  - sceneName: InitMenu
+    music: {fileID: 11400000, guid: c57f84aa5e0d72744bace0ca42ad9143, type: 2}
+  - sceneName: GameCards
+    music: {fileID: 11400000, guid: fc5c53f85eff00849aaac7865d73fbf4, type: 2}
 --- !u!82 &1255553112
 AudioSource:
   m_ObjectHideFlags: 0

@@ -16,11 +16,15 @@ public class CardDragHandler : MonoBehaviour,
     private HandManager handManager;
     private CardInteraction cardInteraction;
 
-    public SoundData moveSound;
+ 
 
     [Header("Red")]
     [Tooltip("Vive en la escena, no en el prefab - se busca solo si no se asigna.")]
     [SerializeField] private DeckManager deckManager;
+
+    [Header("Audio")]
+    [SerializeField] private SoundData drawCardSound;
+    [SerializeField] private SoundData DiscardCardSound;
 
   
    
@@ -68,7 +72,9 @@ public class CardDragHandler : MonoBehaviour,
     public void OnBeginDrag(PointerEventData eventData)
     {
 
-        moveSound.Play();
+        drawCardSound.Play();
+
+    
         wasPlacedOnTable = false;
 
         if (returnCoroutine != null)
@@ -127,6 +133,7 @@ public class CardDragHandler : MonoBehaviour,
 
     public void OnEndDrag(PointerEventData eventData)
     {
+        DiscardCardSound.Play();
         canvasGroup.blocksRaycasts = true;
 
         if (wasPlacedOnTable)

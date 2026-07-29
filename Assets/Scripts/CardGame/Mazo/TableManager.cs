@@ -24,6 +24,9 @@ public class TableManager : MonoBehaviour
     [SerializeField] private float positionRangeY = 5f;
     [SerializeField] private float rotationRangeZ = 8f;
 
+    [Header("Audio")]
+    [SerializeField] private SoundData discardCardSound;
+
     public void AgregarCartaDescartada(CardData carta)
     {
         if (tableCardPrefab == null)
@@ -70,6 +73,8 @@ public class TableManager : MonoBehaviour
         cardRect.localScale = Vector3.one;
 
         DesactivarInteraccion(cartaVisual);
+
+        discardCardSound.Play();
     }
 
     /// <summary>

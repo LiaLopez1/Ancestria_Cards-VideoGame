@@ -103,6 +103,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DeckCardDrag
   returnDuration: 0.2
+  drawCardSound: {fileID: 11400000, guid: 634bda8ec45ea2747bf6f88ec386c328, type: 2}
+  PutCardSound: {fileID: 11400000, guid: ef42224fc6692444da6fe2e49254e6a1, type: 2}
 --- !u!1 &9080689041263919224
 GameObject:
   m_ObjectHideFlags: 0
