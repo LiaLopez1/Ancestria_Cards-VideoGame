@@ -2984,11 +2984,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2373584872502172541, guid: abb61cf0b24e8f748b28d02bc8ecc329, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 336.3
+      value: 324
       objectReference: {fileID: 0}
     - target: {fileID: 2373584872502172541, guid: abb61cf0b24e8f748b28d02bc8ecc329, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 112.3
+      value: 112
       objectReference: {fileID: 0}
     - target: {fileID: 2373584872502172541, guid: abb61cf0b24e8f748b28d02bc8ecc329, type: 3}
       propertyPath: m_LocalPosition.x
@@ -3000,7 +3000,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2373584872502172541, guid: abb61cf0b24e8f748b28d02bc8ecc329, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0.357145
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2373584872502172541, guid: abb61cf0b24e8f748b28d02bc8ecc329, type: 3}
       propertyPath: m_LocalRotation.w
@@ -3020,11 +3020,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2373584872502172541, guid: abb61cf0b24e8f748b28d02bc8ecc329, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -718
+      value: -717
       objectReference: {fileID: 0}
     - target: {fileID: 2373584872502172541, guid: abb61cf0b24e8f748b28d02bc8ecc329, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -6
+      value: -125
       objectReference: {fileID: 0}
     - target: {fileID: 2373584872502172541, guid: abb61cf0b24e8f748b28d02bc8ecc329, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -4492,10 +4492,10 @@ MonoBehaviour:
   gameManager: {fileID: 340926873}
   turnHighlighter: {fileID: 648538554}
   posicionesHighlighterPorSlot:
-  - {x: -680, y: 234}
-  - {x: -680, y: 114}
-  - {x: -680, y: -6}
-  posicionHighlighterBoss: {x: -680, y: 354}
+  - {x: -717, y: 116}
+  - {x: -717, y: -4}
+  - {x: -717, y: -125}
+  posicionHighlighterBoss: {x: -717, y: 236}
 --- !u!114 &979683348
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9323,8 +9323,8 @@ MonoBehaviour:
   bossImage: {fileID: 1452595172}
   spriteConCuatroCartas: {fileID: 21300000, guid: 25d05db2ed6e38c448764ea0fe68baad, type: 3}
   spriteConCincoCartas: {fileID: 21300000, guid: bac3de3da729d5a48bbb67ab410c13d3, type: 3}
-  spriteRevisandoCartas: {fileID: 21300000, guid: 20ae525254ff2f34db59770b0e90422e, type: 3}
-  spriteMirandoOponentes: {fileID: 21300000, guid: 0e0908bc70cc2cf4fb3cb32a5466bc92, type: 3}
+  spriteRevisandoCartas: {fileID: 21300000, guid: 25d05db2ed6e38c448764ea0fe68baad, type: 3}
+  spriteMirandoOponentes: {fileID: 21300000, guid: 858fdd769c59ac74280a4285eb5b7bf3, type: 3}
   intervaloMinimoAtencion: 2
   intervaloMaximoAtencion: 5
   nombreInicial: Boss
