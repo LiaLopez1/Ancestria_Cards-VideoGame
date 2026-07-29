@@ -43,9 +43,6 @@ public class DeckManager : NetworkBehaviour
 
     [Header("Turno")]
     [SerializeField] private TurnManager turnManager;
-
-    [Header("Resultado de la partida")]
-    [Tooltip("Ahora es quien decide victoria/derrota - reemplaza a turnManager.DeclararGanador().")]
     [SerializeField] private GameManager gameManager;
 
     [Header("Boss")]
@@ -79,7 +76,11 @@ public class DeckManager : NetworkBehaviour
     // no revelan identidad - por eso se pueden construir igual en todos lados).
     private readonly List<GameObject> visualDeck = new List<GameObject>();
 
-    private bool partidaIniciada;
+    // Sincronizado para que TODOS los clientes sepan si la partida ya
+    // arranco de verdad - se usa tanto para bloquear un segundo "Iniciar
+    // partida" como para decidir si la pila visual del mazo debe verse o
+    // no (no debe aparecer hasta este momento).
+    private readonly NetworkVariable<bool> partidaIniciada = new NetworkVariable<bool>(false);
 
     // Cuantas cartas quedan en el mazo - esto SI se sincroniza a todos,
     // para que el mazo visual se vea igual de "alto" en todas las pantallas.
@@ -107,7 +108,8 @@ public class DeckManager : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        cartasVisiblesEnMazo.OnValueChanged += (anterior, nuevo) => ActualizarMazoVisual(nuevo);
+        cartasVisiblesEnMazo.OnValueChanged += (anterior, nuevo) => ActualizarMazoVisualSiCorresponde();
+        partidaIniciada.OnValueChanged += (anterior, nuevo) => ActualizarMazoVisualSiCorresponde();
 
         if (IsServer)
         {
@@ -122,10 +124,21 @@ public class DeckManager : NetworkBehaviour
             botonIniciarPartida.SetActive(IsServer);
         }
 
-        // Todos (incluido el host) arman su propio mazo visual con el
-        // conteo actual - el host lo hace de una porque cartasVisiblesEnMazo.Value
-        // ya quedo asignado arriba antes de llegar aqui.
-        ActualizarMazoVisual(cartasVisiblesEnMazo.Value);
+        // El mazo NO debe verse hasta que la partida arranque de verdad -
+        // por eso no usamos directamente cartasVisiblesEnMazo.Value aca.
+        // Si un cliente se conecta cuando la partida YA esta en curso (por
+        // ejemplo, reconectando a mitad de partida), esto ya lo muestra
+        // correctamente de una, gracias a partidaIniciada.Value.
+        ActualizarMazoVisualSiCorresponde();
+    }
+
+    /// <summary>
+    /// Muestra la pila visual del mazo con el conteo real, o la mantiene
+    /// vacia/oculta si la partida todavia no arranco.
+    /// </summary>
+    private void ActualizarMazoVisualSiCorresponde()
+    {
+        ActualizarMazoVisual(partidaIniciada.Value ? cartasVisiblesEnMazo.Value : 0);
     }
 
     /// <summary>
@@ -142,13 +155,13 @@ public class DeckManager : NetworkBehaviour
             return;
         }
 
-        if (partidaIniciada)
+        if (partidaIniciada.Value)
         {
             Debug.LogWarning("[DeckManager] La partida ya fue iniciada.");
             return;
         }
 
-        partidaIniciada = true;
+        partidaIniciada.Value = true;
 
         if (botonIniciarPartida != null)
         {
@@ -583,13 +596,13 @@ public class DeckManager : NetworkBehaviour
         {
             if (NetworkBootstrap.Instance.TryObtenerSlot(clienteSolicitante, out int slotGanador))
             {
-                if (gameManager == null)
+                if (gameManager != null)
                 {
-                    Debug.LogError("[DeckManager] Un jugador cumplió la regla de victoria, pero no se asignó GameManager en el Inspector.");
+                    gameManager.DeclararVictoriaJugador(slotGanador);
                 }
                 else
                 {
-                    gameManager.DeclararVictoriaJugador(slotGanador);
+                    Debug.LogError("[DeckManager] Se cumplió la regla de victoria, pero no se asignó GameManager en el Inspector - no se puede declarar la victoria.");
                 }
 
                 return; // no avanzamos el turno, la partida ya termino
@@ -806,13 +819,13 @@ public class DeckManager : NetworkBehaviour
 
         if (turnManager != null && VictoryRules.SeCumple(turnManager.ReglaActiva, mano))
         {
-            if (gameManager == null)
+            if (gameManager != null)
             {
-                Debug.LogError("[DeckManager] El boss cumplió la regla de victoria, pero no se asignó GameManager en el Inspector.");
+                gameManager.DeclararVictoriaBoss();
             }
             else
             {
-                gameManager.DeclararVictoriaBoss();
+                Debug.LogError("[DeckManager] El boss cumplió la regla de victoria, pero no se asignó GameManager en el Inspector - no se puede declarar la derrota.");
             }
 
             return; // no avanzamos el turno, la partida ya terminó

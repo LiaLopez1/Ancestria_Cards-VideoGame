@@ -15,8 +15,8 @@ EditorBuildSettings:
     path: Assets/Scenes/InitMenu.unity
     guid: 2d97691200f15694f9f32c16f992b64e
   - enabled: 1
-    path: Assets/Scenes/PruebaBoss3.unity
-    guid: 8ce0288b6d60165459a8ae9a0909fa07
+    path: Assets/Scenes/Tutorial.unity
+    guid: fbc02a51450969f49afa4647d91dc820
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

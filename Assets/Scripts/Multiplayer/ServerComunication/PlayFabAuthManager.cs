@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using PlayFab;
 using PlayFab.ClientModels;
 using UnityEngine;
@@ -17,11 +18,24 @@ public class PlayFabAuthManager : MonoBehaviour
     public string EntityId { get; private set; }
     public string EntityType { get; private set; }
 
+    /// <summary>
+    /// ¿Este jugador ya completó el tutorial? Se consulta a PlayFab (UserData,
+    /// ligado a la cuenta/PC) apenas termina el login, ANTES de disparar
+    /// OnLoginSuccess - así, cuando ese evento llega, este valor ya está
+    /// listo para decidir qué botones mostrar.
+    /// </summary>
+    public bool TutorialCompletado { get; private set; }
+
+    private const string TutorialCompletadoKey = "TutorialCompletado";
+
     public bool HasDisplayName => !string.IsNullOrEmpty(DisplayName);
 
     public event Action OnLoginSuccess;
     public event Action<string> OnLoginFailed;
     public event Action OnDisplayNameUpdated;
+
+    /// <summary>Se dispara cuando MarcarTutorialCompletado() confirma el guardado en PlayFab.</summary>
+    public event Action OnTutorialCompletadoConfirmado;
 
     private void Awake()
     {
@@ -61,7 +75,38 @@ public class PlayFabAuthManager : MonoBehaviour
 
         Debug.Log($"[PlayFab] Login OK. PlayFabId: {PlayFabId} (deviceId usado: {SystemInfo.deviceUniqueIdentifier}). HasDisplayName: {HasDisplayName}");
 
-        OnLoginSuccess?.Invoke();
+        // No disparamos OnLoginSuccess todavia - primero hay que saber si
+        // el tutorial ya esta completo, para que quien escuche el evento
+        // (StartupFlowUI) ya tenga ese dato listo de una.
+        ConsultarEstadoTutorial();
+    }
+
+    private void ConsultarEstadoTutorial()
+    {
+        var request = new GetUserDataRequest { Keys = new List<string> { TutorialCompletadoKey } };
+
+        PlayFabClientAPI.GetUserData(request,
+            result =>
+            {
+                TutorialCompletado = result.Data != null
+                    && result.Data.TryGetValue(TutorialCompletadoKey, out UserDataRecord registro)
+                    && registro.Value == "true";
+
+                Debug.Log($"[PlayFab] Estado del tutorial: {(TutorialCompletado ? "ya completado" : "todavía no")}.");
+
+                OnLoginSuccess?.Invoke();
+            },
+            error =>
+            {
+                Debug.LogError($"[PlayFab] Error al consultar el estado del tutorial: {error.GenerateErrorReport()}");
+
+                // Si no podemos saberlo, asumimos que YA lo completo - mejor
+                // eso que bloquear a un jugador existente por un error de red
+                // puntual al consultar este dato.
+                TutorialCompletado = true;
+                OnLoginSuccess?.Invoke();
+            }
+        );
     }
 
     private void OnLoginError(PlayFabError error)
@@ -84,5 +129,53 @@ public class PlayFabAuthManager : MonoBehaviour
         DisplayName = newName;
         Debug.Log($"[PlayFab] DisplayName actualizado (local, sin llamada a PlayFab): {DisplayName}");
         OnDisplayNameUpdated?.Invoke();
+    }
+
+    /// <summary>
+    /// Llamar cuando el jugador termina el tutorial - guarda el progreso en
+    /// PlayFab (UserData, no exige unicidad, a diferencia del nick viejo)
+    /// para que la proxima vez que este mismo PC/cuenta inicie sesion, ya
+    /// no se le vuelva a pedir el tutorial.
+    /// </summary>
+    public void MarcarTutorialCompletado()
+    {
+        var request = new UpdateUserDataRequest
+        {
+            Data = new Dictionary<string, string> { { TutorialCompletadoKey, "true" } }
+        };
+
+        PlayFabClientAPI.UpdateUserData(request,
+            result =>
+            {
+                TutorialCompletado = true;
+                Debug.Log("[PlayFab] Tutorial marcado como completado.");
+                OnTutorialCompletadoConfirmado?.Invoke();
+            },
+            error => Debug.LogError($"[PlayFab] Error al marcar el tutorial como completado: {error.GenerateErrorReport()}")
+        );
+    }
+
+    /// <summary>
+    /// SOLO para pruebas: borra la bandera del tutorial en PlayFab, para
+    /// poder repetir el flujo completo (jugador nuevo -> tutorial -> volver
+    /// al menu) sin tener que ir al dashboard de PlayFab a mano cada vez.
+    /// No se llama desde ningun lado del flujo normal del juego - conectala
+    /// a un boton/atajo de debug mientras estés probando.
+    /// </summary>
+    public void ResetearTutorialCompletado()
+    {
+        var request = new UpdateUserDataRequest
+        {
+            KeysToRemove = new List<string> { TutorialCompletadoKey }
+        };
+
+        PlayFabClientAPI.UpdateUserData(request,
+            result =>
+            {
+                TutorialCompletado = false;
+                Debug.Log("[PlayFab] Tutorial reseteado (para pruebas) - la próxima vez vuelve a pedirse.");
+            },
+            error => Debug.LogError($"[PlayFab] Error al resetear el tutorial: {error.GenerateErrorReport()}")
+        );
     }
 }
