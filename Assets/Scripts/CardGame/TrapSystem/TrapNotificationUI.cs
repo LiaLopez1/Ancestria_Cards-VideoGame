@@ -28,7 +28,7 @@ public class TrapNotificationUI : MonoBehaviour
     [Header("Duración")]
     [SerializeField] private float duracionVisible = 3f;
 
-    [Header("Audio")]
+    //[Header("Audio")]
     //[SerializeField] private SoundData trapNotificationSound;
 
 
