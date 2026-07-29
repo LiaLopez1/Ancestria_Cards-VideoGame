@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using JetBrains.Annotations;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -77,6 +78,19 @@ public class BossManager : NetworkBehaviour
     // reiniciarla limpio si IniciarManoInicial() se llama de nuevo (una
     // ronda nueva) sin dejar una copia vieja corriendo en paralelo.
     private Coroutine corrutinaAtencion;
+    private Sprite spriteInicialBoss;
+
+    private readonly NetworkVariable<bool> partidaIniciada =
+    new NetworkVariable<bool>(false);
+
+    private void Awake()
+    {
+        if (bossImage != null)
+        {
+            spriteInicialBoss = bossImage.sprite;
+        }
+    }
+
 
     public override void OnNetworkSpawn()
     {
@@ -86,6 +100,7 @@ public class BossManager : NetworkBehaviour
         // 5 cartas, su estado de atención, o de quién es el turno ahora.
         tieneCincoCartas.OnValueChanged += (anterior, nuevo) => ActualizarSpriteBoss();
         atencionActual.OnValueChanged += (anterior, nuevo) => ActualizarSpriteBoss();
+        partidaIniciada.OnValueChanged += (anterior, nuevo) => ActualizarSpriteBoss();
 
         if (turnManager != null)
         {
@@ -177,7 +192,20 @@ public class BossManager : NetworkBehaviour
     /// </summary>
     private void ActualizarSpriteBoss()
     {
-        if (bossImage == null || turnManager == null)
+        if (bossImage == null)
+        {
+            return;
+        }
+
+            // Antes de comenzar la partida conserva la imagen configurada
+        // originalmente en el componente Image.
+        if (!partidaIniciada.Value)
+        {
+            bossImage.sprite = spriteInicialBoss;
+            return;
+        }
+
+        if (turnManager == null)
         {
             return;
         }
@@ -201,16 +229,22 @@ public class BossManager : NetworkBehaviour
     /// </summary>
     public void IniciarManoInicial()
     {
+        partidaIniciada.Value = true;
+
         if (!IsServer)
         {
             return;
         }
+
+
 
         // Recien ahora arranca de verdad la partida - nos aseguramos de
         // empezar (o volver a empezar, si es una ronda nueva) quieto en
         // "Mirando oponentes", y ahi si arrancamos el ciclo de alternancia.
         // Antes de este punto, el boss se queda fijo en ese estado inicial.
         atencionActual.Value = EstadoAtencionBoss.MirandoOponentes;
+
+        partidaIniciada.Value = true;
 
         if (corrutinaAtencion != null)
         {
