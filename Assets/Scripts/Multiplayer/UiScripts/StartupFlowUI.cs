@@ -1,17 +1,24 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
-/// Controla el arranque del jugador con dos caminos posibles:
+/// Controla el arranque del jugador. El login arranca solo al mostrarse este
+/// menu (ya no espera a que aprieten un boton) porque hace falta saber si
+/// el tutorial esta completo ANTES de habilitar los botones correctos.
 ///
-/// 1) CREAR SALA (host): boton "Crear sala" -> login -> pedir nick (siempre,
-///    es "oneshot") -> LobbyManager crea la sala -> entra directo al GameScene,
-///    donde espera a que otros se unan.
+/// 1) CREAR SALA (host): boton "Crear sala" ->
+///    - si el tutorial NO esta completo: carga la escena del tutorial
+///      directo (sin nick, sin sala real - es practica en solitario).
+///    - si ya esta completo: pedir nick (siempre, es "oneshot") ->
+///      LobbyManager crea la sala -> entra directo al GameScene, donde
+///      espera a que otros se unan.
 ///
-/// 2) UNIRSE (guest): boton "Unirse" -> login -> pedir nick (siempre) ->
-///    se muestra la lista de salas disponibles -> al elegir una, LobbyManager
-///    se une -> entra al GameScene.
+/// 2) UNIRSE (guest): solo habilitado si el tutorial ya esta completo.
+///    boton "Unirse" -> pedir nick (siempre) -> se muestra la lista de
+///    salas disponibles -> al elegir una, LobbyManager se une -> entra
+///    al GameScene.
 ///
 /// Este script necesita una referencia directa a un PlayFabAuthManager y a un
 /// LobbyManager (arrastralas en el Inspector).
@@ -53,12 +60,21 @@ public class StartupFlowUI : MonoBehaviour
     [SerializeField] private TMP_Text avisoDesconexionText;
     [SerializeField] private Button cerrarAvisoButton;
 
+    [Header("Tutorial (jugador nuevo)")]
+    [Tooltip("Nombre de la escena del tutorial - se carga en vez de crear una sala si el jugador todavia no lo completo.")]
+    [SerializeField] private string nombreEscenaTutorial = "Tutorial";
+
     private const int MinNickLength = 3;
     private const int MaxNickLength = 16;
 
     // Recuerda que boton se presiono originalmente (Crear sala o Unirse),
     // para saber que hacer una vez el nick quede confirmado.
     private bool intentaSerHost;
+
+    // true una vez que el login (con el estado del tutorial ya conocido)
+    // se resolvio con exito - antes de eso, ningun boton debe hacer nada
+    // mas que reintentar el login.
+    private bool sesionIniciada;
 
     private void Start()
     {
@@ -81,6 +97,21 @@ public class StartupFlowUI : MonoBehaviour
         authManager.OnLoginSuccess += HandleLoginSuccess;
         authManager.OnLoginFailed += HandleLoginFailed;
         authManager.OnDisplayNameUpdated += HandleDisplayNameUpdated;
+
+        // El login YA NO espera a que el jugador apriete un boton - arranca
+        // solo apenas se muestra el menu, porque necesitamos saber si ya
+        // completo el tutorial ANTES de poder habilitar los botones
+        // correctos (un jugador nuevo solo debe ver "Crear sala" habilitado).
+        if (!string.IsNullOrEmpty(authManager.PlayFabId))
+        {
+            // Ya nos habiamos logueado antes en esta misma sesion (por
+            // ejemplo, al volver del tutorial) - no hace falta repetirlo.
+            HandleLoginSuccess();
+        }
+        else
+        {
+            IniciarLoginInicial();
+        }
     }
 
     private void MostrarMensajePendienteSiExiste()
@@ -110,16 +141,39 @@ public class StartupFlowUI : MonoBehaviour
     public void OnCrearSalaButtonPressed()
     {
         intentaSerHost = true;
-        IniciarLogin();
+
+        if (!sesionIniciada)
+        {
+            IniciarLoginInicial();
+            return;
+        }
+
+        if (!authManager.TutorialCompletado)
+        {
+            // Jugador nuevo: en vez del flujo normal (nick -> crear sala),
+            // lo mandamos directo al tutorial - todavia no hace falta nick
+            // ni sala real, es una practica en solitario.
+            SceneManager.LoadScene(nombreEscenaTutorial);
+            return;
+        }
+
+        ShowOnly(panelNickname);
     }
 
     public void OnUnirseButtonPressed()
     {
         intentaSerHost = false;
-        IniciarLogin();
+
+        if (!sesionIniciada)
+        {
+            IniciarLoginInicial();
+            return;
+        }
+
+        ShowOnly(panelNickname);
     }
 
-    private void IniciarLogin()
+    private void IniciarLoginInicial()
     {
         crearSalaButton.interactable = false;
         unirseButton.interactable = false;
@@ -129,9 +183,21 @@ public class StartupFlowUI : MonoBehaviour
 
     private void HandleLoginSuccess()
     {
-        // Cada partida es "oneshot": siempre se pide el nick, sin importar
-        // si el jugador ya tenia uno guardado de una partida anterior.
-        ShowOnly(panelNickname);
+        sesionIniciada = true;
+        ActualizarBotonesInicio();
+        SetEstadoInicio(string.Empty);
+    }
+
+    /// <summary>
+    /// "Crear sala" siempre esta disponible una vez logueado (si el tutorial
+    /// no esta completo, igual lo lleva ahi - ver OnCrearSalaButtonPressed).
+    /// "Unirse" queda deshabilitado hasta completar el tutorial: un jugador
+    /// nuevo no deberia poder entrar a la sala de otro todavia.
+    /// </summary>
+    private void ActualizarBotonesInicio()
+    {
+        crearSalaButton.interactable = sesionIniciada;
+        unirseButton.interactable = sesionIniciada && authManager.TutorialCompletado;
     }
 
     private void HandleLoginFailed(string error)
@@ -198,8 +264,7 @@ public class StartupFlowUI : MonoBehaviour
         if (nicknameInput != null) nicknameInput.text = string.Empty;
         if (nicknameErrorText != null) nicknameErrorText.gameObject.SetActive(false);
 
-        crearSalaButton.interactable = true;
-        unirseButton.interactable = true;
+        ActualizarBotonesInicio();
         SetEstadoInicio(string.Empty);
 
         ShowOnly(panelInicio);
