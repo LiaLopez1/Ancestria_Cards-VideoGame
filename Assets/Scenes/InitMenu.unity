@@ -8285,8 +8285,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AudioManager
   musicGroup: {fileID: 2057142142584605926, guid: cf37b6833b6a8c640ad4fd4893af9a6b, type: 2}
   sfxGroup: {fileID: 5893586718415447225, guid: cf37b6833b6a8c640ad4fd4893af9a6b, type: 2}
-  musicSource: {fileID: 1255553112}
-  poolSize: 10
+  defaultFadeDuration: 0.4
+  poolSize: 20
   sceneMusicMap:
   - sceneName: InitMenu
     music: {fileID: 11400000, guid: c57f84aa5e0d72744bace0ca42ad9143, type: 2}

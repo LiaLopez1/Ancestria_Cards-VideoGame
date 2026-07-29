@@ -6187,6 +6187,7 @@ MonoBehaviour:
   - {x: 177, y: 37}
   - {x: 177, y: -53}
   posicionHighlighterBoss: {x: 177, y: 215}
+  NotifyTurn: {fileID: 11400000, guid: 3aa34c179cf5c7d469243ea4ee054ac6, type: 2}
 --- !u!114 &979683348
 MonoBehaviour:
   m_ObjectHideFlags: 0
