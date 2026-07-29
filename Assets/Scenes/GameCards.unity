@@ -1703,6 +1703,7 @@ Transform:
   - {fileID: 391290178}
   - {fileID: 428479929}
   - {fileID: 1124723463}
+  - {fileID: 1174355121}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &305299627
@@ -1787,7 +1788,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 305299630}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1174355123}
+        m_TargetAssemblyTypeName: GameRestartManager, Assembly-CSharp
+        m_MethodName: VolverAlMenu
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &305299630
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5623,7 +5636,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 889682249}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1174355123}
+        m_TargetAssemblyTypeName: GameRestartManager, Assembly-CSharp
+        m_MethodName: SolicitarVolverAJugar
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &889682249
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6620,7 +6645,7 @@ GameObject:
   - component: {fileID: 1067856145}
   - component: {fileID: 1067856144}
   m_Layer: 5
-  m_Name: Panel
+  m_Name: PanelVictoria
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -6980,6 +7005,82 @@ MonoBehaviour:
   ChangeCardSound: {fileID: 11400000, guid: c58e07c089edd504c8e58bc6fc174e95, type: 2}
   selectCartaSound: {fileID: 11400000, guid: 634bda8ec45ea2747bf6f88ec386c328, type: 2}
   Notification: {fileID: 11400000, guid: 3aa34c179cf5c7d469243ea4ee054ac6, type: 2}
+--- !u!1 &1174355120
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1174355121}
+  - component: {fileID: 1174355123}
+  - component: {fileID: 1174355122}
+  m_Layer: 0
+  m_Name: GameRestartManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1174355121
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1174355120}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 282538747}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1174355122
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1174355120}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
+  GlobalObjectIdHash: 980883584
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  <InScenePlaced>k__BackingField: 0
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 0
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
+--- !u!114 &1174355123
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1174355120}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4323fe4c82fabd478d654ef886fe343, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameRestartManager
+  ShowTopMostFoldoutHeaderGroup: 1
+  gameManager: {fileID: 340926873}
+  deckManager: {fileID: 2066499337}
+  suspicionManager: {fileID: 391290177}
+  nombreEscenaMenu: InitMenu
 --- !u!1 &1177302138
 GameObject:
   m_ObjectHideFlags: 0
@@ -9336,7 +9437,7 @@ GameObject:
   - component: {fileID: 1539954060}
   - component: {fileID: 1539954059}
   m_Layer: 5
-  m_Name: Panel (2)
+  m_Name: PanelSospecha
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -10971,7 +11072,7 @@ GameObject:
   - component: {fileID: 1827690990}
   - component: {fileID: 1827690989}
   m_Layer: 5
-  m_Name: Panel (1)
+  m_Name: PanelPierde
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -11466,7 +11567,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1912635120}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1174355123}
+        m_TargetAssemblyTypeName: GameRestartManager, Assembly-CSharp
+        m_MethodName: SolicitarVolverAJugar
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1912635120
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11623,7 +11736,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1933812122}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1174355123}
+        m_TargetAssemblyTypeName: GameRestartManager, Assembly-CSharp
+        m_MethodName: VolverAlMenu
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1933812122
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12145,7 +12270,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 2005650186}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1174355123}
+        m_TargetAssemblyTypeName: GameRestartManager, Assembly-CSharp
+        m_MethodName: VolverAlMenu
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &2005650186
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12634,7 +12771,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 2055045170}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1174355123}
+        m_TargetAssemblyTypeName: GameRestartManager, Assembly-CSharp
+        m_MethodName: SolicitarVolverAJugar
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &2055045170
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -13114,7 +13263,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 4293785343
   m_fontColor: {r: 1, g: 0.9647059, b: 0.92941177, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -13356,7 +13505,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 4293785343
   m_fontColor: {r: 1, g: 0.9647059, b: 0.92941177, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
