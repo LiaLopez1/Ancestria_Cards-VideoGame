@@ -204,7 +204,7 @@ public class TradeUIManager : MonoBehaviour
     {
         if (mensajeIniciadorText != null)
         {
-            mensajeIniciadorText.text = "Elije con quien intercambiar.";
+            mensajeIniciadorText.text = "Selecciona una carta para el intercambio.";
         }
 
         if (panelIniciador != null)
