@@ -28,6 +28,10 @@ public class TrapNotificationUI : MonoBehaviour
     [Header("Duración")]
     [SerializeField] private float duracionVisible = 3f;
 
+    [Header("Audio")]
+    //[SerializeField] private SoundData trapNotificationSound;
+
+
     /// <summary>Una notificación esperando su turno en la cola.</summary>
     private struct NotificacionPendiente
     {
@@ -112,5 +116,7 @@ public class TrapNotificationUI : MonoBehaviour
         {
             panelNotificacion.SetActive(true);
         }
+
+        //trapNotificationSound.Play();
     }
 }

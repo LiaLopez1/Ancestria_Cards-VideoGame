@@ -416,6 +416,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3796759adbf98d24f8f9223265426f30, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CardDragHandler
+  deckManager: {fileID: 0}
+  drawCardSound: {fileID: 11400000, guid: 634bda8ec45ea2747bf6f88ec386c328, type: 2}
+  DiscardCardSound: {fileID: 11400000, guid: ef42224fc6692444da6fe2e49254e6a1, type: 2}
   returnDuration: 0.2
 --- !u!225 &3739568535620960003
 CanvasGroup:

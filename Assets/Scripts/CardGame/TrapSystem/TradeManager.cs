@@ -48,6 +48,11 @@ public class TradeManager : NetworkBehaviour
     [Header("UI local (de este cliente)")]
     [SerializeField] private TradeUIManager tradeUI;
 
+    [Header("Audio")]
+    //[SerializeField] private SoundData selectCartaSound;
+    [SerializeField] private SoundData GetCardChange;
+    [SerializeField] private SoundData trapNotificationSound;
+
     // ------------------- Estado SOLO en el servidor -------------------
     private bool intercambioEnProgreso;
     private ulong clienteIniciador;
@@ -157,6 +162,7 @@ public class TradeManager : NetworkBehaviour
     private void PedirSeleccionInicialClientRpc(ClientRpcParams rpcParams = default)
     {
         tradeUI?.MostrarSeleccionIniciador();
+        //selectCartaSound.Play();
     }
 
     // ---------------------------------------------------------------
@@ -196,6 +202,8 @@ public class TradeManager : NetworkBehaviour
     private void MostrarPropuestaClientRpc(FixedString64Bytes nombreIniciador, ClientRpcParams rpcParams = default)
     {
         tradeUI?.MostrarPropuesta(nombreIniciador.ToString());
+        trapNotificationSound.Play();
+
     }
 
     // ---------------------------------------------------------------
@@ -233,6 +241,7 @@ public class TradeManager : NetworkBehaviour
     private void PedirSeleccionObjetivoClientRpc(ClientRpcParams rpcParams = default)
     {
         tradeUI?.MostrarSeleccionObjetivo();
+        //selectCartaSound.Play();
     }
 
     [ClientRpc]
@@ -299,6 +308,7 @@ public class TradeManager : NetworkBehaviour
         }
 
         handManager?.EjecutarIntercambioVisual(cartaRecibida);
+        GetCardChange.Play();
 
         tradeUI?.CerrarTodo();
     }

@@ -33,6 +33,12 @@ public class TrapsPanelUI : MonoBehaviour
     [Tooltip("Controla la curva de la animacion. Para un efecto 'pop' con rebote, agrega una tercera clave arriba de 1 antes de llegar a 1 (ej: 0,0 -> 0.7,1.15 -> 1,1) en el editor de curvas.")]
     [SerializeField] private AnimationCurve curvaEscala = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
+    [Header("Audio")]
+    [SerializeField] private SoundData TrapSound;
+    [SerializeField] private SoundData CloseButtonSound;
+    
+
+
     private RectTransform panelRect;
     private Coroutine animacionActual;
     private bool panelVisible;
@@ -65,6 +71,10 @@ public class TrapsPanelUI : MonoBehaviour
         {
             AbrirPanel();
         }
+
+        TrapSound.Play();
+
+
     }
 
     /// <summary>Conectar opcionalmente a un botón de "Cerrar" dentro del panel.</summary>
@@ -96,7 +106,10 @@ public class TrapsPanelUI : MonoBehaviour
 
         if (animacionActual != null) StopCoroutine(animacionActual);
         animacionActual = StartCoroutine(AnimarEscala(1f, 0f, ocultarAlTerminar: true));
+
+        CloseButtonSound.Play();
     }
+
 
     private void Update()
     {

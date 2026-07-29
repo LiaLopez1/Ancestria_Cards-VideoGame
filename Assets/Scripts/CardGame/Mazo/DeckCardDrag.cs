@@ -1,4 +1,6 @@
+using System;
 using System.Collections;
+using UnityEditor.Search;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -31,6 +33,10 @@ public class DeckCardDrag : MonoBehaviour,
     private Vector3 originalWorldPosition;
     private Quaternion originalWorldRotation;
 
+    [Header("Audio")]
+    [SerializeField] private SoundData drawCardSound;
+    [SerializeField] private SoundData PutCardSound;
+
 
     public void Configure(DeckManager manager)
     {
@@ -56,6 +62,9 @@ public class DeckCardDrag : MonoBehaviour,
 
     public void OnBeginDrag(PointerEventData eventData)
     {
+
+        drawCardSound.Play();
+
         originalPosition = rectTransform.position;
         originalRotation = rectTransform.rotation;
 
@@ -108,6 +117,8 @@ public class DeckCardDrag : MonoBehaviour,
 
     public void OnEndDrag(PointerEventData eventData)
     {
+        PutCardSound.Play();
+        
         bool drawAccepted = false;
 
         if (deckManager != null)
