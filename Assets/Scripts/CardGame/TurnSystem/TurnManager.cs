@@ -2,6 +2,7 @@ using System;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.UI;
 
 public enum TurnState
 {
@@ -47,6 +48,23 @@ public class TurnManager : NetworkBehaviour
 
     [Header("Audio")]
     [SerializeField] private SoundData NotifyTurn;
+
+    [Header("Carta infiltrada")]
+    [Tooltip("Solo se usa si la regla sorteada esta ronda es CartaInfiltrada o CartaInfiltrada2.")]
+    [SerializeField] private InfiltratedCardManager infiltratedCardManager;
+    [Tooltip("Panel con el icono de la categoria infiltrada - queda apagado en las demas reglas.")]
+    [SerializeField] private GameObject panelCartaInfiltrada;
+    [SerializeField] private Image iconoCartaInfiltrada;
+
+    [System.Serializable]
+    public struct IconoPorCategoria
+    {
+        public CardCategory categoria;
+        public Sprite icono;
+    }
+
+    [Tooltip("Un icono por cada valor de CardCategory - se muestra el que corresponda a la categoria infiltrada sorteada.")]
+    [SerializeField] private IconoPorCategoria[] iconosPorCategoriaInfiltrada;
 
     private readonly NetworkVariable<int> turnoActual = new NetworkVariable<int>(0);
     private readonly NetworkVariable<TurnState> estadoActual = new NetworkVariable<TurnState>(TurnState.Dealing);
@@ -126,6 +144,17 @@ public class TurnManager : NetworkBehaviour
         };
     }
 
+    if (infiltratedCardManager != null)
+    {
+        infiltratedCardManager.OnCategoriaInfiltradaElegida += ActualizarCategoriaInfiltrada;
+
+        // Por si este cliente se conecta/reactiva DESPUES de que ya se
+        // eligio la categoria esta ronda - no depender solo del evento.
+        ActualizarCategoriaInfiltrada(infiltratedCardManager.HayCategoriaInfiltrada
+            ? (int)infiltratedCardManager.CategoriaInfiltrada
+            : -1);
+    }
+
     ActualizarMensaje();
     ActualizarHighlighter();
 }
@@ -146,7 +175,32 @@ public class TurnManager : NetworkBehaviour
         indiceReglaActual.Value = UnityEngine.Random.Range(0, VictoryRules.ReglasDisponibles.Length);
         estadoActual.Value = TurnState.WaitingToDraw;
 
+        ActualizarCartaInfiltradaSegunRegla();
+
         Debug.Log($"[Servidor] Regla de esta ronda: {VictoryRules.ObtenerNombre(ReglaActiva)}");
+    }
+
+    /// <summary>
+    /// SOLO servidor. Si la regla sorteada esta ronda es CartaInfiltrada o
+    /// CartaInfiltrada2, elige la carta ahora (se sincroniza sola a todos
+    /// via InfiltratedCardManager). Si no, se asegura de que quede en -1,
+    /// para que el panel se mantenga apagado el resto de la ronda.
+    /// </summary>
+    private void ActualizarCartaInfiltradaSegunRegla()
+    {
+        if (infiltratedCardManager == null) return;
+
+        bool necesitaCartaInfiltrada = ReglaActiva == VictoryRuleType.CartaInfiltrada
+                                     || ReglaActiva == VictoryRuleType.CartaInfiltrada2;
+
+        if (necesitaCartaInfiltrada)
+        {
+            infiltratedCardManager.ElegirCategoriaInfiltrada();
+        }
+        else
+        {
+            infiltratedCardManager.ReiniciarCategoriaInfiltrada();
+        }
     }
 
     /// <summary>¿El turno actual le pertenece a este slot?</summary>
@@ -287,5 +341,49 @@ public class TurnManager : NetworkBehaviour
         }
 
         turnHighlighter.anchoredPosition = posicionesHighlighterPorSlot[slot];
+    }
+
+    /// <summary>
+    /// Prende el panel con el icono de la categoria infiltrada cuando hay
+    /// una elegida (index >= 0), lo apaga si no (-1 = regla distinta esta
+    /// ronda, o todavia no se sorteo nada). Se llama tanto por el evento de
+    /// InfiltratedCardManager como al conectarse a mitad de ronda.
+    /// </summary>
+    private void ActualizarCategoriaInfiltrada(int categoriaIndex)
+    {
+        if (panelCartaInfiltrada == null) return;
+
+        if (categoriaIndex < 0)
+        {
+            panelCartaInfiltrada.SetActive(false);
+            return;
+        }
+
+        CardCategory categoria = (CardCategory)categoriaIndex;
+        Sprite icono = ObtenerIconoDeCategoriaInfiltrada(categoria);
+
+        if (icono == null)
+        {
+            Debug.LogWarning($"[TurnManager] No hay icono configurado para la categoria infiltrada {categoria}.");
+            return;
+        }
+
+        if (iconoCartaInfiltrada != null) iconoCartaInfiltrada.sprite = icono;
+        panelCartaInfiltrada.SetActive(true);
+    }
+
+    private Sprite ObtenerIconoDeCategoriaInfiltrada(CardCategory categoria)
+    {
+        if (iconosPorCategoriaInfiltrada == null) return null;
+
+        foreach (var entrada in iconosPorCategoriaInfiltrada)
+        {
+            if (entrada.categoria == categoria)
+            {
+                return entrada.icono;
+            }
+        }
+
+        return null;
     }
 }
