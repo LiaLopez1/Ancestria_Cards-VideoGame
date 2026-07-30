@@ -2172,9 +2172,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   ShowTopMostFoldoutHeaderGroup: 1
-  panelVictoria: {fileID: 1067856142}
-  panelDerrotaPorBoss: {fileID: 1827690987}
-  panelDerrotaPorSospecha: {fileID: 1539954057}
+  panelVictoria: {fileID: 1067856146}
+  panelDerrotaPorBoss: {fileID: 1827690991}
+  panelDerrotaPorSospecha: {fileID: 1539954061}
+  fadeDuration: 0.6
   textoNombreGanador: {fileID: 0}
   musicPruba: {fileID: 0}
 --- !u!114 &340926874
@@ -6612,6 +6613,7 @@ GameObject:
   - component: {fileID: 1067856143}
   - component: {fileID: 1067856145}
   - component: {fileID: 1067856144}
+  - component: {fileID: 1067856146}
   m_Layer: 5
   m_Name: PanelVictoria
   m_TagString: Untagged
@@ -6681,6 +6683,18 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1067856142}
   m_CullTransparentMesh: 1
+--- !u!225 &1067856146
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1067856142}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &1072735956
 GameObject:
   m_ObjectHideFlags: 0
@@ -9311,6 +9325,7 @@ GameObject:
   - component: {fileID: 1539954058}
   - component: {fileID: 1539954060}
   - component: {fileID: 1539954059}
+  - component: {fileID: 1539954061}
   m_Layer: 5
   m_Name: PanelSospecha
   m_TagString: Untagged
@@ -9380,6 +9395,18 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1539954057}
   m_CullTransparentMesh: 1
+--- !u!225 &1539954061
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1539954057}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &1551117339
 GameObject:
   m_ObjectHideFlags: 0
@@ -10752,6 +10779,7 @@ GameObject:
   - component: {fileID: 1827690988}
   - component: {fileID: 1827690990}
   - component: {fileID: 1827690989}
+  - component: {fileID: 1827690991}
   m_Layer: 5
   m_Name: PanelPierde
   m_TagString: Untagged
@@ -10821,6 +10849,18 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1827690987}
   m_CullTransparentMesh: 1
+--- !u!225 &1827690991
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1827690987}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &1849672992
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
@@ -23,13 +24,18 @@ public enum ResultadoPartida
 /// DeckManager y SuspicionManager avisan aquí, y este decide qué panel
 /// mostrar. Autoridad de servidor: solo el servidor decide el resultado,
 /// sincronizado a todos para que el panel correcto aparezca en cada cliente.
+/// Los paneles hacen fade in/out (CanvasGroup) en vez de aparecer/desaparecer
+/// de golpe.
 /// </summary>
 public class GameManager : NetworkBehaviour
 {
     [Header("Paneles (uno por desenlace - deben empezar todos desactivados en la escena)")]
-    [SerializeField] private GameObject panelVictoria;
-    [SerializeField] private GameObject panelDerrotaPorBoss;
-    [SerializeField] private GameObject panelDerrotaPorSospecha;
+    [SerializeField] private CanvasGroup panelVictoria;
+    [SerializeField] private CanvasGroup panelDerrotaPorBoss;
+    [SerializeField] private CanvasGroup panelDerrotaPorSospecha;
+
+    [Header("Transicion de paneles")]
+    [SerializeField] private float fadeDuration = 0.4f;
 
     [Header("Texto del panel de victoria (opcional)")]
     [SerializeField] private TMP_Text textoNombreGanador;
@@ -127,20 +133,29 @@ public class GameManager : NetworkBehaviour
     /// </summary>
     public void OcultarPanelesLocalmente()
     {
-        if (panelVictoria != null) panelVictoria.SetActive(false);
-        if (panelDerrotaPorBoss != null) panelDerrotaPorBoss.SetActive(false);
-        if (panelDerrotaPorSospecha != null) panelDerrotaPorSospecha.SetActive(false);
+        if (panelVictoria != null) StartCoroutine(FadeOutPanel(panelVictoria));
+        if (panelDerrotaPorBoss != null) StartCoroutine(FadeOutPanel(panelDerrotaPorBoss));
+        if (panelDerrotaPorSospecha != null) StartCoroutine(FadeOutPanel(panelDerrotaPorSospecha));
     }
 
     private void ActualizarPaneles(ResultadoPartida nuevoResultado)
     {
-        AvisarSiFalta(panelVictoria, nameof(panelVictoria));
-        AvisarSiFalta(panelDerrotaPorBoss, nameof(panelDerrotaPorBoss));
-        AvisarSiFalta(panelDerrotaPorSospecha, nameof(panelDerrotaPorSospecha));
+        AvisarSiFalta(panelVictoria != null ? panelVictoria.gameObject : null, nameof(panelVictoria));
+        AvisarSiFalta(panelDerrotaPorBoss != null ? panelDerrotaPorBoss.gameObject : null, nameof(panelDerrotaPorBoss));
+        AvisarSiFalta(panelDerrotaPorSospecha != null ? panelDerrotaPorSospecha.gameObject : null, nameof(panelDerrotaPorSospecha));
 
-        if (panelVictoria != null) panelVictoria.SetActive(nuevoResultado == ResultadoPartida.VictoriaJugadores);
-        if (panelDerrotaPorBoss != null) panelDerrotaPorBoss.SetActive(nuevoResultado == ResultadoPartida.DerrotaPorBoss);
-        if (panelDerrotaPorSospecha != null) panelDerrotaPorSospecha.SetActive(nuevoResultado == ResultadoPartida.DerrotaPorSospecha);
+        CanvasGroup panelAMostrar = nuevoResultado switch
+        {
+            ResultadoPartida.VictoriaJugadores => panelVictoria,
+            ResultadoPartida.DerrotaPorBoss => panelDerrotaPorBoss,
+            ResultadoPartida.DerrotaPorSospecha => panelDerrotaPorSospecha,
+            _ => null
+        };
+
+        if (panelAMostrar != null)
+        {
+            StartCoroutine(FadeInPanel(panelAMostrar));
+        }
 
         Debug.Log($"[GameManager] Resultado actualizado a: {nuevoResultado}");
 
@@ -152,6 +167,41 @@ public class GameManager : NetworkBehaviour
 
             textoNombreGanador.text = $"¡{nombre} ganó!";
         }
+    }
+
+    private IEnumerator FadeInPanel(CanvasGroup panel)
+    {
+        panel.gameObject.SetActive(true);
+        panel.alpha = 0f;
+        panel.blocksRaycasts = false;
+
+        float t = 0f;
+        while (t < fadeDuration)
+        {
+            t += Time.deltaTime;
+            panel.alpha = Mathf.Lerp(0f, 1f, t / fadeDuration);
+            yield return null;
+        }
+
+        panel.alpha = 1f;
+        panel.blocksRaycasts = true;
+    }
+
+    private IEnumerator FadeOutPanel(CanvasGroup panel)
+    {
+        panel.blocksRaycasts = false;
+        float alphaInicial = panel.alpha;
+        float t = 0f;
+
+        while (t < fadeDuration)
+        {
+            t += Time.deltaTime;
+            panel.alpha = Mathf.Lerp(alphaInicial, 0f, t / fadeDuration);
+            yield return null;
+        }
+
+        panel.alpha = 0f;
+        panel.gameObject.SetActive(false);
     }
 
     private void AvisarSiFalta(GameObject panel, string nombreCampo)
