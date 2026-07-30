@@ -48,6 +48,7 @@ public class DeckManager : NetworkBehaviour
     [Header("Boss")]
     [Tooltip("Se le avisa cuando la partida arranca, para que reparta su mano inicial igual que a un jugador más.")]
     [SerializeField] private BossManager bossManager;
+    [SerializeField] private SuspicionManager suspicionManager;
 
     // Identidad reservada para el boss dentro de manoPorCliente - reutiliza
     // exactamente la misma estructura que ya usan los jugadores reales, así
@@ -147,6 +148,49 @@ public class DeckManager : NetworkBehaviour
     /// momento (1, 2 o 3), simultaneamente, en vez de repartir uno por uno
     /// a medida que se conectan.
     /// </summary>
+    /// <summary>
+    /// Conectar ESTO al boton "Iniciar partida" en el Inspector (no
+    /// OnIniciarPartidaPressed directo) - decide solo si hay que arrancar
+    /// por primera vez o reiniciar una ronda nueva, segun si la partida ya
+    /// se jugo antes. Asi el mismo boton sirve para las dos cosas.
+    /// </summary>
+    public void OnBotonIniciarPartidaPressed()
+    {
+        if (!IsServer)
+        {
+            Debug.LogWarning("[DeckManager] Solo el host puede iniciar/reiniciar la partida.");
+            return;
+        }
+
+        if (!partidaIniciada.Value)
+        {
+            OnIniciarPartidaPressed();
+        }
+        else
+        {
+            ReiniciarPartida();
+        }
+
+        if (botonIniciarPartida != null)
+        {
+            botonIniciarPartida.SetActive(false);
+        }
+    }
+
+    /// <summary>
+    /// Reactiva el boton "Iniciar partida" (SOLO tiene efecto en el host) -
+    /// lo llama GameRestartManager cuando el host aprieta "Volver a jugar"
+    /// en el panel de resultado, para que la ronda nueva no arranque sola:
+    /// el host tiene que apretar este boton de nuevo a mano.
+    /// </summary>
+    public void MostrarBotonIniciarPartida()
+    {
+        if (IsServer && botonIniciarPartida != null)
+        {
+            botonIniciarPartida.SetActive(true);
+        }
+    }
+
     public void OnIniciarPartidaPressed()
     {
         if (!IsServer)
@@ -195,8 +239,7 @@ public class DeckManager : NetworkBehaviour
     /// manoPorCliente, reconstruye y mezcla el mazo, limpia la mesa y las
     /// manos visuales de TODOS los clientes, reparte una mano nueva a cada
     /// uno (incluido el boss), reinicia el turno, y vuelve el resultado de
-    /// la partida a "En curso". No toca SuspicionManager - eso lo hace
-    /// GameRestartManager aparte, porque DeckManager no lo conoce.
+    /// la partida a "En curso", y vuelve la sospecha a 0.
     /// </summary>
     public void ReiniciarPartida()
     {
@@ -219,6 +262,11 @@ public class DeckManager : NetworkBehaviour
         if (gameManager != null)
         {
             gameManager.ReiniciarResultado();
+        }
+
+        if (suspicionManager != null)
+        {
+            suspicionManager.ReiniciarSospecha();
         }
 
         int cantidadJugadores = NetworkManager.Singleton.ConnectedClientsIds.Count;

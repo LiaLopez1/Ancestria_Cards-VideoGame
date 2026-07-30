@@ -105,6 +105,23 @@ public class PlayerCube : NetworkBehaviour
     }
 
     /// <summary>
+    /// Se dispara en TODOS los clientes cuando este cubo desaparece de la
+    /// red (por ejemplo, porque su dueño se desconecto) - a diferencia de
+    /// NetworkManager.OnClientDisconnectCallback (que en un cliente SOLO
+    /// avisa si el que se desconecto fue uno mismo, nunca sobre otros
+    /// jugadores), el despawn de un NetworkObject SI se propaga a todos.
+    /// Por eso este es el lugar correcto para ocultar el panel de nombre
+    /// del jugador que se fue.
+    /// </summary>
+    public override void OnNetworkDespawn()
+    {
+        if (slotJugador.Value >= 0)
+        {
+            PlayerNamePanelsUI.Instance?.OcultarPanelPorSlot(slotJugador.Value);
+        }
+    }
+
+    /// <summary>
     /// Le permite a PlayerNamePanelsUI pedirle a este cubo que reintente
     /// avisar su nombre, por si el cubo ya habia spawneado (y ya intento
     /// avisar) antes de que el panel existiera todavia.

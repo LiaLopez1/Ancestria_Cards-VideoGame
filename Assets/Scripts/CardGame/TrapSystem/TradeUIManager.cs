@@ -23,6 +23,7 @@ public class TradeUIManager : MonoBehaviour
     [SerializeField] private TradeManager tradeManager;
     [SerializeField] private HandManager handManager;
     [SerializeField] private TurnManager turnManager;
+    [SerializeField] private GameManager gameManager;
 
     [Header("Boton \"Intercambio\" (panel de trampas)")]
     [Tooltip("Se vuelve no interactuable automaticamente fuera de la ventana en la que se puede pedir un intercambio (misma condicion que CanDiscard: ya robaste, todavia no descartaste).")]
@@ -56,12 +57,6 @@ public class TradeUIManager : MonoBehaviour
     [SerializeField] private TMP_Text mensajeObjetivoText;
     [SerializeField] private Button botonConfirmar;
 
-    [Header("Audio")]
-    [SerializeField] private SoundData ChangeCardSound;
-    [SerializeField] private SoundData selectCartaSound;
-    [SerializeField] private SoundData Notification;
-
-
     // Se reutiliza para el Panel A y el Panel C (nunca los dos a la vez,
     // porque en este cliente solo uno de los dos roles puede estar activo).
     private System.Action<int> manejadorSeleccionActual;
@@ -93,6 +88,39 @@ public class TradeUIManager : MonoBehaviour
             botonConfirmar.onClick.AddListener(ConfirmarSeleccionObjetivo);
             botonConfirmar.interactable = false;
         }
+    }
+
+    private void Start()
+    {
+        if (gameManager != null)
+        {
+            gameManager.OnResultadoCambio += ManejarFinDePartida;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (gameManager != null)
+        {
+            gameManager.OnResultadoCambio -= ManejarFinDePartida;
+        }
+    }
+
+    /// <summary>
+    /// Se dispara en este cliente cuando la partida termina (o se vuelve a
+    /// "En curso" al reiniciar). Mata CUALQUIER panel de intercambio que
+    /// haya quedado abierto a mitad de camino - incluyendo el de elegir
+    /// compañero, que CerrarTodo() por si solo no cubre.
+    /// </summary>
+    private void ManejarFinDePartida(ResultadoPartida resultado)
+    {
+        if (resultado == ResultadoPartida.EnCurso)
+        {
+            return;
+        }
+
+        CerrarPanelSeleccionJugador();
+        CerrarTodo();
     }
 
     private void Update()
@@ -204,15 +232,13 @@ public class TradeUIManager : MonoBehaviour
     {
         if (mensajeIniciadorText != null)
         {
-            mensajeIniciadorText.text = "Selecciona una carta para el intercambio.";
+            mensajeIniciadorText.text = "Selecciona la carta que quieres intercambiar.";
         }
 
         if (panelIniciador != null)
         {
             panelIniciador.SetActive(true);
         }
-
-        selectCartaSound.Play();
 
         handManager.HabilitarSeleccionParaIntercambio();
 
@@ -284,15 +310,13 @@ public class TradeUIManager : MonoBehaviour
     {
         if (mensajePropuestaText != null)
         {
-            mensajePropuestaText.text = $"{nombreIniciador} quiere intercambiar contigo.";
+            mensajePropuestaText.text = $"{nombreIniciador} quiere intercambiar una carta contigo. ¿Aceptas?";
         }
 
         if (panelPropuesta != null)
         {
             panelPropuesta.SetActive(true);
         }
-
-        Notification.Play();
     }
 
     private void ResponderPropuesta(bool acepta)
@@ -314,7 +338,7 @@ public class TradeUIManager : MonoBehaviour
     {
         if (mensajeObjetivoText != null)
         {
-            mensajeObjetivoText.text = "Selecciona una carta para intercambiar.";
+            mensajeObjetivoText.text = "Selecciona la carta que quieres intercambiar.";
         }
 
         if (botonConfirmar != null)
@@ -327,7 +351,6 @@ public class TradeUIManager : MonoBehaviour
             panelObjetivo.SetActive(true);
         }
 
-        selectCartaSound.Play();
         handManager.HabilitarSeleccionParaIntercambio();
 
         manejadorSeleccionActual = ManejarCartaElegidaObjetivo;
@@ -352,7 +375,6 @@ public class TradeUIManager : MonoBehaviour
             Debug.LogWarning("[TradeUIManager] Se apreto Confirmar sin ninguna carta seleccionada.");
             return;
         }
-        ChangeCardSound.Play(); // Sonido al confirmar el intercabio
 
         if (botonConfirmar != null)
         {

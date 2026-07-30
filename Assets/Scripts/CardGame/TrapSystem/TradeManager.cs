@@ -41,6 +41,7 @@ public class TradeManager : NetworkBehaviour
     [Header("Referencias")]
     [SerializeField] private DeckManager deckManager;
     [SerializeField] private TurnManager turnManager;
+    [SerializeField] private GameManager gameManager;
 
     [Header("Mano local (de este cliente)")]
     [SerializeField] private HandManager handManager;
@@ -48,17 +49,46 @@ public class TradeManager : NetworkBehaviour
     [Header("UI local (de este cliente)")]
     [SerializeField] private TradeUIManager tradeUI;
 
-    [Header("Audio")]
-    //[SerializeField] private SoundData selectCartaSound;
-    [SerializeField] private SoundData GetCardChange;
-    [SerializeField] private SoundData trapNotificationSound;
-
     // ------------------- Estado SOLO en el servidor -------------------
     private bool intercambioEnProgreso;
     private ulong clienteIniciador;
     private ulong clienteObjetivo;
     private int cardIdIniciador = -1;
     private int cardIdObjetivo = -1;
+
+    public override void OnNetworkSpawn()
+    {
+        if (gameManager != null)
+        {
+            gameManager.OnResultadoCambio += ManejarFinDePartida;
+        }
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        if (gameManager != null)
+        {
+            gameManager.OnResultadoCambio -= ManejarFinDePartida;
+        }
+    }
+
+    /// <summary>
+    /// Se dispara en TODOS los clientes cuando cambia el resultado - SOLO
+    /// el servidor actua aca (cancela cualquier intercambio a mitad de
+    /// camino, para que no quede "trabado" bloqueando futuros intercambios
+    /// despues de reiniciar). La parte visual (cerrar los paneles en cada
+    /// cliente) la maneja TradeUIManager por su cuenta, suscrito al mismo evento.
+    /// </summary>
+    private void ManejarFinDePartida(ResultadoPartida resultado)
+    {
+        if (!IsServer || resultado == ResultadoPartida.EnCurso || !intercambioEnProgreso)
+        {
+            return;
+        }
+
+        Debug.Log("[Servidor] La partida terminó con un intercambio a mitad de camino - se cancela.");
+        CancelarIntercambio();
+    }
 
     // ---------------------------------------------------------------
     // Paso 1: pedir la lista de companeros posibles
@@ -162,7 +192,6 @@ public class TradeManager : NetworkBehaviour
     private void PedirSeleccionInicialClientRpc(ClientRpcParams rpcParams = default)
     {
         tradeUI?.MostrarSeleccionIniciador();
-        //selectCartaSound.Play();
     }
 
     // ---------------------------------------------------------------
@@ -202,8 +231,6 @@ public class TradeManager : NetworkBehaviour
     private void MostrarPropuestaClientRpc(FixedString64Bytes nombreIniciador, ClientRpcParams rpcParams = default)
     {
         tradeUI?.MostrarPropuesta(nombreIniciador.ToString());
-        trapNotificationSound.Play();
-
     }
 
     // ---------------------------------------------------------------
@@ -241,7 +268,6 @@ public class TradeManager : NetworkBehaviour
     private void PedirSeleccionObjetivoClientRpc(ClientRpcParams rpcParams = default)
     {
         tradeUI?.MostrarSeleccionObjetivo();
-        //selectCartaSound.Play();
     }
 
     [ClientRpc]
@@ -308,7 +334,6 @@ public class TradeManager : NetworkBehaviour
         }
 
         handManager?.EjecutarIntercambioVisual(cartaRecibida);
-        GetCardChange.Play();
 
         tradeUI?.CerrarTodo();
     }

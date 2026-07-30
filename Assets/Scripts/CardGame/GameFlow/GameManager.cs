@@ -117,6 +117,21 @@ public class GameManager : NetworkBehaviour
         Debug.Log("[Servidor] Derrota: la barra de sospecha llegó al máximo.");
     }
 
+    /// <summary>
+    /// Puramente local (no toca la NetworkVariable de resultado) - lo llama
+    /// GameRestartManager cuando ESTE cliente aprieta "Volver a jugar"
+    /// individualmente. Los demas clientes (que todavia no volvieron) siguen
+    /// viendo su propio panel de resultado sin verse afectados. Se vuelve a
+    /// mostrar solo si el resultado sincronizado cambia de verdad (por
+    /// ejemplo, si alguien gana otra vez en la ronda nueva).
+    /// </summary>
+    public void OcultarPanelesLocalmente()
+    {
+        if (panelVictoria != null) panelVictoria.SetActive(false);
+        if (panelDerrotaPorBoss != null) panelDerrotaPorBoss.SetActive(false);
+        if (panelDerrotaPorSospecha != null) panelDerrotaPorSospecha.SetActive(false);
+    }
+
     private void ActualizarPaneles(ResultadoPartida nuevoResultado)
     {
         AvisarSiFalta(panelVictoria, nameof(panelVictoria));

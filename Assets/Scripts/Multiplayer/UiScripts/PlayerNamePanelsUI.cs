@@ -83,6 +83,27 @@ public class PlayerNamePanelsUI : MonoBehaviour
     }
 
     /// <summary>
+    /// Oculta el panel de nombre de ese slot - lo llama PlayerCube.OnNetworkDespawn()
+    /// cuando ese jugador se desconecta, para que su panel no se quede
+    /// mostrando un nick de alguien que ya no esta.
+    /// </summary>
+    public void OcultarPanelPorSlot(int slot)
+    {
+        if (slot == 0)
+        {
+            if (panelHost != null) panelHost.SetActive(false);
+        }
+        else if (slot == 1)
+        {
+            if (panelInvitado1 != null) panelInvitado1.SetActive(false);
+        }
+        else if (slot == 2)
+        {
+            if (panelInvitado2 != null) panelInvitado2.SetActive(false);
+        }
+    }
+
+    /// <summary>
     /// El boss no tiene slot 0/1/2 como los jugadores - se muestra en su
     /// propio panel dedicado. Por ahora el nombre es fijo ("Boss"), pero
     /// queda listo para más adelante mostrar la leyenda sorteada de la

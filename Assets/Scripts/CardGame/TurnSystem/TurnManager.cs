@@ -214,6 +214,20 @@ public class TurnManager : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Puramente local (no toca ninguna NetworkVariable) - lo llama
+    /// GameRestartManager cuando ESTE cliente vuelve a jugar individualmente,
+    /// mientras espera a que el host arranque la ronda nueva. Se sobreescribe
+    /// solo apenas vuelva a cambiar algo real (turno, regla, resultado, etc.).
+    /// </summary>
+    public void MostrarMensajeEsperando()
+    {
+        if (turnMessage != null)
+        {
+            turnMessage.text = "Esperando jugadores...";
+        }
+    }
+
     private void ActualizarMensaje()
     {
         string mensaje;
