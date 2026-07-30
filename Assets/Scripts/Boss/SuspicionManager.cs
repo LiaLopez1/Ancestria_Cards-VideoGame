@@ -48,6 +48,8 @@ public class SuspicionManager : NetworkBehaviour
     public float SospechaMaxima => sospechaMaxima;
     public bool IntercambioEnCurso => intercambioEnCurso.Value;
 
+    public bool AlcanzoMitadDeSospecha => nivelSospecha.Value >= sospechaMaxima * 0.5f;
+
     /// <summary>Para que la UI (barra, texto) se actualice sin tener que hacer polling.</summary>
     public event Action<float> OnSospechaCambio;
     public event Action<bool> OnIntercambioCambio;
