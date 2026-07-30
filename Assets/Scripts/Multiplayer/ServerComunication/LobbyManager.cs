@@ -329,7 +329,7 @@ public class LobbyManager : MonoBehaviour
         // El host ya esta conectado por Netcode (arrancado dentro de
         // IniciarHostYObtenerJoinCode). Es el host quien controla la carga de
         // escena para que se sincronice automaticamente con quien se una despues.
-        NetworkManager.Singleton.SceneManager.LoadScene(gameSceneName, LoadSceneMode.Single);
+        LoadingScreenManager.Instance.LoadNetworkScene(gameSceneName);
     }
 
     public void BuscarSalas()
