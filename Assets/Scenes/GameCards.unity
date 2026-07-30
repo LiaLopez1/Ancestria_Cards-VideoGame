@@ -10409,7 +10409,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 01588c62cb562c9448269003918776af, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 344ee2cc1c2c60f479970bf8c99bc634, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -15422,21 +15422,21 @@ MonoBehaviour:
   deckManager: {fileID: 2066499337}
   turnManager: {fileID: 979683347}
   suspicionManager: {fileID: 391290177}
-  infiltratedCardManager: {fileID: 0}
+  infiltratedCardManager: {fileID: 2042000777}
   gameManager: {fileID: 340926873}
   delayAntesDeActuar: 1.5
   delayEntreCartasReparto: 0.25
   bossImage: {fileID: 1452595172}
-  spriteConCuatroCartas: {fileID: 21300000, guid: 25d05db2ed6e38c448764ea0fe68baad, type: 3}
-  spriteConCincoCartas: {fileID: 21300000, guid: bac3de3da729d5a48bbb67ab410c13d3, type: 3}
-  spriteRevisandoCartas: {fileID: 21300000, guid: 25d05db2ed6e38c448764ea0fe68baad, type: 3}
-  spriteMirandoOponentes: {fileID: 21300000, guid: 858fdd769c59ac74280a4285eb5b7bf3, type: 3}
+  spriteConCuatroCartas: {fileID: 21300000, guid: b0f9b1e1aaf805a45be7feac294afc03, type: 3}
+  spriteConCincoCartas: {fileID: 21300000, guid: b806784572334454f84294dd7947f41c, type: 3}
+  spriteRevisandoCartas: {fileID: 21300000, guid: b0f9b1e1aaf805a45be7feac294afc03, type: 3}
+  spriteMirandoOponentes: {fileID: 21300000, guid: d8282733cf2205344860dd306db9adb4, type: 3}
   intervaloMinimoAtencion: 2
   intervaloMaximoAtencion: 5
-  spriteMonstruoConCuatroCartas: {fileID: 21300000, guid: 20ae525254ff2f34db59770b0e90422e, type: 3}
-  spriteMonstruoConCincoCartas: {fileID: 21300000, guid: cbe5a6fb7626a874280cdee49f2d2623, type: 3}
-  spriteMonstruoRevisandoCartas: {fileID: 21300000, guid: 20ae525254ff2f34db59770b0e90422e, type: 3}
-  spriteMonstruoMirandoOponentes: {fileID: 21300000, guid: 0e0908bc70cc2cf4fb3cb32a5466bc92, type: 3}
+  spriteMonstruoConCuatroCartas: {fileID: 21300000, guid: 771a5e8f27818e84d9facf8572b528bb, type: 3}
+  spriteMonstruoConCincoCartas: {fileID: 21300000, guid: f35df90920227f9469d5bd0c3fb5d59f, type: 3}
+  spriteMonstruoRevisandoCartas: {fileID: 21300000, guid: 771a5e8f27818e84d9facf8572b528bb, type: 3}
+  spriteMonstruoMirandoOponentes: {fileID: 21300000, guid: 83c0ef052fc1e62419bbe999afe1e303, type: 3}
   nombreInicial: Hombre Caiman
 --- !u!114 &2032638370
 MonoBehaviour:
