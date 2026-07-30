@@ -160,7 +160,7 @@ public class DeckManager : NetworkBehaviour
     /// nuevo (no debe verse hasta que el host arranque la ronda nueva) y
     /// limpia la mesa de descarte - el resto (mano, mazo real, turno,
     /// boss, sospecha) se reinicia recien cuando el host aprieta "Iniciar
-    /// partida" de nuevo (ver ReiniciarPartida).
+    /// partida" (o "Siguiente ronda") de nuevo (ver EjecutarResetDeRonda).
     /// </summary>
     private void ManejarFinDePartida(ResultadoPartida resultado)
     {
@@ -207,10 +207,10 @@ public class DeckManager : NetworkBehaviour
     /// Conectar ESTO al boton "Iniciar partida" en el Inspector. Antes
     /// decidia entre "primera vez" y "reinicio" mirando partidaIniciada,
     /// pero ahora ese flag tambien vuelve a false apenas termina una
-    /// partida (para ocultar el mazo) - asi que ya no sirve para distinguir
-    /// "primera vez" de "reinicio". ReiniciarPartida() es un superset seguro
-    /// de la logica original: reconstruye el mazo entero de cero, asi que
-    /// funciona igual de bien la primera vez que en cualquier reinicio.
+    /// ronda (para ocultar el mazo) - asi que ya no sirve para distinguir
+    /// "primera vez" de "reinicio". A diferencia de OnBotonSiguienteRondaPressed()
+    /// (que conserva el marcador de rondas), esto arranca todo de cero via
+    /// GameManager.ReiniciarPartidaCompleta().
     /// </summary>
     public void OnBotonIniciarPartidaPressed()
     {
@@ -225,7 +225,36 @@ public class DeckManager : NetworkBehaviour
             botonIniciarPartida.SetActive(false);
         }
 
-        ReiniciarPartida();
+        // Partida COMPLETAMENTE nueva: ronda 1, marcador 0-0.
+        if (gameManager != null)
+        {
+            gameManager.ReiniciarPartidaCompleta();
+        }
+
+        EjecutarResetDeRonda();
+    }
+
+    /// <summary>
+    /// Conectar al boton "Siguiente ronda" (dentro del panel de "ronda
+    /// ganada" de GameManager - SOLO visible/interactuable para el host).
+    /// Avanza a la ronda siguiente CONSERVANDO el marcador de rondas
+    /// ganadas, a diferencia de OnBotonIniciarPartidaPressed() que arranca
+    /// todo de cero.
+    /// </summary>
+    public void OnBotonSiguienteRondaPressed()
+    {
+        if (!IsServer)
+        {
+            Debug.LogWarning("[DeckManager] Solo el host puede avanzar a la siguiente ronda.");
+            return;
+        }
+
+        if (gameManager != null)
+        {
+            gameManager.AvanzarRonda();
+        }
+
+        EjecutarResetDeRonda();
     }
 
     /// <summary>
@@ -243,20 +272,9 @@ public class DeckManager : NetworkBehaviour
     }
 
     /// <summary>
-    /// YA NO esta conectada al boton (ver OnBotonIniciarPartidaPressed, que
-    /// ahora llama directo a ReiniciarPartida()) - se deja sin usar por si
-    /// hace falta el flujo original puntual en algun otro lugar mas
-    /// adelante. No borra/reconstruye el mazo, asume que ya existe uno
-    /// (valido solo para un arranque desde OnNetworkSpawn recien hecho).
-    /// </summary>
-    /// <summary>
     /// LEGACY: si el boton del Inspector todavia apunta a este metodo en vez
-    /// de OnBotonIniciarPartidaPressed, esto redirige igual a ReiniciarPartida()
-    /// para que funcione correctamente sin importar cual de los dos este
-    /// conectado - antes este metodo tenia su propia logica separada (que
-    /// no reconstruia el mazo ni limpiaba manoPorCliente), lo cual causaba
-    /// que el conteo de cartas se acumulara de mas en cada reinicio si el
-    /// boton quedaba apuntando aca.
+    /// de OnBotonIniciarPartidaPressed, esto redirige igual para que
+    /// funcione correctamente sin importar cual de los dos este conectado.
     /// </summary>
     public void OnIniciarPartidaPressed()
     {
@@ -264,15 +282,15 @@ public class DeckManager : NetworkBehaviour
     }
 
     /// <summary>
-    /// SOLO desde el servidor (GameRestartManager, boton "Volver a jugar").
-    /// Reinicia todo lo que le corresponde a este manager para una ronda
-    /// nueva, SIN salir de la sala: limpia drawPile/discardPile/
-    /// manoPorCliente, reconstruye y mezcla el mazo, limpia la mesa y las
-    /// manos visuales de TODOS los clientes, reparte una mano nueva a cada
-    /// uno (incluido el boss), reinicia el turno, y vuelve el resultado de
-    /// la partida a "En curso", y vuelve la sospecha a 0.
+    /// Rutina compartida por OnBotonIniciarPartidaPressed() y
+    /// OnBotonSiguienteRondaPressed() - reconstruye y mezcla el mazo,
+    /// limpia la mesa y las manos visuales de TODOS los clientes, reparte
+    /// una mano nueva a cada uno (incluido el boss), reinicia el turno, y
+    /// vuelve la sospecha a 0. NO toca ronda/marcador/resultado de
+    /// GameManager - eso ya lo resolvio quien llamo a este metodo, cada
+    /// uno a su manera (partida nueva vs. siguiente ronda).
     /// </summary>
-    public void ReiniciarPartida()
+    private void EjecutarResetDeRonda()
     {
         if (!IsServer)
         {
@@ -291,11 +309,6 @@ public class DeckManager : NetworkBehaviour
 
         LimpiarManosClientRpc();
         ReiniciarMesaDeDescarteClientRpc();
-
-        if (gameManager != null)
-        {
-            gameManager.ReiniciarResultado();
-        }
 
         if (suspicionManager != null)
         {
@@ -319,7 +332,7 @@ public class DeckManager : NetworkBehaviour
             bossManager.IniciarManoInicial();
         }
 
-        Debug.Log($"[Servidor] Partida reiniciada para una ronda nueva. Repartiendo a {cantidadJugadores} jugador(es).");
+        Debug.Log($"[Servidor] Ronda reiniciada. Repartiendo a {cantidadJugadores} jugador(es).");
     }
 
     /// <summary>Se ejecuta en TODOS los clientes: vacía la mano visual antes de que lleguen las cartas de la ronda nueva.</summary>
