@@ -249,45 +249,18 @@ public class DeckManager : NetworkBehaviour
     /// adelante. No borra/reconstruye el mazo, asume que ya existe uno
     /// (valido solo para un arranque desde OnNetworkSpawn recien hecho).
     /// </summary>
+    /// <summary>
+    /// LEGACY: si el boton del Inspector todavia apunta a este metodo en vez
+    /// de OnBotonIniciarPartidaPressed, esto redirige igual a ReiniciarPartida()
+    /// para que funcione correctamente sin importar cual de los dos este
+    /// conectado - antes este metodo tenia su propia logica separada (que
+    /// no reconstruia el mazo ni limpiaba manoPorCliente), lo cual causaba
+    /// que el conteo de cartas se acumulara de mas en cada reinicio si el
+    /// boton quedaba apuntando aca.
+    /// </summary>
     public void OnIniciarPartidaPressed()
     {
-        if (!IsServer)
-        {
-            Debug.LogWarning("[DeckManager] Solo el host puede iniciar la partida.");
-            return;
-        }
-
-        if (partidaIniciada.Value)
-        {
-            Debug.LogWarning("[DeckManager] La partida ya fue iniciada.");
-            return;
-        }
-
-        partidaIniciada.Value = true;
-
-        if (botonIniciarPartida != null)
-        {
-            botonIniciarPartida.SetActive(false);
-        }
-
-        int cantidadJugadores = NetworkManager.Singleton.ConnectedClientsIds.Count;
-
-        foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
-        {
-            IniciarRepartoParaCliente(clientId);
-        }
-
-        if (turnManager != null)
-        {
-            turnManager.IniciarPrimerTurno(cantidadJugadores);
-        }
-
-        if (bossManager != null)
-        {
-            bossManager.IniciarManoInicial();
-        }
-
-        Debug.Log($"[Servidor] Partida iniciada. Repartiendo a {cantidadJugadores} jugador(es).");
+        OnBotonIniciarPartidaPressed();
     }
 
     /// <summary>
