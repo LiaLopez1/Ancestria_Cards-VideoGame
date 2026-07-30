@@ -2,6 +2,7 @@ using System;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.UI;
 
 public enum TurnState
 {
@@ -34,6 +35,8 @@ public class TurnManager : NetworkBehaviour
     [Header("Referencias")]
     [SerializeField] private HandManager handManager;
     [SerializeField] private TMP_Text turnMessage;
+    [Tooltip("Texto aparte para la explicación larga de la regla (VictoryRules.ObtenerDescripcion) - turnMessage se queda con el título corto.")]
+    [SerializeField] private TMP_Text turnRuleDescriptionText;
     [Tooltip("Ahora es quien decide victoria/derrota - TurnManager solo le pregunta si la partida ya terminó.")]
     [SerializeField] private GameManager gameManager;
 
@@ -47,6 +50,29 @@ public class TurnManager : NetworkBehaviour
 
     [Header("Audio")]
     [SerializeField] private SoundData NotifyTurn;
+
+    [Header("Carta infiltrada")]
+    [Tooltip("Solo se usa si la regla sorteada esta ronda es CartaInfiltrada o CartaInfiltrada2.")]
+    [SerializeField] private InfiltratedCardManager infiltratedCardManager;
+    [Tooltip("Panel con el icono de la categoria infiltrada - queda apagado en las demas reglas.")]
+    [SerializeField] private GameObject panelCartaInfiltrada;
+    [SerializeField] private Image iconoCartaInfiltrada;
+
+    [System.Serializable]
+    public struct IconoPorCategoria
+    {
+        public CardCategory categoria;
+        public Sprite icono;
+    }
+
+    [Tooltip("Un icono por cada valor de CardCategory - se muestra el que corresponda a la categoria infiltrada sorteada.")]
+    [SerializeField] private IconoPorCategoria[] iconosPorCategoriaInfiltrada;
+
+    [Header("Debug / Pruebas")]
+    [Tooltip("Si está activo, la regla de la ronda NO se sortea al azar - siempre se usa 'reglaParaPruebas'. Apágalo para volver al comportamiento normal (aleatorio).")]
+    [SerializeField] private bool usarReglaFijaParaPruebas = false;
+    [Tooltip("Solo se usa si 'usarReglaFijaParaPruebas' está activo. Debe existir en VictoryRules.ReglasDisponibles (descoméntala ahí si está comentada).")]
+    [SerializeField] private VictoryRuleType reglaParaPruebas = VictoryRuleType.CartaInfiltrada;
 
     private readonly NetworkVariable<int> turnoActual = new NetworkVariable<int>(0);
     private readonly NetworkVariable<TurnState> estadoActual = new NetworkVariable<TurnState>(TurnState.Dealing);
@@ -126,6 +152,17 @@ public class TurnManager : NetworkBehaviour
         };
     }
 
+    if (infiltratedCardManager != null)
+    {
+        infiltratedCardManager.OnCategoriaInfiltradaElegida += ActualizarCategoriaInfiltrada;
+
+        // Por si este cliente se conecta/reactiva DESPUES de que ya se
+        // eligio la categoria esta ronda - no depender solo del evento.
+        ActualizarCategoriaInfiltrada(infiltratedCardManager.HayCategoriaInfiltrada
+            ? (int)infiltratedCardManager.CategoriaInfiltrada
+            : -1);
+    }
+
     ActualizarMensaje();
     ActualizarHighlighter();
 }
@@ -143,10 +180,61 @@ public class TurnManager : NetworkBehaviour
         turnoActual.Value = 0;
         gameManager?.ReiniciarResultado();
         slotBoss.Value = cantidadJugadores; // el boss va justo despues del ultimo humano
-        indiceReglaActual.Value = UnityEngine.Random.Range(0, VictoryRules.ReglasDisponibles.Length);
+        indiceReglaActual.Value = SortearIndiceDeRegla();
         estadoActual.Value = TurnState.WaitingToDraw;
 
+        ActualizarCartaInfiltradaSegunRegla();
+
         Debug.Log($"[Servidor] Regla de esta ronda: {VictoryRules.ObtenerNombre(ReglaActiva)}");
+    }
+
+    /// <summary>
+    /// Normalmente sortea al azar entre VictoryRules.ReglasDisponibles.
+    /// Si 'usarReglaFijaParaPruebas' está activo, en cambio devuelve siempre
+    /// el indice de 'reglaParaPruebas' - util para probar la logica del
+    /// boss (o la propia regla) sin depender de que salga por sorteo.
+    /// </summary>
+    private int SortearIndiceDeRegla()
+    {
+        if (!usarReglaFijaParaPruebas)
+        {
+            return UnityEngine.Random.Range(0, VictoryRules.ReglasDisponibles.Length);
+        }
+
+        int indice = System.Array.IndexOf(VictoryRules.ReglasDisponibles, reglaParaPruebas);
+
+        if (indice < 0)
+        {
+            Debug.LogError($"[TurnManager] La regla '{reglaParaPruebas}' no está en VictoryRules.ReglasDisponibles " +
+                "- agregala ahí (descomentala si está comentada) para poder forzarla en pruebas. " +
+                "Usando sorteo aleatorio en su lugar por esta vez.");
+            return UnityEngine.Random.Range(0, VictoryRules.ReglasDisponibles.Length);
+        }
+
+        return indice;
+    }
+
+    /// <summary>
+    /// SOLO servidor. Si la regla sorteada esta ronda es CartaInfiltrada o
+    /// CartaInfiltrada2, elige la carta ahora (se sincroniza sola a todos
+    /// via InfiltratedCardManager). Si no, se asegura de que quede en -1,
+    /// para que el panel se mantenga apagado el resto de la ronda.
+    /// </summary>
+    private void ActualizarCartaInfiltradaSegunRegla()
+    {
+        if (infiltratedCardManager == null) return;
+
+        bool necesitaCartaInfiltrada = ReglaActiva == VictoryRuleType.CartaInfiltrada
+                                     || ReglaActiva == VictoryRuleType.CartaInfiltrada2;
+
+        if (necesitaCartaInfiltrada)
+        {
+            infiltratedCardManager.ElegirCategoriaInfiltrada();
+        }
+        else
+        {
+            infiltratedCardManager.ReiniciarCategoriaInfiltrada();
+        }
     }
 
     /// <summary>¿El turno actual le pertenece a este slot?</summary>
@@ -231,6 +319,7 @@ public class TurnManager : NetworkBehaviour
     private void ActualizarMensaje()
     {
         string mensaje;
+        string descripcion = string.Empty;
 
         if (PartidaTerminada)
         {
@@ -245,11 +334,17 @@ public class TurnManager : NetworkBehaviour
         else
         {
             mensaje = $"Regla: {VictoryRules.ObtenerNombre(ReglaActiva)}";
+            descripcion = VictoryRules.ObtenerDescripcion(ReglaActiva);
         }
 
         if (turnMessage != null)
         {
             turnMessage.text = mensaje;
+        }
+
+        if (turnRuleDescriptionText != null)
+        {
+            turnRuleDescriptionText.text = descripcion;
         }
     }
 
@@ -287,5 +382,49 @@ public class TurnManager : NetworkBehaviour
         }
 
         turnHighlighter.anchoredPosition = posicionesHighlighterPorSlot[slot];
+    }
+
+    /// <summary>
+    /// Prende el panel con el icono de la categoria infiltrada cuando hay
+    /// una elegida (index >= 0), lo apaga si no (-1 = regla distinta esta
+    /// ronda, o todavia no se sorteo nada). Se llama tanto por el evento de
+    /// InfiltratedCardManager como al conectarse a mitad de ronda.
+    /// </summary>
+    private void ActualizarCategoriaInfiltrada(int categoriaIndex)
+    {
+        if (panelCartaInfiltrada == null) return;
+
+        if (categoriaIndex < 0)
+        {
+            panelCartaInfiltrada.SetActive(false);
+            return;
+        }
+
+        CardCategory categoria = (CardCategory)categoriaIndex;
+        Sprite icono = ObtenerIconoDeCategoriaInfiltrada(categoria);
+
+        if (icono == null)
+        {
+            Debug.LogWarning($"[TurnManager] No hay icono configurado para la categoria infiltrada {categoria}.");
+            return;
+        }
+
+        if (iconoCartaInfiltrada != null) iconoCartaInfiltrada.sprite = icono;
+        panelCartaInfiltrada.SetActive(true);
+    }
+
+    private Sprite ObtenerIconoDeCategoriaInfiltrada(CardCategory categoria)
+    {
+        if (iconosPorCategoriaInfiltrada == null) return null;
+
+        foreach (var entrada in iconosPorCategoriaInfiltrada)
+        {
+            if (entrada.categoria == categoria)
+            {
+                return entrada.icono;
+            }
+        }
+
+        return null;
     }
 }
