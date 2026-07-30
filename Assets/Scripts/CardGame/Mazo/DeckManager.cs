@@ -102,6 +102,14 @@ public class DeckManager : NetworkBehaviour
     // el descarte (¿de verdad tienes esa carta?) ademas de reglas de conteo.
     private readonly Dictionary<ulong, List<int>> manoPorCliente = new Dictionary<ulong, List<int>>();
 
+    // Trackea la corrutina de reparto activa por cliente, para poder
+    // cancelar cualquier reparto anterior que hubiera quedado corriendo
+    // (por ejemplo, si la partida termino justo a mitad del reparto inicial)
+    // antes de arrancar uno nuevo - sin esto, dos corrutinas podian terminar
+    // agregando cartas a la misma mano, haciendo que el conteo se fuera
+    // acumulando de mas en vez de resetear limpio en cada ronda.
+    private readonly Dictionary<ulong, Coroutine> corrutinasDeReparto = new Dictionary<ulong, Coroutine>();
+
     public int CardsRemaining
     {
         get { return cartasEnMazo.Value; }
@@ -165,6 +173,19 @@ public class DeckManager : NetworkBehaviour
 
         discardPile.Clear();
         ReiniciarMesaDeDescarteClientRpc();
+
+        // Por si algun reparto quedo a mitad de camino justo cuando termino
+        // la partida - se cancela para que no siga agregando cartas de mas
+        // cuando ya no corresponde.
+        foreach (Coroutine corrutina in corrutinasDeReparto.Values)
+        {
+            if (corrutina != null)
+            {
+                StopCoroutine(corrutina);
+            }
+        }
+
+        corrutinasDeReparto.Clear();
     }
 
     /// <summary>
@@ -253,7 +274,7 @@ public class DeckManager : NetworkBehaviour
 
         foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
         {
-            StartCoroutine(RepartirManoAJugador(clientId));
+            IniciarRepartoParaCliente(clientId);
         }
 
         if (turnManager != null)
@@ -312,7 +333,7 @@ public class DeckManager : NetworkBehaviour
 
         foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
         {
-            StartCoroutine(RepartirManoAJugador(clientId));
+            IniciarRepartoParaCliente(clientId);
         }
 
         if (turnManager != null)
@@ -512,6 +533,23 @@ public class DeckManager : NetworkBehaviour
     /// arranca una de estas corrutinas por jugador EN PARALELO, asi todos
     /// reciben sus cartas al mismo tiempo (no uno detras de otro).
     /// </summary>
+    /// <summary>
+    /// Arranca el reparto inicial para un cliente, cancelando primero
+    /// cualquier corrutina de reparto anterior que hubiera quedado
+    /// corriendo para ese mismo cliente - sin esto, si una ronda terminaba
+    /// justo a mitad de un reparto, la corrutina vieja podia seguir viva y
+    /// agregar cartas de mas a la mano en la ronda siguiente.
+    /// </summary>
+    private void IniciarRepartoParaCliente(ulong clientId)
+    {
+        if (corrutinasDeReparto.TryGetValue(clientId, out Coroutine corrutinaVieja) && corrutinaVieja != null)
+        {
+            StopCoroutine(corrutinaVieja);
+        }
+
+        corrutinasDeReparto[clientId] = StartCoroutine(RepartirManoAJugador(clientId));
+    }
+
     private IEnumerator RepartirManoAJugador(ulong clientId)
     {
         for (int i = 0; i < initialHandSize; i++)

@@ -86,6 +86,7 @@ public class BossManager : NetworkBehaviour
     // reiniciarla limpio si IniciarManoInicial() se llama de nuevo (una
     // ronda nueva) sin dejar una copia vieja corriendo en paralelo.
     private Coroutine corrutinaAtencion;
+    private Coroutine corrutinaRepartoInicial;
     private Sprite spriteInicialBoss;
 
     private readonly NetworkVariable<bool> partidaIniciada = new NetworkVariable<bool>(false);
@@ -186,6 +187,12 @@ public class BossManager : NetworkBehaviour
         {
             StopCoroutine(corrutinaAtencion);
             corrutinaAtencion = null;
+        }
+
+        if (corrutinaRepartoInicial != null)
+        {
+            StopCoroutine(corrutinaRepartoInicial);
+            corrutinaRepartoInicial = null;
         }
 
         partidaIniciada.Value = false;
@@ -322,7 +329,15 @@ public class BossManager : NetworkBehaviour
 
         corrutinaAtencion = StartCoroutine(AlternarAtencionMientrasNoEsSuTurno());
 
-        StartCoroutine(RepartirManoInicial());
+        // Mismo motivo que IniciarRepartoParaCliente() en DeckManager: si
+        // una ronda anterior termino a mitad del reparto inicial del boss,
+        // esta corrutina vieja podia seguir viva y sumar cartas de mas.
+        if (corrutinaRepartoInicial != null)
+        {
+            StopCoroutine(corrutinaRepartoInicial);
+        }
+
+        corrutinaRepartoInicial = StartCoroutine(RepartirManoInicial());
     }
 
     private IEnumerator RepartirManoInicial()
