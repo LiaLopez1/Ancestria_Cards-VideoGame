@@ -119,6 +119,11 @@ public class DeckManager : NetworkBehaviour
             ActualizarContadoresDeMazo();
         }
 
+        if (gameManager != null)
+        {
+            gameManager.OnResultadoCambio += ManejarFinDePartida;
+        }
+
         // El boton de iniciar partida solo lo puede usar el host.
         if (botonIniciarPartida != null)
         {
@@ -131,6 +136,35 @@ public class DeckManager : NetworkBehaviour
         // ejemplo, reconectando a mitad de partida), esto ya lo muestra
         // correctamente de una, gracias a partidaIniciada.Value.
         ActualizarMazoVisualSiCorresponde();
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        if (gameManager != null)
+        {
+            gameManager.OnResultadoCambio -= ManejarFinDePartida;
+        }
+    }
+
+    /// <summary>
+    /// SOLO actua del lado del servidor, apenas la partida termina (no
+    /// espera a "Volver a jugar" ni al reinicio real). Oculta el mazo de
+    /// nuevo (no debe verse hasta que el host arranque la ronda nueva) y
+    /// limpia la mesa de descarte - el resto (mano, mazo real, turno,
+    /// boss, sospecha) se reinicia recien cuando el host aprieta "Iniciar
+    /// partida" de nuevo (ver ReiniciarPartida).
+    /// </summary>
+    private void ManejarFinDePartida(ResultadoPartida resultado)
+    {
+        if (!IsServer || resultado == ResultadoPartida.EnCurso)
+        {
+            return;
+        }
+
+        partidaIniciada.Value = false;
+
+        discardPile.Clear();
+        ReiniciarMesaDeDescarteClientRpc();
     }
 
     /// <summary>
@@ -149,10 +183,13 @@ public class DeckManager : NetworkBehaviour
     /// a medida que se conectan.
     /// </summary>
     /// <summary>
-    /// Conectar ESTO al boton "Iniciar partida" en el Inspector (no
-    /// OnIniciarPartidaPressed directo) - decide solo si hay que arrancar
-    /// por primera vez o reiniciar una ronda nueva, segun si la partida ya
-    /// se jugo antes. Asi el mismo boton sirve para las dos cosas.
+    /// Conectar ESTO al boton "Iniciar partida" en el Inspector. Antes
+    /// decidia entre "primera vez" y "reinicio" mirando partidaIniciada,
+    /// pero ahora ese flag tambien vuelve a false apenas termina una
+    /// partida (para ocultar el mazo) - asi que ya no sirve para distinguir
+    /// "primera vez" de "reinicio". ReiniciarPartida() es un superset seguro
+    /// de la logica original: reconstruye el mazo entero de cero, asi que
+    /// funciona igual de bien la primera vez que en cualquier reinicio.
     /// </summary>
     public void OnBotonIniciarPartidaPressed()
     {
@@ -162,19 +199,12 @@ public class DeckManager : NetworkBehaviour
             return;
         }
 
-        if (!partidaIniciada.Value)
-        {
-            OnIniciarPartidaPressed();
-        }
-        else
-        {
-            ReiniciarPartida();
-        }
-
         if (botonIniciarPartida != null)
         {
             botonIniciarPartida.SetActive(false);
         }
+
+        ReiniciarPartida();
     }
 
     /// <summary>
@@ -191,6 +221,13 @@ public class DeckManager : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// YA NO esta conectada al boton (ver OnBotonIniciarPartidaPressed, que
+    /// ahora llama directo a ReiniciarPartida()) - se deja sin usar por si
+    /// hace falta el flujo original puntual en algun otro lugar mas
+    /// adelante. No borra/reconstruye el mazo, asume que ya existe uno
+    /// (valido solo para un arranque desde OnNetworkSpawn recien hecho).
+    /// </summary>
     public void OnIniciarPartidaPressed()
     {
         if (!IsServer)
@@ -247,6 +284,8 @@ public class DeckManager : NetworkBehaviour
         {
             return;
         }
+
+        partidaIniciada.Value = true;
 
         drawPile.Clear();
         discardPile.Clear();
