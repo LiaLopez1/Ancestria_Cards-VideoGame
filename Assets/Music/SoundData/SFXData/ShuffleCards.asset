@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f0fcd7729f4500542a49c8501de6a4b1, type: 3}
-  m_Name: SFX_Trap
+  m_Name: ShuffleCards
   m_EditorClassIdentifier: Assembly-CSharp::SoundData
   clips:
-  - {fileID: 8300000, guid: 34a38771905f1e84987cd2d8aefe44d8, type: 3}
+  - {fileID: 8300000, guid: 18609c18f95c75d459560e01e2041eb4, type: 3}
   volume: 1
   pitchVariation: 0.05

@@ -1,13 +1,42 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-
-public class UIClickSound : MonoBehaviour
+[RequireComponent(typeof(Button))]
+public class UIClickSound : MonoBehaviour, IPointerEnterHandler
 {
-    public SoundData clickSound;
+    [Header("Sonidos")]
+    [SerializeField] private SoundData clickSound;
+    [SerializeField] private SoundData hoverSound;
 
-    void Start()
+    private Button button;
+
+    private void Awake()
     {
-        GetComponent<Button>().onClick.AddListener(() => clickSound.Play());
+        button = GetComponent<Button>();
+    }
+
+    private void OnEnable()
+    {
+        button.onClick.AddListener(PlayClickSound);
+    }
+
+    private void OnDisable()
+    {
+        button.onClick.RemoveListener(PlayClickSound);
+    }
+
+    private void PlayClickSound()
+    {
+        clickSound?.Play();
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        // Evita reproducir el sonido si el botón está desactivado.
+        if (button.interactable)
+        {
+            hoverSound?.Play();
+        }
     }
 }

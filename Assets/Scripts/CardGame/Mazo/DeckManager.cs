@@ -67,6 +67,9 @@ public class DeckManager : NetworkBehaviour
     [Header("Iniciar partida (solo host)")]
     [SerializeField] private GameObject botonIniciarPartida;
 
+    [Header("Audio")]
+    [SerializeField] private SoundData ShuffleCardsSound;
+
     // Cartas disponibles para robar. SOLO tiene contenido real en el servidor.
     private readonly List<CardData> drawPile = new List<CardData>();
 
@@ -384,8 +387,11 @@ public class DeckManager : NetworkBehaviour
 
     private void ShuffleDeck()
     {
+        //sonido
+        ShuffleCardsSound.Play();
         for (int i = drawPile.Count - 1; i > 0; i--)
         {
+
             int randomIndex = Random.Range(0, i + 1);
 
             CardData temporaryCard = drawPile[i];
