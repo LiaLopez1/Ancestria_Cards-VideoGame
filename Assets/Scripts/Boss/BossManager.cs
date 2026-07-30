@@ -34,6 +34,8 @@ public class BossManager : NetworkBehaviour
     [SerializeField] private DeckManager deckManager;
     [SerializeField] private TurnManager turnManager;
     [SerializeField] private SuspicionManager suspicionManager;
+    [Tooltip("Necesario para que el boss sepa cuál es la categoría infiltrada cuando esa regla está activa.")]
+    [SerializeField] private InfiltratedCardManager infiltratedCardManager;
     [SerializeField] private GameManager gameManager;
 
     [Header("Ritmo del boss")]
@@ -419,7 +421,11 @@ public class BossManager : NetworkBehaviour
         Debug.Log("[Boss][Diagnóstico] Regla activa: " + VictoryRules.ObtenerNombre(turnManager.ReglaActiva)
             + " | Mano completa: " + NombresDeMano(mano));
 
-        int cardIdADescartar = BossStrategy.ElegirCartaADescartar(mano, turnManager.ReglaActiva);
+        CardCategory? categoriaInfiltrada = infiltratedCardManager != null && infiltratedCardManager.HayCategoriaInfiltrada
+            ? infiltratedCardManager.CategoriaInfiltrada
+            : (CardCategory?)null;
+
+        int cardIdADescartar = BossStrategy.ElegirCartaADescartar(mano, turnManager.ReglaActiva, categoriaInfiltrada);
 
         if (cardIdADescartar < 0)
         {
