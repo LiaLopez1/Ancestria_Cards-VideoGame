@@ -8,29 +8,29 @@ using UnityEngine.UI;
 using UnityEngine.Video;
 
 /// <summary>
-/// Motor de pasos del tutorial. El VIDEO de fondo esta SIEMPRE presente
-/// (reemplaza la partida jugable) y nunca se apaga durante todo el
-/// tutorial - lo que cambia paso a paso es:
+/// Motor de pasos del tutorial. Cada paso muestra VIDEO, IMAGEN estatica, o
+/// "Ninguno" (sigue con lo que ya estaba en pantalla, sin cortes - util
+/// cuando varios paneles de texto pasan sobre el mismo video/imagen). Lo
+/// que cambia paso a paso es:
 ///   - El texto del panel.
 ///   - La POSICION del panel en pantalla (para no tapar lo importante de
-///     cada momento del video).
-///   - Opcionalmente, el clip que se esta reproduciendo de fondo.
+///     cada momento).
+///   - El tipo de media (Video/Imagen/Ninguno) y, si corresponde, el clip
+///     o sprite nuevo.
 ///
-/// Un paso puede asignar un clip nuevo (el video cambia apenas se muestra
-/// ese paso) o dejarlo vacio (sigue el mismo clip de antes sin cortes -
-/// util cuando varios paneles pasan sobre el mismo tramo de video).
-///
-/// Cada paso avanza al siguiente de una de 3 formas, independientemente de
-/// si cambio de clip o no:
+/// Cada paso avanza al siguiente de una de 3 formas, independientemente
+/// del tipo de media:
 ///   - Duracion: se muestra unos segundos y avanza solo (sin boton).
 ///   - Click en el panel: aparece el boton "Siguiente", ya interactuable
 ///     desde que se muestra el paso.
 ///   - Fin de video: aparece el boton "Siguiente", pero arranca NO
 ///     interactuable - el video se queda en su ultimo frame al terminar
 ///     (Wrap Mode "Hold" en el VideoPlayer) y recien ahi se habilita el
-///     boton para poder avanzar. El video NUNCA avanza el paso solo.
+///     boton para poder avanzar. El video NUNCA avanza el paso solo. SOLO
+///     tiene sentido combinado con tipo de media "Video" (si se usa con
+///     Imagen/Ninguno, el paso se traba - hay un warning en consola).
 ///
-/// Al ser todo por video en vez de jugable, este script no necesita
+/// Al ser todo por video/imagen en vez de jugable, este script no necesita
 /// engancharse a ningun sistema real del juego (mazo, turnos, categorias,
 /// intercambio) - queda 100% autocontenido, sin Netcode ni logica
 /// duplicada del juego real.
@@ -50,17 +50,31 @@ public class TutorialSequencer : MonoBehaviour
         FinDeVideo,
     }
 
+    private enum TipoDeMedia
+    {
+        Video,
+        Imagen,
+        [InspectorName("Ninguno (sigue lo que ya estaba)")]
+        Ninguno,
+    }
+
     [Serializable]
     private class PasoTutorial
     {
         [TextArea(2, 5)]
         public string texto;
 
-        [Tooltip("Posicion del panel en pantalla (anchoredPosition) para este paso - se mueve para no tapar lo importante del video en cada momento.")]
+        [Tooltip("Posicion del panel en pantalla (anchoredPosition) para este paso - se mueve para no tapar lo importante del video/imagen en cada momento.")]
         public Vector2 posicionPanel;
 
-        [Tooltip("Si se asigna, el video de fondo cambia a este clip apenas se muestra este paso. Si se deja vacio, el video sigue con lo que ya estaba reproduciendo, sin cortes.")]
+        [Tooltip("Video, Imagen estatica, o Ninguno (sigue mostrando lo que ya estaba en el paso anterior, sin cortes - util cuando varios paneles pasan sobre el mismo video/imagen).")]
+        public TipoDeMedia tipoDeMedia = TipoDeMedia.Video;
+
+        [Tooltip("Solo se usa si Tipo De Media es Video.")]
         public VideoClip clip;
+
+        [Tooltip("Solo se usa si Tipo De Media es Imagen.")]
+        public Sprite imagen;
 
         public TipoDeEspera tipoDeEspera;
 
@@ -77,10 +91,17 @@ public class TutorialSequencer : MonoBehaviour
     [Tooltip("Boton 'Siguiente'. En los pasos 'ClickEnPanel' aparece ya interactuable. En los pasos 'FinDeVideo' aparece pero NO interactuable hasta que el video termine - recien ahi se habilita. En los pasos 'Duracion' queda oculto (avanza solo).")]
     [SerializeField] private Button botonSiguiente;
 
-    [Header("Video de fondo (siempre activo durante todo el tutorial)")]
+    [Header("Video de fondo")]
     [SerializeField] private VideoPlayer videoPlayer;
-    [Tooltip("El primer clip que arranca apenas empieza el tutorial, antes de mostrar el paso 1.")]
+    [Tooltip("El objeto que muestra el video en pantalla (por ejemplo un RawImage con RenderTexture) - se activa solo en los pasos de tipo Video.")]
+    [SerializeField] private GameObject contenedorVideo;
+    [Tooltip("El primer clip que arranca apenas empieza el tutorial, antes de mostrar el paso 1 (solo si el paso 1 es de tipo Video).")]
     [SerializeField] private VideoClip clipInicial;
+
+    [Header("Imagen estatica de fondo")]
+    [Tooltip("El objeto que muestra la imagen en pantalla - se activa solo en los pasos de tipo Imagen.")]
+    [SerializeField] private GameObject contenedorImagen;
+    [SerializeField] private Image imagenMostrada;
 
     [Header("Pasos, en orden")]
     [SerializeField] private List<PasoTutorial> pasos = new List<PasoTutorial>();
@@ -98,6 +119,11 @@ public class TutorialSequencer : MonoBehaviour
         if (panelRect != null)
         {
             panelRect.gameObject.SetActive(false);
+        }
+
+        if (contenedorImagen != null)
+        {
+            contenedorImagen.SetActive(false);
         }
 
         if (botonSiguiente != null)
@@ -141,6 +167,11 @@ public class TutorialSequencer : MonoBehaviour
     {
         if (videoPlayer != null && clipInicial != null)
         {
+            if (contenedorVideo != null)
+            {
+                contenedorVideo.SetActive(true);
+            }
+
             videoPlayer.clip = clipInicial;
             videoPlayer.Play();
         }
@@ -232,12 +263,27 @@ public class TutorialSequencer : MonoBehaviour
             panelRect.gameObject.SetActive(true);
         }
 
-        // Solo cambiamos de clip si este paso trajo uno nuevo - si no, el
-        // video de fondo sigue igual que en el paso anterior, sin cortes.
-        if (paso.clip != null && videoPlayer != null)
+        // Segun el tipo de media de este paso: cambia a un video nuevo,
+        // cambia a una imagen nueva, o no toca nada (sigue lo que ya
+        // estaba en pantalla del paso anterior, sin cortes).
+        switch (paso.tipoDeMedia)
         {
-            videoPlayer.clip = paso.clip;
-            videoPlayer.Play();
+            case TipoDeMedia.Video:
+                MostrarVideo(paso.clip);
+                break;
+
+            case TipoDeMedia.Imagen:
+                MostrarImagen(paso.imagen);
+                break;
+
+            case TipoDeMedia.Ninguno:
+                // No se toca ni el video ni la imagen - sigue lo del paso anterior.
+                break;
+        }
+
+        if (paso.tipoDeEspera == TipoDeEspera.FinDeVideo && paso.tipoDeMedia != TipoDeMedia.Video)
+        {
+            Debug.LogWarning("[TutorialSequencer] Un paso tiene tipo de espera 'FinDeVideo' pero su tipo de media NO es 'Video' - el video de ese momento nunca va a terminar (porque no es un video), asi que este paso se va a trabar. Revisar la configuracion de ese paso en el Inspector.");
         }
 
         paso.alMostrarse?.Invoke();
@@ -273,6 +319,48 @@ public class TutorialSequencer : MonoBehaviour
                     botonSiguiente.interactable = false;
                 }
                 break;
+        }
+    }
+
+    private void MostrarVideo(VideoClip clip)
+    {
+        if (contenedorImagen != null)
+        {
+            contenedorImagen.SetActive(false);
+        }
+
+        if (contenedorVideo != null)
+        {
+            contenedorVideo.SetActive(true);
+        }
+
+        if (clip != null && videoPlayer != null)
+        {
+            videoPlayer.clip = clip;
+            videoPlayer.Play();
+        }
+    }
+
+    private void MostrarImagen(Sprite sprite)
+    {
+        if (videoPlayer != null && videoPlayer.isPlaying)
+        {
+            videoPlayer.Stop();
+        }
+
+        if (contenedorVideo != null)
+        {
+            contenedorVideo.SetActive(false);
+        }
+
+        if (contenedorImagen != null)
+        {
+            contenedorImagen.SetActive(true);
+        }
+
+        if (imagenMostrada != null)
+        {
+            imagenMostrada.sprite = sprite;
         }
     }
 
