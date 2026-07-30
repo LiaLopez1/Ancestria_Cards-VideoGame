@@ -16,11 +16,11 @@ public class SuspicionBarUI : MonoBehaviour
     [Header("Referencias")]
     [SerializeField] private SuspicionManager suspicionManager;
     [SerializeField] private Slider sliderSospecha;
-    [Tooltip("Opcional - muestra algo como '3/10'.")]
-    [SerializeField] private TMP_Text textoSospecha;
+    
+    //[SerializeField] private TMP_Text textoSospecha;
 
     [Header("Botón de aceptar intercambio (opcional)")]
-    [Tooltip("Se deshabilita automáticamente si no hay un intercambio en curso.")]
+   // [Tooltip("Se deshabilita automáticamente si no hay un intercambio en curso.")]
     [SerializeField] private Button botonAceptarIntercambio;
 
     private void Start()
@@ -65,10 +65,10 @@ public class SuspicionBarUI : MonoBehaviour
             sliderSospecha.value = nuevoValor;
         }
 
-        if (textoSospecha != null)
+        /*if (textoSospecha != null)
         {
             textoSospecha.text = $"{Mathf.RoundToInt(nuevoValor)}/{Mathf.RoundToInt(suspicionManager.SospechaMaxima)}";
-        }
+        }*/
     }
 
     private void ActualizarBotonAceptar(bool intercambioEnCurso)
