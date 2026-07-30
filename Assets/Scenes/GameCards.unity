@@ -4362,6 +4362,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SuspicionBarUI
   suspicionManager: {fileID: 391290177}
   sliderSospecha: {fileID: 621891903}
+  colorBajo: {r: 0.2509804, g: 0.48235297, b: 0.7019608, a: 1}
+  colorAlto: {r: 1, g: 0, b: 0, a: 1}
+  velocidadAnimacion: 2
   botonAceptarIntercambio: {fileID: 0}
 --- !u!114 &621891903
 MonoBehaviour:
