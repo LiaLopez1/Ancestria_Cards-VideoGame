@@ -15887,6 +15887,7 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   initialHandSize: 4
   delayBetweenCards: 0.25
+  delayAfterShuffle: 2
   copiesPerCard: 4
   deckArea: {fileID: 2066499336}
   deckCardPrefab: {fileID: 8731562171490182180, guid: e1e3013a430eef04897cee56274402e2, type: 3}

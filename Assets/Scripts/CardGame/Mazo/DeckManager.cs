@@ -30,6 +30,7 @@ public class DeckManager : NetworkBehaviour
     [Header("Reparto inicial")]
     [SerializeField] private int initialHandSize = 4;
     [SerializeField] private float delayBetweenCards = 0.25f;
+    [SerializeField] private float delayAfterShuffle = 2f;
 
     public int InitialHandSize => initialHandSize;
 
@@ -128,7 +129,7 @@ public class DeckManager : NetworkBehaviour
         if (IsServer)
         {
             BuildLogicalDeck();
-            ShuffleDeck();
+            ShuffleDeck(false);
             ActualizarContadoresDeMazo();
         }
 
@@ -320,6 +321,20 @@ public class DeckManager : NetworkBehaviour
             suspicionManager.ReiniciarSospecha();
         }
 
+        // El sonido de barajado ya se disparó dentro de ShuffleDeck() -
+        // esta coroutina espera "delayAfterShuffle" y RECIEN AHI reparte.
+        // No hay ningún reparto adicional fuera de la coroutina: antes
+        // había una copia duplicada acá mismo, que hacía que el reparto
+        // ocurriera dos veces (una de una, otra después de la espera).
+        StartCoroutine(ContinuarResetDespuesDelBarajado());
+
+        Debug.Log("[Servidor] Ronda reiniciada - esperando el barajado antes de repartir.");
+    }
+
+    private IEnumerator ContinuarResetDespuesDelBarajado()
+    {
+        yield return new WaitForSecondsRealtime(delayAfterShuffle);
+
         int cantidadJugadores = NetworkManager.Singleton.ConnectedClientsIds.Count;
 
         foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
@@ -337,8 +352,10 @@ public class DeckManager : NetworkBehaviour
             bossManager.IniciarManoInicial();
         }
 
-        Debug.Log($"[Servidor] Ronda reiniciada. Repartiendo a {cantidadJugadores} jugador(es).");
+        Debug.Log($"[Servidor] Barajado terminado. Repartiendo a {cantidadJugadores} jugador(es).");
     }
+
+
 
     /// <summary>Se ejecuta en TODOS los clientes: vacía la mano visual antes de que lleguen las cartas de la ronda nueva.</summary>
     [ClientRpc]
@@ -385,26 +402,30 @@ public class DeckManager : NetworkBehaviour
         Debug.Log("[Servidor] Mazo creado con " + drawPile.Count + " cartas.");
     }
 
-    private void ShuffleDeck()
+    private void ShuffleDeck(bool reproducirSonido = true)
     {
-        //sonido
-        
         for (int i = drawPile.Count - 1; i > 0; i--)
         {
-            ShuffleCardsSound.Play();
-
             int randomIndex = Random.Range(0, i + 1);
 
             CardData temporaryCard = drawPile[i];
             drawPile[i] = drawPile[randomIndex];
             drawPile[randomIndex] = temporaryCard;
+        }
 
+        if (reproducirSonido)
+        {
+            ReproducirSonidoBarajadoClientRpc();
         }
 
         Debug.Log("[Servidor] El mazo fue mezclado.");
     }
-
-    /// <summary>
+    [ClientRpc]
+    private void ReproducirSonidoBarajadoClientRpc()
+    {
+        ShuffleCardsSound?.Play();
+    }
+        /// <summary>
     /// Reconstruye la pila visual (generica, sin identidad) para que tenga
     /// exactamente "cantidad" cartas boca abajo.
     /// </summary>

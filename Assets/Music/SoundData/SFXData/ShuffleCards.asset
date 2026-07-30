@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: ShuffleCards
   m_EditorClassIdentifier: Assembly-CSharp::SoundData
   clips:
-  - {fileID: 8300000, guid: 18609c18f95c75d459560e01e2041eb4, type: 3}
+  - {fileID: 8300000, guid: dc544dcf180dcac40b9767ff5425887b, type: 3}
   volume: 1
   pitchVariation: 0.05
