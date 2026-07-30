@@ -1,6 +1,6 @@
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using UnityEngine.Audio;
 using UnityEngine.SceneManagement;
 
@@ -8,20 +8,18 @@ public class AudioManager : MonoBehaviour
 {
     public static AudioManager Instance { get; private set; }
 
-    [Header("Mixer Groups")]
     [SerializeField] private AudioMixerGroup musicGroup;
     [SerializeField] private AudioMixerGroup sfxGroup;
 
     [Header("Música (crossfade con 2 fuentes, se crean solas)")]
     [Tooltip("Duración por defecto del crossfade al cambiar de música. 0 = corte instantáneo.")]
-    [SerializeField] private float defaultFadeDuration = 0.4f;
+    [SerializeField] private float defaultFadeDuration = 1f;
 
     private AudioSource musicSourceA;
     private AudioSource musicSourceB;
     private AudioSource activeMusicSource;
     private Coroutine crossfadeRoutine;
 
-    [Header("Pool de SFX")]
     [SerializeField] private int poolSize = 10;
     private Queue<AudioSource> sfxPool;
 
@@ -37,19 +35,11 @@ public class AudioManager : MonoBehaviour
     [Tooltip("Al cargar cada escena, se busca aquí el SoundData correspondiente y se reproduce de inmediato.")]
     [SerializeField] private List<SceneMusicEntry> sceneMusicMap;
 
-    private void Awake()
+    void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            // Ya existe un AudioManager (viene de DontDestroyOnLoad de la escena anterior).
-            // Este duplicado se destruye antes de tocar nada más.
-            Destroy(gameObject);
-            return;
-        }
-
+        if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
         DontDestroyOnLoad(gameObject);
-
         InitPool();
         InitMusicSources();
 
@@ -88,9 +78,9 @@ public class AudioManager : MonoBehaviour
         Debug.LogWarning($"AudioManager: no hay música asignada para la escena '{sceneName}'.");
     }
 
-    // ---------------- SFX ----------------
+    // ---------------- SFX (sin cambios) ----------------
 
-    private void InitPool()
+    void InitPool()
     {
         sfxPool = new Queue<AudioSource>();
         for (int i = 0; i < poolSize; i++)
@@ -110,7 +100,7 @@ public class AudioManager : MonoBehaviour
         src.volume = volume;
         src.pitch = pitch;
         src.Play();
-        sfxPool.Enqueue(src);
+        sfxPool.Enqueue(src); // vuelve a la cola, se reutiliza cuando termine
     }
 
     // ---------------- Música (crossfade con 2 fuentes) ----------------
@@ -134,7 +124,9 @@ public class AudioManager : MonoBehaviour
     /// <summary>
     /// Reproduce música con crossfade: la fuente entrante empieza en volumen 0 y sube
     /// mientras la saliente baja, ambas al mismo tiempo (no hay silencio entre medio).
-    /// fadeDuration = 0 -> corte instantáneo (comportamiento anterior).
+    /// Se usa tanto para la música por escena como para cambios dentro de la misma
+    /// escena (ej. SuspicionMusicController al llegar al 50% de sospecha).
+    /// fadeDuration = 0 -> corte instantáneo.
     /// </summary>
     public void PlayMusic(SoundData data, float fadeDuration = -1f)
     {
@@ -163,7 +155,6 @@ public class AudioManager : MonoBehaviour
 
         if (duration <= 0f)
         {
-            // Corte instantáneo: la saliente se detiene ya mismo.
             outgoing.Stop();
         }
         else

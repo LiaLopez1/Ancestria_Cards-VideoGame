@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f0fcd7729f4500542a49c8501de6a4b1, type: 3}
   m_Name: Music_SuspiciusBoss
   m_EditorClassIdentifier: Assembly-CSharp::SoundData
-  clips: []
+  clips:
+  - {fileID: 8300000, guid: e86ba5997cab53941af8aea551244583, type: 3}
   volume: 1
   pitchVariation: 0.05

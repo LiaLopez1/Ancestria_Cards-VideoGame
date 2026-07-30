@@ -1704,6 +1704,8 @@ Transform:
   - {fileID: 428479929}
   - {fileID: 1124723463}
   - {fileID: 1174355121}
+  - {fileID: 382387462}
+  - {fileID: 620220671}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &305299627
@@ -2277,6 +2279,53 @@ RectTransform:
   m_AnchoredPosition: {x: 178, y: 40}
   m_SizeDelta: {x: 209, y: 88}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &382387461
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 382387462}
+  - component: {fileID: 382387463}
+  m_Layer: 0
+  m_Name: SuspisiusMusicController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &382387462
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 382387461}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 282538747}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &382387463
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 382387461}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43377b57a3af9004c94845ff3560abc3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SuspicionMusicController
+  suspicionManager: {fileID: 391290177}
+  musicaNormal: {fileID: 11400000, guid: fc5c53f85eff00849aaac7865d73fbf4, type: 2}
+  musicaAlerta: {fileID: 11400000, guid: a05bcc3ed8b237f4591ef81946a32545, type: 2}
 --- !u!1 &391290175
 GameObject:
   m_ObjectHideFlags: 0
@@ -3358,6 +3407,55 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CardSlot
   moveSpeed: 12
   rotationSpeed: 12
+--- !u!1 &620220670
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 620220671}
+  - component: {fileID: 620220672}
+  m_Layer: 0
+  m_Name: PanelsGameMusic
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &620220671
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 620220670}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 282538747}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &620220672
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 620220670}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae20a94cd3526fb49b34b1bace402441, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameResultMusic
+  gameManager: {fileID: 340926873}
+  musicaVictoria: {fileID: 11400000, guid: c57f84aa5e0d72744bace0ca42ad9143, type: 2}
+  musicaDerrotaPorBoss: {fileID: 11400000, guid: c57f84aa5e0d72744bace0ca42ad9143, type: 2}
+  musicaDerrotaPorSospecha: {fileID: 11400000, guid: c57f84aa5e0d72744bace0ca42ad9143, type: 2}
+  fadeDuration: 0.8
 --- !u!1 &621891900
 GameObject:
   m_ObjectHideFlags: 0
@@ -3413,7 +3511,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SuspicionBarUI
   suspicionManager: {fileID: 391290177}
   sliderSospecha: {fileID: 621891903}
-  textoSospecha: {fileID: 41239711}
   botonAceptarIntercambio: {fileID: 0}
 --- !u!114 &621891903
 MonoBehaviour:
@@ -3454,7 +3551,7 @@ MonoBehaviour:
     m_PressedTrigger: Pressed
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
-  m_Interactable: 1
+  m_Interactable: 0
   m_TargetGraphic: {fileID: 148382463}
   m_FillRect: {fileID: 1534144499}
   m_HandleRect: {fileID: 148382462}
