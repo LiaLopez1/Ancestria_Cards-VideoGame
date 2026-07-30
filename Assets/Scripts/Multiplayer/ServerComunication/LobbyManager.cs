@@ -121,6 +121,17 @@ public class LobbyManager : MonoBehaviour
     public void CrearSala(System.Action onError = null)
     {
         SetEstadoCrearSala("Creando sala...", 0.1f);
+        //LimpiarMisSalasAnteriores(() => CrearSalaInterno(onError));
+        StartCoroutine(CrearSalaConLoading(onError));
+    }
+
+    private System.Collections.IEnumerator CrearSalaConLoading(System.Action onError)
+    {
+        // 1. Tapar la pantalla PRIMERO, antes de tocar PlayFab o Netcode
+        yield return LoadingScreenManager.Instance.ShowLoading();
+
+        // 2. Ya tapado, arranca tu flujo normal sin cambios
+        SetEstadoCrearSala("Creando sala...", 0.1f);
         LimpiarMisSalasAnteriores(() => CrearSalaInterno(onError));
     }
 
@@ -329,7 +340,7 @@ public class LobbyManager : MonoBehaviour
         // El host ya esta conectado por Netcode (arrancado dentro de
         // IniciarHostYObtenerJoinCode). Es el host quien controla la carga de
         // escena para que se sincronice automaticamente con quien se una despues.
-        NetworkManager.Singleton.SceneManager.LoadScene(gameSceneName, LoadSceneMode.Single);
+        LoadingScreenManager.Instance.LoadNetworkScene(gameSceneName);
     }
 
     public void BuscarSalas()
@@ -442,8 +453,17 @@ public class LobbyManager : MonoBehaviour
 
     private void OnUnirseASalaPressed(string connectionString)
     {
-        DetenerBusquedaPeriodica();
         SetEstadoUnirse("Uniendose a la sala...", 0.3f);
+        StartCoroutine(UnirseConLoading(connectionString));
+    }
+
+    private System.Collections.IEnumerator UnirseConLoading(string connectionString)
+    {
+        // Tapar la pantalla PRIMERO, antes de tocar nada de PlayFab
+        yield return LoadingScreenManager.Instance.ShowLoading();
+
+        // Recién ahí, ya tapado, tu código de siempre sin cambios
+        DetenerBusquedaPeriodica();
         DeshabilitarBotonesDeSalas();
 
         var request = new JoinLobbyRequest
@@ -474,6 +494,7 @@ public class LobbyManager : MonoBehaviour
             RehabilitarBotonesDeSalas();
             OcultarProgresoUnirse();
             IniciarBusquedaPeriodica();
+            LoadingScreenManager.Instance.HideLoadingOnError();
             return;
         }
 
@@ -486,6 +507,7 @@ public class LobbyManager : MonoBehaviour
             SetEstadoUnirse("Uniendose a la sala...", 1f);
             // No hace falta cargar la escena manualmente: Netcode sincroniza
             // al cliente automaticamente con la escena que el host ya cargo.
+            LoadingScreenManager.Instance.WaitForSceneSync(gameSceneName);
         }
         catch (System.Exception e)
         {
@@ -494,6 +516,7 @@ public class LobbyManager : MonoBehaviour
             RehabilitarBotonesDeSalas();
             OcultarProgresoUnirse();
             IniciarBusquedaPeriodica();
+            LoadingScreenManager.Instance.HideLoadingOnError();
         }
     }
 
