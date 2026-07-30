@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
@@ -70,6 +71,14 @@ public class GameManager : NetworkBehaviour
     private readonly NetworkVariable<int> rondasGanadasJugadores = new NetworkVariable<int>(0);
     private readonly NetworkVariable<int> rondasGanadasBoss = new NetworkVariable<int>(0);
 
+    // Historial de CADA ronda individual, sincronizado a todos - 0=pendiente,
+    // 1=la gano un jugador, 2=la gano el boss. A diferencia de los
+    // contadores de arriba (que solo dicen "cuantas"), esto dice
+    // "cual ronda en particular gano quien", para poder pintar la bolita
+    // correcta en el slot correcto (incluso si alguien se conecta a mitad
+    // de partida y necesita reconstruir el marcador visual de una).
+    private readonly NetworkList<int> resultadosPorRonda = new NetworkList<int>();
+
     public ResultadoPartida Resultado => resultado.Value;
 
     public bool PartidaTerminada => resultado.Value != ResultadoPartida.EnCurso;
@@ -82,6 +91,15 @@ public class GameManager : NetworkBehaviour
     /// <summary>Se dispara en TODOS los clientes cada vez que cambia el resultado.</summary>
     public event Action<ResultadoPartida> OnResultadoCambio;
 
+    /// <summary>
+    /// Se dispara en TODOS los clientes cada vez que se registra (o se
+    /// resetea) el resultado de una ronda especifica - (indiceRonda,
+    /// resultado: 0=pendiente, 1=jugador, 2=boss). Lo usa RoundIndicatorUI
+    /// para saber que bolita poner en que slot, sin tener que consultar
+    /// nada mas del juego en si.
+    /// </summary>
+    public event Action<int, int> OnResultadoRondaRegistrado;
+
 
     public override void OnNetworkSpawn()
     {
@@ -93,8 +111,29 @@ public class GameManager : NetworkBehaviour
 
         rondaActual.OnValueChanged += (anterior, nuevo) => ActualizarContadorRondas();
 
+        resultadosPorRonda.OnListChanged += (cambio) =>
+        {
+            OnResultadoRondaRegistrado?.Invoke(cambio.Index, cambio.Value);
+        };
+
+        if (IsServer && resultadosPorRonda.Count == 0)
+        {
+            for (int i = 0; i < totalRondas; i++)
+            {
+                resultadosPorRonda.Add(0);
+            }
+        }
+
         ActualizarPaneles(resultado.Value);
         ActualizarContadorRondas();
+    }
+
+    /// <summary>0=pendiente, 1=la gano un jugador, 2=la gano el boss. indice 0-based.</summary>
+    public int ObtenerResultadoDeRonda(int indiceRonda)
+    {
+        return indiceRonda >= 0 && indiceRonda < resultadosPorRonda.Count
+            ? resultadosPorRonda[indiceRonda]
+            : 0;
     }
 
     /// <summary>
@@ -112,6 +151,11 @@ public class GameManager : NetworkBehaviour
         rondaActual.Value = 1;
         rondasGanadasJugadores.Value = 0;
         rondasGanadasBoss.Value = 0;
+
+        for (int i = 0; i < resultadosPorRonda.Count; i++)
+        {
+            resultadosPorRonda[i] = 0;
+        }
 
         ReiniciarResultado();
     }
@@ -159,6 +203,7 @@ public class GameManager : NetworkBehaviour
 
         slotGanador.Value = slot;
         rondasGanadasJugadores.Value++;
+        RegistrarResultadoDeRonda(1);
 
         Debug.Log($"[Servidor] El slot {slot} cumplió la regla de victoria (ronda {rondaActual.Value}/{totalRondas}). Marcador: jugadores {rondasGanadasJugadores.Value} - boss {rondasGanadasBoss.Value}.");
 
@@ -174,10 +219,22 @@ public class GameManager : NetworkBehaviour
         }
 
         rondasGanadasBoss.Value++;
+        RegistrarResultadoDeRonda(2);
 
         Debug.Log($"[Servidor] El boss cumplió la regla de victoria (ronda {rondaActual.Value}/{totalRondas}). Marcador: jugadores {rondasGanadasJugadores.Value} - boss {rondasGanadasBoss.Value}.");
 
         ResolverFinDeRonda(ganoJugador: false);
+    }
+
+    /// <summary>SOLO servidor. Guarda en resultadosPorRonda[rondaActual - 1] quien gano ESTA ronda (1=jugador, 2=boss).</summary>
+    private void RegistrarResultadoDeRonda(int resultadoRonda)
+    {
+        int indice = rondaActual.Value - 1;
+
+        if (indice >= 0 && indice < resultadosPorRonda.Count)
+        {
+            resultadosPorRonda[indice] = resultadoRonda;
+        }
     }
 
     /// <summary>
