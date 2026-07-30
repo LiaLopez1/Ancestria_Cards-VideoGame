@@ -1705,6 +1705,8 @@ Transform:
   - {fileID: 1124723463}
   - {fileID: 1174355121}
   - {fileID: 926278843}
+  - {fileID: 438414188}
+  - {fileID: 1534219903}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &305299627
@@ -2550,6 +2552,55 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 430612156}
   m_CullTransparentMesh: 1
+--- !u!1 &438414187
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 438414188}
+  - component: {fileID: 438414189}
+  m_Layer: 0
+  m_Name: PanelsGameMusic
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &438414188
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 438414187}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 282538747}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &438414189
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 438414187}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae20a94cd3526fb49b34b1bace402441, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameResultMusic
+  gameManager: {fileID: 0}
+  musicaVictoria: {fileID: 11400000, guid: c57f84aa5e0d72744bace0ca42ad9143, type: 2}
+  musicaDerrotaPorBoss: {fileID: 11400000, guid: c57f84aa5e0d72744bace0ca42ad9143, type: 2}
+  musicaDerrotaPorSospecha: {fileID: 11400000, guid: c57f84aa5e0d72744bace0ca42ad9143, type: 2}
+  fadeDuration: 0.8
 --- !u!1 &442093640
 GameObject:
   m_ObjectHideFlags: 0
@@ -3282,7 +3333,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SuspicionBarUI
   suspicionManager: {fileID: 391290177}
   sliderSospecha: {fileID: 621891903}
-  textoSospecha: {fileID: 41239711}
   botonAceptarIntercambio: {fileID: 0}
 --- !u!114 &621891903
 MonoBehaviour:
@@ -9203,6 +9253,53 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1534144498}
   m_CullTransparentMesh: 1
+--- !u!1 &1534219902
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1534219903}
+  - component: {fileID: 1534219904}
+  m_Layer: 0
+  m_Name: SuspisiusMusicController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1534219903
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1534219902}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 282538747}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1534219904
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1534219902}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43377b57a3af9004c94845ff3560abc3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SuspicionMusicController
+  suspicionManager: {fileID: 391290177}
+  musicaNormal: {fileID: 11400000, guid: fc5c53f85eff00849aaac7865d73fbf4, type: 2}
+  musicaAlerta: {fileID: 11400000, guid: a05bcc3ed8b237f4591ef81946a32545, type: 2}
 --- !u!1 &1539954057
 GameObject:
   m_ObjectHideFlags: 0
@@ -12162,6 +12259,7 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   deckManager: {fileID: 2066499337}
   turnManager: {fileID: 979683347}
+  suspicionManager: {fileID: 391290177}
   delayAntesDeActuar: 1.5
   delayEntreCartasReparto: 0.25
   bossImage: {fileID: 1452595172}
@@ -12171,6 +12269,10 @@ MonoBehaviour:
   spriteMirandoOponentes: {fileID: 21300000, guid: 858fdd769c59ac74280a4285eb5b7bf3, type: 3}
   intervaloMinimoAtencion: 2
   intervaloMaximoAtencion: 5
+  spriteMonstruoConCuatroCartas: {fileID: 0}
+  spriteMonstruoConCincoCartas: {fileID: 0}
+  spriteMonstruoRevisandoCartas: {fileID: 0}
+  spriteMonstruoMirandoOponentes: {fileID: 0}
   nombreInicial: Boss
 --- !u!114 &2032638370
 MonoBehaviour:
