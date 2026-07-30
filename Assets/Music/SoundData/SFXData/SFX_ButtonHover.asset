@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: SFX_ButtonHover
   m_EditorClassIdentifier: Assembly-CSharp::SoundData
   clips:
-  - {fileID: 8300000, guid: c054807d40d1bea4dbecd17157bf2c43, type: 3}
-  volume: 1
-  pitchVariation: -0.036
+  - {fileID: 8300000, guid: b3044c13f3cd4474da7944f88ca478d6, type: 3}
+  volume: 0.64
+  pitchVariation: 0.041

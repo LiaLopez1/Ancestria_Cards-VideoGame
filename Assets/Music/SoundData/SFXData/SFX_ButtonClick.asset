@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: SFX_ButtonClick
   m_EditorClassIdentifier: Assembly-CSharp::SoundData
   clips:
-  - {fileID: 8300000, guid: 1899e0bce43ade14fafdc38abcfeb2c4, type: 3}
+  - {fileID: 8300000, guid: 37290893717ab7b4c852cdc261614ae0, type: 3}
   volume: 0.432
-  pitchVariation: -0.036
+  pitchVariation: 0.028

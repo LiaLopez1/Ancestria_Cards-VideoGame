@@ -388,15 +388,17 @@ public class DeckManager : NetworkBehaviour
     private void ShuffleDeck()
     {
         //sonido
-        ShuffleCardsSound.Play();
+        
         for (int i = drawPile.Count - 1; i > 0; i--)
         {
+            ShuffleCardsSound.Play();
 
             int randomIndex = Random.Range(0, i + 1);
 
             CardData temporaryCard = drawPile[i];
             drawPile[i] = drawPile[randomIndex];
             drawPile[randomIndex] = temporaryCard;
+
         }
 
         Debug.Log("[Servidor] El mazo fue mezclado.");
