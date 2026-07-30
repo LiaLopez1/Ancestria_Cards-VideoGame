@@ -930,7 +930,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &415244503
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1207,7 +1207,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &608828607
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1807,12 +1807,17 @@ MonoBehaviour:
   textoPanel: {fileID: 143447654}
   botonSiguiente: {fileID: 22415334}
   videoPlayer: {fileID: 453886534}
+  contenedorVideo: {fileID: 453886532}
   clipInicial: {fileID: 0}
+  contenedorImagen: {fileID: 0}
+  imagenMostrada: {fileID: 0}
   pasos:
   - texto: Cada partida enfrenta a un grupo de jugadores contra el Boss. Para arrancar,
       el host presiona 'Iniciar partida' y se reparten las cartas.
     posicionPanel: {x: 0, y: 0}
+    tipoDeMedia: 0
     clip: {fileID: 0}
+    imagen: {fileID: 0}
     tipoDeEspera: 0
     duracionSegundos: 0
     alMostrarse:
@@ -1821,7 +1826,9 @@ MonoBehaviour:
   - texto: "En tu turno: roba una carta del mazo y despu\xE9s descarta una de tu
       mano. As\xED de simple."
     posicionPanel: {x: 0, y: 0}
+    tipoDeMedia: 0
     clip: {fileID: 0}
+    imagen: {fileID: 0}
     tipoDeEspera: 0
     duracionSegundos: 0
     alMostrarse:
@@ -1830,7 +1837,9 @@ MonoBehaviour:
   - texto: "La Leyenda tambi\xE9n juega: roba y descarta como cualquier jugador,
       y el turno va rotando entre todos."
     posicionPanel: {x: 0, y: 0}
+    tipoDeMedia: 0
     clip: {fileID: 0}
+    imagen: {fileID: 0}
     tipoDeEspera: 0
     duracionSegundos: 0
     alMostrarse:
@@ -1839,7 +1848,9 @@ MonoBehaviour:
   - texto: "Cada ronda tiene una regla de victoria. C\xFAmplela en tu mano antes
       que La Leyenda."
     posicionPanel: {x: 0, y: 0}
+    tipoDeMedia: 0
     clip: {fileID: 0}
+    imagen: {fileID: 0}
     tipoDeEspera: 0
     duracionSegundos: 0
     alMostrarse:
@@ -1848,7 +1859,9 @@ MonoBehaviour:
   - texto: "Para ganarle a La Leyenda, vas a poder hacer trampa junto a otros jugadores
       \u2014 comunic\xE1ndose en secreto sin que se d\xE9 cuenta."
     posicionPanel: {x: 0, y: 0}
+    tipoDeMedia: 0
     clip: {fileID: 0}
+    imagen: {fileID: 0}
     tipoDeEspera: 0
     duracionSegundos: 0
     alMostrarse:
@@ -1857,7 +1870,9 @@ MonoBehaviour:
   - texto: "Toca 'Pedir' para preguntar si alguien tiene cartas de la categor\xEDa
       que necesitas, elige la categor\xEDa que buscas. Todos van a ver tu pedido."
     posicionPanel: {x: 0, y: 0}
+    tipoDeMedia: 0
     clip: {fileID: 0}
+    imagen: {fileID: 0}
     tipoDeEspera: 0
     duracionSegundos: 0
     alMostrarse:
@@ -1866,7 +1881,9 @@ MonoBehaviour:
   - texto: "Con 'Decir' avisas qu\xE9 categor\xEDa S\xCD tienes en tu mano, elige
       la categor\xEDa que quieres mostrar."
     posicionPanel: {x: 0, y: 0}
+    tipoDeMedia: 0
     clip: {fileID: 0}
+    imagen: {fileID: 0}
     tipoDeEspera: 0
     duracionSegundos: 0
     alMostrarse:
@@ -1875,7 +1892,9 @@ MonoBehaviour:
   - texto: "Ojo: cada trampa sube la sospecha de La Leyenda. Si llega al m\xE1ximo,
       \xA1pierden todos!"
     posicionPanel: {x: 0, y: 0}
+    tipoDeMedia: 0
     clip: {fileID: 0}
+    imagen: {fileID: 0}
     tipoDeEspera: 0
     duracionSegundos: 0
     alMostrarse:
@@ -1884,7 +1903,9 @@ MonoBehaviour:
   - texto: "Despu\xE9s de robar, tambi\xE9n puedes proponerle un intercambio de cartas
       a otro jugador."
     posicionPanel: {x: 0, y: 0}
+    tipoDeMedia: 0
     clip: {fileID: 0}
+    imagen: {fileID: 0}
     tipoDeEspera: 0
     duracionSegundos: 0
     alMostrarse:
@@ -1894,7 +1915,9 @@ MonoBehaviour:
       vas a ofrecer, el otro jugador puede aceptar o rechazar tu propuesta, si acepta,
       ambos reciben la carta del otro al mismo tiempo."
     posicionPanel: {x: 0, y: 0}
+    tipoDeMedia: 0
     clip: {fileID: 0}
+    imagen: {fileID: 0}
     tipoDeEspera: 0
     duracionSegundos: 0
     alMostrarse:
@@ -1903,7 +1926,9 @@ MonoBehaviour:
   - texto: "\"\xA1Ahora te toca a ti! Completa la regla antes que La Leyenda \u2014
       se juega a 3 rondas, gana quien se lleve 2."
     posicionPanel: {x: 0, y: 0}
+    tipoDeMedia: 0
     clip: {fileID: 0}
+    imagen: {fileID: 0}
     tipoDeEspera: 0
     duracionSegundos: 0
     alMostrarse:
