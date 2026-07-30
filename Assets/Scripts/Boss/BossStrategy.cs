@@ -9,13 +9,23 @@ using System.Collections.Generic;
 /// CardDatabase.Instance.ObtenerPorId(id) solo cuando hace falta (para
 /// CategoriaCompleta, que necesita saber la categoria de cada carta).
 ///
-/// La idea general es la misma para las dos reglas: agrupar segun el
+/// La idea general es la misma para las cuatro reglas: agrupar segun el
 /// criterio que pide la regla, quedarse con el grupo mas prometedor, y
 /// descartar la carta que menos aporta a ese grupo.
+///
+/// CartaInfiltrada / CartaInfiltrada2 agregan un paso extra: antes de
+/// agrupar, se reserva (nunca se descarta) una carta que pertenezca a la
+/// categoriaInfiltrada - es el "comodin" que exige la regla. El resto de
+/// la mano (3 cartas) se evalua igual que las reglas base, pero apuntando
+/// a un trio en vez de a las 4 cartas completas.
 /// </summary>
 public static class BossStrategy
 {
-    public static int ElegirCartaADescartar(List<int> manoCardIds, VictoryRuleType reglaActiva)
+    /// <param name="categoriaInfiltrada">
+    /// Solo se usa para CartaInfiltrada / CartaInfiltrada2. Pasa null para
+    /// las demas reglas.
+    /// </param>
+    public static int ElegirCartaADescartar(List<int> manoCardIds, VictoryRuleType reglaActiva, CardCategory? categoriaInfiltrada = null)
     {
         if (manoCardIds == null || manoCardIds.Count == 0)
         {
@@ -29,6 +39,12 @@ public static class BossStrategy
 
             case VictoryRuleType.CategoriaCompleta:
                 return EvaluarCategoriaCompleta(manoCardIds);
+
+            case VictoryRuleType.CartaInfiltrada:
+                return EvaluarCartaInfiltrada(manoCardIds, categoriaInfiltrada);
+
+            case VictoryRuleType.CartaInfiltrada2:
+                return EvaluarCartaInfiltrada2(manoCardIds, categoriaInfiltrada);
 
             default:
                 return manoCardIds[0];
@@ -95,9 +111,145 @@ public static class BossStrategy
     /// </summary>
     private static int EvaluarCategoriaCompleta(List<int> mano)
     {
+        Dictionary<CardCategory, List<int>> porCategoria = AgruparPorCategoria(mano);
+
+        if (porCategoria.Count == 0)
+        {
+            return mano[0];
+        }
+
+        CardCategory mejorCategoria = EncontrarMejorCategoria(porCategoria);
+
+        int? duplicado = BuscarDuplicadoDentroDe(porCategoria[mejorCategoria]);
+        if (duplicado.HasValue)
+        {
+            return duplicado.Value;
+        }
+
+        int? deCategoriaMenosUtil = BuscarCartaDeCategoriaMenosUtil(porCategoria, mejorCategoria);
+
+        return deCategoriaMenosUtil ?? mano[0];
+    }
+
+    /// <summary>
+    /// Trio de 3 cartas DISTINTAS de una misma categoria + CUALQUIER carta
+    /// de la categoriaInfiltrada. Reserva una carta de esa categoria como
+    /// comodin (nunca se descarta mientras haya otra opcion) y evalua el
+    /// resto igual que CategoriaCompleta, pero apuntando a 3, no a 4.
+    /// </summary>
+    private static int EvaluarCartaInfiltrada(List<int> mano, CardCategory? categoriaInfiltrada)
+    {
+        // Sin categoria infiltrada valida no hay nada especial que
+        // proteger - se aproxima con la misma logica que CategoriaCompleta.
+        if (categoriaInfiltrada == null)
+        {
+            return EvaluarCategoriaCompleta(mano);
+        }
+
+        int comodinId = BuscarComodin(mano, categoriaInfiltrada.Value);
+        List<int> resto = QuitarComodin(mano, comodinId);
+
+        if (comodinId == -1)
+        {
+            // No hay ninguna carta de la categoria infiltrada en mano
+            // todavia - no hay comodin que proteger, se evalua la mano
+            // completa buscando la mejor agrupacion posible mientras tanto.
+            return EvaluarCategoriaCompleta(mano);
+        }
+
+        Dictionary<CardCategory, List<int>> porCategoria = AgruparPorCategoria(resto);
+
+        if (porCategoria.Count == 0)
+        {
+            return resto.Count > 0 ? resto[0] : comodinId;
+        }
+
+        CardCategory mejorCategoria = EncontrarMejorCategoria(porCategoria);
+
+        int? duplicado = BuscarDuplicadoDentroDe(porCategoria[mejorCategoria]);
+        if (duplicado.HasValue)
+        {
+            return duplicado.Value;
+        }
+
+        int? deCategoriaMenosUtil = BuscarCartaDeCategoriaMenosUtil(porCategoria, mejorCategoria);
+
+        return deCategoriaMenosUtil ?? resto[0];
+    }
+
+    /// <summary>
+    /// 3 copias IDENTICAS + CUALQUIER carta de la categoriaInfiltrada.
+    /// Mismo comodin que CartaInfiltrada, pero el resto se evalua buscando
+    /// el cardId mas repetido (como CuatroIguales, apuntando a 3).
+    /// </summary>
+    private static int EvaluarCartaInfiltrada2(List<int> mano, CardCategory? categoriaInfiltrada)
+    {
+        if (categoriaInfiltrada == null)
+        {
+            return EvaluarCuatroIguales(mano);
+        }
+
+        int comodinId = BuscarComodin(mano, categoriaInfiltrada.Value);
+        List<int> resto = QuitarComodin(mano, comodinId);
+
+        if (comodinId == -1)
+        {
+            return EvaluarCuatroIguales(mano);
+        }
+
+        if (resto.Count == 0)
+        {
+            return comodinId; // no deberia pasar con una mano de 4 cartas
+        }
+
+        Dictionary<int, int> conteo = new Dictionary<int, int>();
+
+        foreach (int id in resto)
+        {
+            conteo[id] = conteo.TryGetValue(id, out int actual) ? actual + 1 : 1;
+        }
+
+        int mejorCardId = resto[0];
+        int mejorConteo = 0;
+
+        foreach (KeyValuePair<int, int> par in conteo)
+        {
+            if (par.Value > mejorConteo)
+            {
+                mejorConteo = par.Value;
+                mejorCardId = par.Key;
+            }
+        }
+
+        int cardIdADescartar = -1;
+        int menorConteo = int.MaxValue;
+
+        foreach (int id in resto)
+        {
+            if (id == mejorCardId)
+            {
+                continue;
+            }
+
+            int conteoDeEsta = conteo[id];
+
+            if (conteoDeEsta < menorConteo)
+            {
+                menorConteo = conteoDeEsta;
+                cardIdADescartar = id;
+            }
+        }
+
+        return cardIdADescartar != -1 ? cardIdADescartar : resto[0];
+    }
+
+    // ---------------- Helpers compartidos ----------------
+
+    private static Dictionary<CardCategory, List<int>> AgruparPorCategoria(List<int> cardIds)
+    {
         Dictionary<CardCategory, List<int>> porCategoria = new Dictionary<CardCategory, List<int>>();
 
-        foreach (int id in mano)
+        foreach (int id in cardIds)
         {
             CardData carta = CardDatabase.Instance.ObtenerPorId(id);
 
@@ -115,11 +267,11 @@ public static class BossStrategy
             idsDeEstaCategoria.Add(id);
         }
 
-        if (porCategoria.Count == 0)
-        {
-            return mano[0];
-        }
+        return porCategoria;
+    }
 
+    private static CardCategory EncontrarMejorCategoria(Dictionary<CardCategory, List<int>> porCategoria)
+    {
         CardCategory mejorCategoria = default;
         int mejorCantidadDistintos = -1;
 
@@ -134,26 +286,36 @@ public static class BossStrategy
             }
         }
 
-        // Prioridad 1: duplicado dentro de la mejor categoria.
-        Dictionary<int, int> conteoDentroDeLaMejor = new Dictionary<int, int>();
+        return mejorCategoria;
+    }
 
-        foreach (int id in porCategoria[mejorCategoria])
+    /// <summary>Busca un cardId repetido dentro del grupo dado. Null si no hay ninguno.</summary>
+    private static int? BuscarDuplicadoDentroDe(List<int> grupo)
+    {
+        Dictionary<int, int> conteo = new Dictionary<int, int>();
+
+        foreach (int id in grupo)
         {
-            conteoDentroDeLaMejor[id] = conteoDentroDeLaMejor.TryGetValue(id, out int actual) ? actual + 1 : 1;
+            conteo[id] = conteo.TryGetValue(id, out int actual) ? actual + 1 : 1;
         }
 
-        foreach (KeyValuePair<int, int> par in conteoDentroDeLaMejor)
+        foreach (KeyValuePair<int, int> par in conteo)
         {
             if (par.Value > 1)
             {
-                return par.Key; // hay una copia de mas de este cardId - se descarta una
+                return par.Key;
             }
         }
 
-        // Prioridad 2: sin duplicados - descartar de la categoria menos prometedora.
+        return null;
+    }
+
+    /// <summary>Entre las categorias que NO son la mejor, devuelve una carta de la menos util. Null si no hay ninguna otra categoria.</summary>
+    private static int? BuscarCartaDeCategoriaMenosUtil(Dictionary<CardCategory, List<int>> porCategoria, CardCategory mejorCategoria)
+    {
         CardCategory categoriaMenosUtil = default;
         int menorCantidadDistintos = int.MaxValue;
-        bool encontroCategoriaAfuera = false;
+        bool encontro = false;
 
         foreach (KeyValuePair<CardCategory, List<int>> par in porCategoria)
         {
@@ -168,17 +330,38 @@ public static class BossStrategy
             {
                 menorCantidadDistintos = distintos;
                 categoriaMenosUtil = par.Key;
-                encontroCategoriaAfuera = true;
+                encontro = true;
             }
         }
 
-        if (encontroCategoriaAfuera)
+        return encontro ? porCategoria[categoriaMenosUtil][0] : (int?)null;
+    }
+
+    /// <summary>Primera carta de la mano que pertenece a la categoria infiltrada. -1 si no hay ninguna.</summary>
+    private static int BuscarComodin(List<int> mano, CardCategory categoriaInfiltrada)
+    {
+        foreach (int id in mano)
         {
-            return porCategoria[categoriaMenosUtil][0];
+            CardData carta = CardDatabase.Instance.ObtenerPorId(id);
+
+            if (carta != null && carta.category == categoriaInfiltrada)
+            {
+                return id;
+            }
         }
 
-        // Fallback: toda la mano es de la misma categoria y sin duplicados
-        // (mano ya ideal o caso raro) - se descarta la primera.
-        return mano[0];
+        return -1;
+    }
+
+    private static List<int> QuitarComodin(List<int> mano, int comodinId)
+    {
+        List<int> resto = new List<int>(mano);
+
+        if (comodinId != -1)
+        {
+            resto.Remove(comodinId); // solo quita UNA ocurrencia
+        }
+
+        return resto;
     }
 }

@@ -40,8 +40,8 @@ public static class VictoryRules
     {
         VictoryRuleType.CuatroIguales,
         VictoryRuleType.CategoriaCompleta,
-        // VictoryRuleType.CartaInfiltrada,
-        // VictoryRuleType.CartaInfiltrada2,
+        VictoryRuleType.CartaInfiltrada,
+        VictoryRuleType.CartaInfiltrada2,
     };
 
     public static string ObtenerNombre(VictoryRuleType regla)
@@ -61,17 +61,36 @@ public static class VictoryRules
         }
     }
 
+    /// <summary>Version larga, para mostrar debajo del titulo corto (ObtenerNombre) y explicar como se gana.</summary>
+    public static string ObtenerDescripcion(VictoryRuleType regla)
+    {
+        switch (regla)
+        {
+            case VictoryRuleType.CuatroIguales:
+                return "Consigue 4 copias exactas de la misma carta.";
+            case VictoryRuleType.CategoriaCompleta:
+                return "Consigue las 4 cartas distintas de una misma categoría.";
+            case VictoryRuleType.CartaInfiltrada:
+                return "Consigue 3 cartas distintas de una misma categoría, más cualquier carta de la categoría que reveló el Boss.";
+            case VictoryRuleType.CartaInfiltrada2:
+                return "Consigue 3 copias exactas de la misma carta, más cualquier carta de la categoría que reveló el Boss.";
+            default:
+                return string.Empty;
+        }
+    }
+
     /// <summary>
     /// Evalua si una mano (lista de cardId) cumple la regla dada.
     /// Solo tiene sentido llamarlo del lado del servidor, ya que necesita
     /// la mano REAL del jugador (privada).
     /// </summary>
-    /// <param name="cartaInfiltradaId">
-    /// Solo se usa para CartaInfiltrada / CartaInfiltrada2 - la carta que
-    /// el Boss elige al inicio de la ronda. Pasa -1 (o nada) para las
-    /// demas reglas, no hace falta.
+    /// <param name="categoriaInfiltrada">
+    /// Solo se usa para CartaInfiltrada / CartaInfiltrada2 - la categoría
+    /// que el Boss "muestra" al inicio de la ronda. Cualquier carta de esa
+    /// categoría en la mano cuenta (no una carta exacta). Pasa null para
+    /// las demas reglas, no hace falta.
     /// </param>
-    public static bool SeCumple(VictoryRuleType regla, List<int> manoCardIds, int cartaInfiltradaId = -1)
+    public static bool SeCumple(VictoryRuleType regla, List<int> manoCardIds, CardCategory? categoriaInfiltrada = null)
     {
         if (manoCardIds == null || manoCardIds.Count != 4)
         {
@@ -87,10 +106,10 @@ public static class VictoryRules
                 return EvaluarCategoriaCompleta(manoCardIds);
 
             case VictoryRuleType.CartaInfiltrada:
-                return EvaluarCartaInfiltrada(manoCardIds, cartaInfiltradaId);
+                return EvaluarCartaInfiltrada(manoCardIds, categoriaInfiltrada);
 
             case VictoryRuleType.CartaInfiltrada2:
-                return EvaluarCartaInfiltrada2(manoCardIds, cartaInfiltradaId);
+                return EvaluarCartaInfiltrada2(manoCardIds, categoriaInfiltrada);
 
             default:
                 return false;
@@ -132,18 +151,90 @@ public static class VictoryRules
 
     /// <summary>
     /// Trio de 3 cartas DISTINTAS de una misma categoria (cualquiera) +
-    /// la carta especifica que eligio el Boss.
+    /// CUALQUIER carta de la categoria que "muestra" el Boss.
+    ///
+    /// Prueba CADA carta de la mano que pertenezca a la categoria infiltrada
+    /// como posible comodin (no solo la primera que encuentre) - necesario
+    /// para manos con copias repetidas de la misma carta, donde separar una
+    /// u otra copia puede cambiar si el trio restante es valido o no.
     /// </summary>
-    private static bool EvaluarCartaInfiltrada(List<int> mano, int cartaInfiltradaId)
+    private static bool EvaluarCartaInfiltrada(List<int> mano, CardCategory? categoriaInfiltrada)
     {
-        if (!SepararCartaInfiltrada(mano, cartaInfiltradaId, out List<int> resto))
+        if (categoriaInfiltrada == null)
         {
             return false;
         }
 
-        List<CardData> cartas = resto
-            .Select(id => CardDatabase.Instance.ObtenerPorId(id))
-            .ToList();
+        List<CardData> cartas = mano.Select(id => CardDatabase.Instance.ObtenerPorId(id)).ToList();
+
+        if (cartas.Any(carta => carta == null))
+        {
+            return false;
+        }
+
+        for (int i = 0; i < mano.Count; i++)
+        {
+            if (cartas[i].category != categoriaInfiltrada.Value)
+            {
+                continue;
+            }
+
+            List<int> resto = new List<int>(mano);
+            resto.RemoveAt(i);
+
+            if (EsTrioDeCategoriaValido(resto))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 3 copias IDENTICAS de la misma carta + CUALQUIER carta de la
+    /// categoria que "muestra" el Boss. Misma idea de probar todas las
+    /// combinaciones posibles que EvaluarCartaInfiltrada.
+    /// </summary>
+    private static bool EvaluarCartaInfiltrada2(List<int> mano, CardCategory? categoriaInfiltrada)
+    {
+        if (categoriaInfiltrada == null)
+        {
+            return false;
+        }
+
+        List<CardData> cartas = mano.Select(id => CardDatabase.Instance.ObtenerPorId(id)).ToList();
+
+        if (cartas.Any(carta => carta == null))
+        {
+            return false;
+        }
+
+        for (int i = 0; i < mano.Count; i++)
+        {
+            if (cartas[i].category != categoriaInfiltrada.Value)
+            {
+                continue;
+            }
+
+            List<int> resto = new List<int>(mano);
+            resto.RemoveAt(i);
+
+            int primero = resto[0];
+
+            if (resto.All(id => id == primero))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>¿Estas 3 cartas son todas de la misma categoria y las 3 son DISTINTAS entre si?</summary>
+    private static bool EsTrioDeCategoriaValido(List<int> tresCartas)
+    {
+        List<CardData> cartas = tresCartas.Select(id => CardDatabase.Instance.ObtenerPorId(id)).ToList();
 
         if (cartas.Any(carta => carta == null))
         {
@@ -158,44 +249,8 @@ public static class VictoryRules
             return false;
         }
 
-        // El trio debe ser de 3 cartas UNICAS de esa categoria, no copias
-        // repetidas - si no, seria CartaInfiltrada2, no esta.
         int cardIdsUnicos = cartas.Select(carta => carta.cardId).Distinct().Count();
 
         return cardIdsUnicos == 3;
-    }
-
-    /// <summary>
-    /// 3 copias IDENTICAS de la misma carta + la carta especifica que
-    /// eligio el Boss.
-    /// </summary>
-    private static bool EvaluarCartaInfiltrada2(List<int> mano, int cartaInfiltradaId)
-    {
-        if (!SepararCartaInfiltrada(mano, cartaInfiltradaId, out List<int> resto))
-        {
-            return false;
-        }
-
-        int primero = resto[0];
-        return resto.All(id => id == primero);
-    }
-
-    /// <summary>
-    /// Valida que la carta del Boss este presente en la mano (una sola vez)
-    /// y devuelve las otras 3 cartas restantes para evaluar el trio.
-    /// </summary>
-    private static bool SepararCartaInfiltrada(List<int> mano, int cartaInfiltradaId, out List<int> resto)
-    {
-        resto = null;
-
-        if (cartaInfiltradaId < 0 || !mano.Contains(cartaInfiltradaId))
-        {
-            return false;
-        }
-
-        resto = new List<int>(mano);
-        resto.Remove(cartaInfiltradaId); // solo quita UNA ocurrencia
-
-        return resto.Count == 3;
     }
 }

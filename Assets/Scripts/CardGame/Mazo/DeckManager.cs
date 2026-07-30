@@ -44,6 +44,8 @@ public class DeckManager : NetworkBehaviour
     [Header("Turno")]
     [SerializeField] private TurnManager turnManager;
     [SerializeField] private GameManager gameManager;
+    [Tooltip("Necesario para poder chequear las reglas CartaInfiltrada / CartaInfiltrada2 al descartar.")]
+    [SerializeField] private InfiltratedCardManager infiltratedCardManager;
 
     [Header("Boss")]
     [Tooltip("Se le avisa cuando la partida arranca, para que reparta su mano inicial igual que a un jugador más.")]
@@ -703,7 +705,7 @@ public class DeckManager : NetworkBehaviour
 
         MostrarCartaDescartadaClientRpc(cardId);
 
-        if (turnManager != null && VictoryRules.SeCumple(turnManager.ReglaActiva, mano))
+        if (turnManager != null && VictoryRules.SeCumple(turnManager.ReglaActiva, mano, ObtenerCategoriaInfiltradaActual()))
         {
             if (NetworkBootstrap.Instance.TryObtenerSlot(clienteSolicitante, out int slotGanador))
             {
@@ -781,6 +783,18 @@ public class DeckManager : NetworkBehaviour
             manoPorCliente[clientId] = mano;
         }
         return mano;
+    }
+
+    /// <summary>
+    /// Atajo para no repetir esta condicion en cada chequeo de victoria -
+    /// null si no hay categoria infiltrada elegida esta ronda (regla
+    /// distinta, o todavia no se sorteo nada).
+    /// </summary>
+    private CardCategory? ObtenerCategoriaInfiltradaActual()
+    {
+        return infiltratedCardManager != null && infiltratedCardManager.HayCategoriaInfiltrada
+            ? infiltratedCardManager.CategoriaInfiltrada
+            : (CardCategory?)null;
     }
 
     private void AgregarCartaAManoDeCliente(ulong clientId, int cardId)
@@ -928,7 +942,7 @@ public class DeckManager : NetworkBehaviour
 
         MostrarCartaDescartadaClientRpc(cardId);
 
-        if (turnManager != null && VictoryRules.SeCumple(turnManager.ReglaActiva, mano))
+        if (turnManager != null && VictoryRules.SeCumple(turnManager.ReglaActiva, mano, ObtenerCategoriaInfiltradaActual()))
         {
             if (gameManager != null)
             {

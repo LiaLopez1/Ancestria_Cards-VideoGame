@@ -35,6 +35,8 @@ public class TurnManager : NetworkBehaviour
     [Header("Referencias")]
     [SerializeField] private HandManager handManager;
     [SerializeField] private TMP_Text turnMessage;
+    [Tooltip("Texto aparte para la explicación larga de la regla (VictoryRules.ObtenerDescripcion) - turnMessage se queda con el título corto.")]
+    [SerializeField] private TMP_Text turnRuleDescriptionText;
     [Tooltip("Ahora es quien decide victoria/derrota - TurnManager solo le pregunta si la partida ya terminó.")]
     [SerializeField] private GameManager gameManager;
 
@@ -65,6 +67,12 @@ public class TurnManager : NetworkBehaviour
 
     [Tooltip("Un icono por cada valor de CardCategory - se muestra el que corresponda a la categoria infiltrada sorteada.")]
     [SerializeField] private IconoPorCategoria[] iconosPorCategoriaInfiltrada;
+
+    [Header("Debug / Pruebas")]
+    [Tooltip("Si está activo, la regla de la ronda NO se sortea al azar - siempre se usa 'reglaParaPruebas'. Apágalo para volver al comportamiento normal (aleatorio).")]
+    [SerializeField] private bool usarReglaFijaParaPruebas = false;
+    [Tooltip("Solo se usa si 'usarReglaFijaParaPruebas' está activo. Debe existir en VictoryRules.ReglasDisponibles (descoméntala ahí si está comentada).")]
+    [SerializeField] private VictoryRuleType reglaParaPruebas = VictoryRuleType.CartaInfiltrada;
 
     private readonly NetworkVariable<int> turnoActual = new NetworkVariable<int>(0);
     private readonly NetworkVariable<TurnState> estadoActual = new NetworkVariable<TurnState>(TurnState.Dealing);
@@ -172,12 +180,38 @@ public class TurnManager : NetworkBehaviour
         turnoActual.Value = 0;
         gameManager?.ReiniciarResultado();
         slotBoss.Value = cantidadJugadores; // el boss va justo despues del ultimo humano
-        indiceReglaActual.Value = UnityEngine.Random.Range(0, VictoryRules.ReglasDisponibles.Length);
+        indiceReglaActual.Value = SortearIndiceDeRegla();
         estadoActual.Value = TurnState.WaitingToDraw;
 
         ActualizarCartaInfiltradaSegunRegla();
 
         Debug.Log($"[Servidor] Regla de esta ronda: {VictoryRules.ObtenerNombre(ReglaActiva)}");
+    }
+
+    /// <summary>
+    /// Normalmente sortea al azar entre VictoryRules.ReglasDisponibles.
+    /// Si 'usarReglaFijaParaPruebas' está activo, en cambio devuelve siempre
+    /// el indice de 'reglaParaPruebas' - util para probar la logica del
+    /// boss (o la propia regla) sin depender de que salga por sorteo.
+    /// </summary>
+    private int SortearIndiceDeRegla()
+    {
+        if (!usarReglaFijaParaPruebas)
+        {
+            return UnityEngine.Random.Range(0, VictoryRules.ReglasDisponibles.Length);
+        }
+
+        int indice = System.Array.IndexOf(VictoryRules.ReglasDisponibles, reglaParaPruebas);
+
+        if (indice < 0)
+        {
+            Debug.LogError($"[TurnManager] La regla '{reglaParaPruebas}' no está en VictoryRules.ReglasDisponibles " +
+                "- agregala ahí (descomentala si está comentada) para poder forzarla en pruebas. " +
+                "Usando sorteo aleatorio en su lugar por esta vez.");
+            return UnityEngine.Random.Range(0, VictoryRules.ReglasDisponibles.Length);
+        }
+
+        return indice;
     }
 
     /// <summary>
@@ -285,6 +319,7 @@ public class TurnManager : NetworkBehaviour
     private void ActualizarMensaje()
     {
         string mensaje;
+        string descripcion = string.Empty;
 
         if (PartidaTerminada)
         {
@@ -299,11 +334,17 @@ public class TurnManager : NetworkBehaviour
         else
         {
             mensaje = $"Regla: {VictoryRules.ObtenerNombre(ReglaActiva)}";
+            descripcion = VictoryRules.ObtenerDescripcion(ReglaActiva);
         }
 
         if (turnMessage != null)
         {
             turnMessage.text = mensaje;
+        }
+
+        if (turnRuleDescriptionText != null)
+        {
+            turnRuleDescriptionText.text = descripcion;
         }
     }
 
