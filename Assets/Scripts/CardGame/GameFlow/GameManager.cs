@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using Unity.Netcode;
@@ -33,8 +32,6 @@ public enum ResultadoPartida
 /// SuspicionManager avisa aparte (DeclararDerrotaPorSospecha) - eso SIEMPRE
 /// termina la partida entera, sin importar en que ronda vamos.
 /// Autoridad de servidor: solo el servidor decide, sincronizado a todos.
-/// Los paneles hacen fade in/out (CanvasGroup) en vez de aparecer/desaparecer
-/// de golpe.
 /// </summary>
 public class GameManager : NetworkBehaviour
 {
@@ -44,12 +41,9 @@ public class GameManager : NetworkBehaviour
     [SerializeField] private int rondasParaGanarLaPartida = 2;
 
     [Header("Paneles finales (uno por desenlace final - deben empezar todos desactivados en la escena)")]
-    [SerializeField] private CanvasGroup panelVictoria;
-    [SerializeField] private CanvasGroup panelDerrotaPorBoss;
-    [SerializeField] private CanvasGroup panelDerrotaPorSospecha;
-
-    [Header("Transicion de paneles")]
-    [SerializeField] private float fadeDuration = 0.4f;
+    [SerializeField] private GameObject panelVictoria;
+    [SerializeField] private GameObject panelDerrotaPorBoss;
+    [SerializeField] private GameObject panelDerrotaPorSospecha;
 
     [Header("Panel de RONDA ganada (compartido - jugador o boss, con el nombre correspondiente)")]
     [SerializeField] private GameObject panelRondaGanada;
@@ -113,9 +107,19 @@ public class GameManager : NetworkBehaviour
         {
             ActualizarPaneles(nuevo);
             OnResultadoCambio?.Invoke(nuevo);
+            ReiniciarMarcadorSiEsResultadoFinal(nuevo);
         };
 
         rondaActual.OnValueChanged += (anterior, nuevo) => ActualizarContadorRondas();
+
+        // Falta esta: sin ella, el nombre del ganador en el panel de ronda
+        // solo se recalculaba "de casualidad" cuando el callback de
+        // resultado se disparaba - pero Netcode no garantiza que
+        // slotGanador ya haya llegado/aplicado en ESE momento para los
+        // clientes invitados (a diferencia del host, que no tiene ese
+        // desfase de red). Sin esto, a veces se leia el valor viejo de una
+        // ronda anterior, mostrando el nombre equivocado.
+        slotGanador.OnValueChanged += (anterior, nuevo) => ActualizarPaneles(resultado.Value);
 
         resultadosPorRonda.OnListChanged += (cambio) =>
         {
@@ -140,6 +144,41 @@ public class GameManager : NetworkBehaviour
         return indiceRonda >= 0 && indiceRonda < resultadosPorRonda.Count
             ? resultadosPorRonda[indiceRonda]
             : 0;
+    }
+
+    /// <summary>
+    /// SOLO servidor. Apenas se ve un resultado FINAL (Victoria, Derrota
+    /// por boss, o Derrota por sospecha) - NO una ronda ganada intermedia -
+    /// el contador de rondas y las bolitas ya deben mostrar "partida nueva
+    /// lista" (ronda 1/3, todo vacio), sin esperar a que el host apriete
+    /// "Iniciar partida". Mismo criterio que el resto de la limpieza
+    /// (mano, mazo, trampas, sospecha, boss): todo eso pasa apenas termina
+    /// la partida, no recien al reiniciar.
+    /// </summary>
+    private void ReiniciarMarcadorSiEsResultadoFinal(ResultadoPartida nuevoResultado)
+    {
+        if (!IsServer)
+        {
+            return;
+        }
+
+        bool esResultadoFinal = nuevoResultado == ResultadoPartida.VictoriaJugadores
+            || nuevoResultado == ResultadoPartida.DerrotaPorBoss
+            || nuevoResultado == ResultadoPartida.DerrotaPorSospecha;
+
+        if (!esResultadoFinal)
+        {
+            return;
+        }
+
+        rondaActual.Value = 1;
+        rondasGanadasJugadores.Value = 0;
+        rondasGanadasBoss.Value = 0;
+
+        for (int i = 0; i < resultadosPorRonda.Count; i++)
+        {
+            resultadosPorRonda[i] = 0;
+        }
     }
 
     /// <summary>
@@ -298,31 +337,22 @@ public class GameManager : NetworkBehaviour
     /// </summary>
     public void OcultarPanelesLocalmente()
     {
-        if (panelVictoria != null) StartCoroutine(FadeOutPanel(panelVictoria));
-        if (panelDerrotaPorBoss != null) StartCoroutine(FadeOutPanel(panelDerrotaPorBoss));
-        if (panelDerrotaPorSospecha != null) StartCoroutine(FadeOutPanel(panelDerrotaPorSospecha));
+        if (panelVictoria != null) panelVictoria.SetActive(false);
+        if (panelDerrotaPorBoss != null) panelDerrotaPorBoss.SetActive(false);
+        if (panelDerrotaPorSospecha != null) panelDerrotaPorSospecha.SetActive(false);
         if (panelRondaGanada != null) panelRondaGanada.SetActive(false);
     }
 
     private void ActualizarPaneles(ResultadoPartida nuevoResultado)
     {
-        AvisarSiFalta(panelVictoria != null ? panelVictoria.gameObject : null, nameof(panelVictoria));
-        AvisarSiFalta(panelDerrotaPorBoss != null ? panelDerrotaPorBoss.gameObject : null, nameof(panelDerrotaPorBoss));
-        AvisarSiFalta(panelDerrotaPorSospecha != null ? panelDerrotaPorSospecha.gameObject : null, nameof(panelDerrotaPorSospecha));
+        AvisarSiFalta(panelVictoria, nameof(panelVictoria));
+        AvisarSiFalta(panelDerrotaPorBoss, nameof(panelDerrotaPorBoss));
+        AvisarSiFalta(panelDerrotaPorSospecha, nameof(panelDerrotaPorSospecha));
         AvisarSiFalta(panelRondaGanada, nameof(panelRondaGanada));
 
-        CanvasGroup panelAMostrar = nuevoResultado switch
-        {
-            ResultadoPartida.VictoriaJugadores => panelVictoria,
-            ResultadoPartida.DerrotaPorBoss => panelDerrotaPorBoss,
-            ResultadoPartida.DerrotaPorSospecha => panelDerrotaPorSospecha,
-            _ => null
-        };
-
-        if (panelAMostrar != null)
-        {
-            StartCoroutine(FadeInPanel(panelAMostrar));
-        }
+        if (panelVictoria != null) panelVictoria.SetActive(nuevoResultado == ResultadoPartida.VictoriaJugadores);
+        if (panelDerrotaPorBoss != null) panelDerrotaPorBoss.SetActive(nuevoResultado == ResultadoPartida.DerrotaPorBoss);
+        if (panelDerrotaPorSospecha != null) panelDerrotaPorSospecha.SetActive(nuevoResultado == ResultadoPartida.DerrotaPorSospecha);
 
         bool esRondaGanada = nuevoResultado == ResultadoPartida.RondaGanadaJugador
             || nuevoResultado == ResultadoPartida.RondaGanadaBoss;
@@ -351,41 +381,6 @@ public class GameManager : NetworkBehaviour
             string nombre = ObtenerNombrePorSlot(slotGanador.Value);
             textoNombreGanador.text = $"¡{nombre} ganó!";
         }
-    }
-
-    private IEnumerator FadeInPanel(CanvasGroup panel)
-    {
-        panel.gameObject.SetActive(true);
-        panel.alpha = 0f;
-        panel.blocksRaycasts = false;
-
-        float t = 0f;
-        while (t < fadeDuration)
-        {
-            t += Time.deltaTime;
-            panel.alpha = Mathf.Lerp(0f, 1f, t / fadeDuration);
-            yield return null;
-        }
-
-        panel.alpha = 1f;
-        panel.blocksRaycasts = true;
-    }
-
-    private IEnumerator FadeOutPanel(CanvasGroup panel)
-    {
-        panel.blocksRaycasts = false;
-        float alphaInicial = panel.alpha;
-        float t = 0f;
-
-        while (t < fadeDuration)
-        {
-            t += Time.deltaTime;
-            panel.alpha = Mathf.Lerp(alphaInicial, 0f, t / fadeDuration);
-            yield return null;
-        }
-
-        panel.alpha = 0f;
-        panel.gameObject.SetActive(false);
     }
 
     private void ActualizarContadorRondas()

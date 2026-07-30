@@ -37,6 +37,16 @@ public class NetworkBootstrap : MonoBehaviour
     // instancia de StartupFlowUI se recrea de cero al recargar la escena.
     public static string MensajePendiente { get; private set; }
 
+    /// <summary>
+    /// Marcar esto en true JUSTO ANTES de llamar a NetworkManager.Shutdown()
+    /// por decision propia (por ejemplo, el boton "Volver al menu" dentro
+    /// del juego) - sin esto, ManejarDesconexion() no puede distinguir
+    /// "me desconecte yo a proposito" de "el host se cayo", y siempre
+    /// asumia lo segundo, mostrando ese mensaje aunque fuera mentira.
+    /// Se consume solo (vuelve a false) apenas se usa una vez.
+    /// </summary>
+    public bool SalidaVoluntaria { get; set; }
+
     private const int MaxJugadoresInvitados = 2; // 3 totales: host + 2 invitados
     private const int TotalSlots = MaxJugadoresInvitados + 1;
     private const string TipoConexion = "dtls";
@@ -127,6 +137,8 @@ public class NetworkBootstrap : MonoBehaviour
     {
         await AsegurarServiciosInicializados();
 
+        SalidaVoluntaria = false;
+
         // Reinicia los slots: esta es una sesion de hosting nueva, sin importar
         // cuantas veces se haya hosteado antes en este mismo proceso.
         slotsAsignados.Clear();
@@ -158,6 +170,8 @@ public class NetworkBootstrap : MonoBehaviour
     {
         await AsegurarServiciosInicializados();
 
+        SalidaVoluntaria = false;
+
         JoinAllocation allocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
 
         var transport = networkManager.GetComponent<UnityTransport>();
@@ -184,6 +198,14 @@ public class NetworkBootstrap : MonoBehaviour
         }
 
         if (clientId != networkManager.LocalClientId) return;
+
+        if (SalidaVoluntaria)
+        {
+            // Me fui por decision propia (por ejemplo, "Volver al menu") -
+            // no es que el host se haya caido, no hace falta avisar nada.
+            SalidaVoluntaria = false;
+            return;
+        }
 
         Debug.Log("[Netcode] Se perdio la conexion con el host. Volviendo al menu.");
         VolverAlMenuPorDesconexion("El dueño de la sala se desconectó.");

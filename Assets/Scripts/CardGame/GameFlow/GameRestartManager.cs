@@ -67,6 +67,15 @@ public class GameRestartManager : NetworkBehaviour
     /// </summary>
     public void VolverAlMenu()
     {
+        // Marcamos esto ANTES de Shutdown() - sin esto, NetworkBootstrap
+        // interpreta cualquier desconexion propia como si el host se
+        // hubiera caido, y mostraria ese mensaje aunque nos fuimos nosotros
+        // por decision propia.
+        if (NetworkBootstrap.Instance != null)
+        {
+            NetworkBootstrap.Instance.SalidaVoluntaria = true;
+        }
+
         if (LobbyManager.Instance != null)
         {
             LobbyManager.Instance.SalirDeSalaActual();
