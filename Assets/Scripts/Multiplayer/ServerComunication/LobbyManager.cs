@@ -40,7 +40,8 @@ public class LobbyManager : MonoBehaviour
 
     [Header("Sondeo de salas disponibles")]
     [Tooltip("Cada cuantos segundos se vuelve a buscar salas mientras el jugador ve la lista.")]
-    [SerializeField] private float intervaloBusquedaSalas = 0.5f;
+    [Range(1f, 10f)]
+    [SerializeField] private float intervaloBusquedaSalas = 3f;
 
     private Coroutine busquedaPeriodicaCoroutine;
 
@@ -124,20 +125,32 @@ public class LobbyManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Busca todas las salas de las que el jugador actual es dueno (sin importar
-    /// el nick que tuvieran al crearlas) y las deja completamente vacias:
-    /// primero saca a cualquier otro miembro colgado (RemoveMember) y despues
-    /// sale el mismo (LeaveLobby). En salas client-owned, al quedar vacia,
-    /// PlayFab la borra sola.
+    /// Limpia CUALQUIER sala anterior ligada a esta cuenta antes de crear o
+    /// buscar una nueva - cubre dos casos:
+    ///   - Salas donde soy DUEÑO: se vacian del todo (se saca a cualquier
+    ///     miembro colgado y salgo yo tambien), porque son mias de verdad.
+    ///   - Salas donde solo soy MIEMBRO (por ejemplo, me uni como invitado
+    ///     en una sesion anterior y no llegue a salir limpio - Unity no
+    ///     siempre llama a OnApplicationQuit al detener el Play Mode en el
+    ///     Editor): SOLO salgo yo. Nunca toco a los demas miembros de una
+    ///     sala que no es mia - podria seguir siendo una partida real de
+    ///     otra persona.
     /// </summary>
     private void LimpiarMisSalasAnteriores(System.Action alTerminar)
     {
-        var request = new FindLobbiesRequest { Filter = "lobby/amOwner eq 'true'" };
+        BuscarYLimpiar("lobby/amOwner eq 'true'", esDueno: true, () =>
+            BuscarYLimpiar("lobby/amMember eq 'true'", esDueno: false, alTerminar)
+        );
+    }
+
+    private void BuscarYLimpiar(string filtro, bool esDueno, System.Action alTerminar)
+    {
+        var request = new FindLobbiesRequest { Filter = filtro };
 
         PlayFabMultiplayerAPI.FindLobbies(request,
             result =>
             {
-                Debug.Log($"[Lobby] Limpieza: {result.Lobbies.Count} sala(s) propia(s) anterior(es) encontrada(s).");
+                Debug.Log($"[Lobby] Limpieza ({filtro}): {result.Lobbies.Count} sala(s) anterior(es) encontrada(s).");
 
                 if (result.Lobbies.Count == 0)
                 {
@@ -149,16 +162,26 @@ public class LobbyManager : MonoBehaviour
 
                 foreach (var lobbyVieja in result.Lobbies)
                 {
-                    VaciarSalaVieja(lobbyVieja.LobbyId, () =>
+                    System.Action onUnaTerminada = () =>
                     {
                         pendientes--;
                         if (pendientes == 0) alTerminar?.Invoke();
-                    });
+                    };
+
+                    if (esDueno)
+                    {
+                        VaciarSalaVieja(lobbyVieja.LobbyId, onUnaTerminada);
+                    }
+                    else
+                    {
+                        // Solo miembro, no dueño - solo salgo yo, no toco a nadie mas.
+                        SalirDeSalaVieja(lobbyVieja.LobbyId, onUnaTerminada);
+                    }
                 }
             },
             error =>
             {
-                Debug.LogWarning($"[Lobby] No se pudo revisar salas anteriores: {error.GenerateErrorReport()}");
+                Debug.LogWarning($"[Lobby] No se pudo revisar salas anteriores ({filtro}): {error.GenerateErrorReport()}");
                 alTerminar?.Invoke();
             }
         );
@@ -311,7 +334,8 @@ public class LobbyManager : MonoBehaviour
 
     public void BuscarSalas()
     {
-        IniciarBusquedaPeriodica();
+        SetEstadoUnirse("Preparando búsqueda...");
+        LimpiarMisSalasAnteriores(IniciarBusquedaPeriodica);
     }
 
     /// <summary>
@@ -346,8 +370,42 @@ public class LobbyManager : MonoBehaviour
     {
         while (true)
         {
-            PlayFabMultiplayerAPI.FindLobbies(new FindLobbiesRequest(), OnFindLobbiesSuccess, OnLobbyErrorUnirse);
-            yield return new WaitForSeconds(intervaloBusquedaSalas);
+            bool solicitudEnCurso = true;
+            bool tuvoError = false;
+
+            PlayFabMultiplayerAPI.FindLobbies(new FindLobbiesRequest(),
+                result =>
+                {
+                    solicitudEnCurso = false;
+                    OnFindLobbiesSuccess(result);
+                },
+                error =>
+                {
+                    solicitudEnCurso = false;
+                    tuvoError = true;
+                    OnLobbyErrorUnirse(error);
+                }
+            );
+
+            // Esperamos a que la solicitud actual termine antes de decidir
+            // cuanto esperar - asi nunca se acumulan pedidos en paralelo si
+            // la respuesta tarda mas que el intervalo configurado.
+            yield return new WaitUntil(() => !solicitudEnCurso);
+
+            if (tuvoError)
+            {
+                // Si fallo (por ejemplo, por limite de tasa de la API), en
+                // vez de insistir al mismo ritmo esperamos bastante mas -
+                // asi no seguimos golpeando la API mientras esta rechazando
+                // pedidos.
+                float esperaConBackoff = intervaloBusquedaSalas * 4f;
+                Debug.LogWarning($"[Lobby] El sondeo de salas tuvo un error - se espera {esperaConBackoff}s antes de reintentar (en vez de los {intervaloBusquedaSalas}s normales).");
+                yield return new WaitForSeconds(esperaConBackoff);
+            }
+            else
+            {
+                yield return new WaitForSeconds(intervaloBusquedaSalas);
+            }
         }
     }
 

@@ -28,7 +28,7 @@ public class DebugLimpiezaLobbies : MonoBehaviour
 
     private void Update()
     {
-        if (Keyboard.current != null && Keyboard.current.lKey.wasPressedThisFrame)
+        if (Keyboard.current != null && Keyboard.current.pKey.wasPressedThisFrame)
         {
             if (string.IsNullOrEmpty(authManager.EntityId))
             {

@@ -45,6 +45,9 @@ public class TurnManager : NetworkBehaviour
     [Tooltip("Posición fija del panel del boss - a diferencia de los jugadores, el slot del boss cambia según cuántos humanos se conecten (1, 2 o 3), pero su panel en pantalla siempre está en el mismo lugar.")]
     [SerializeField] private Vector2 posicionHighlighterBoss;
 
+    [Header("Audio")]
+    [SerializeField] private SoundData NotifyTurn;
+
     private readonly NetworkVariable<int> turnoActual = new NetworkVariable<int>(0);
     private readonly NetworkVariable<TurnState> estadoActual = new NetworkVariable<TurnState>(TurnState.Dealing);
 
@@ -87,19 +90,45 @@ public class TurnManager : NetworkBehaviour
     public event Action OnEstadoTurnoCambio;
 
     public override void OnNetworkSpawn()
+{
+    turnoActual.OnValueChanged += (anterior, nuevo) =>
     {
-        turnoActual.OnValueChanged += (anterior, nuevo) => { ActualizarHighlighter(); OnEstadoTurnoCambio?.Invoke(); };
-        estadoActual.OnValueChanged += (anterior, nuevo) => { ActualizarMensaje(); ActualizarHighlighter(); OnEstadoTurnoCambio?.Invoke(); };
-        slotBoss.OnValueChanged += (anterior, nuevo) => { ActualizarMensaje(); ActualizarHighlighter(); OnEstadoTurnoCambio?.Invoke(); };
+        ActualizarHighlighter();
+        OnEstadoTurnoCambio?.Invoke();
+    };
 
-        if (gameManager != null)
-        {
-            gameManager.OnResultadoCambio += (nuevo) => { ActualizarMensaje(); ActualizarHighlighter(); OnEstadoTurnoCambio?.Invoke(); };
-        }
-
+    estadoActual.OnValueChanged += (anterior, nuevo) =>
+    {
         ActualizarMensaje();
         ActualizarHighlighter();
+        OnEstadoTurnoCambio?.Invoke();
+
+        if (nuevo == TurnState.WaitingToDraw && EsMiTurno())
+        {
+            NotifyTurn?.Play();
+        }
+    };
+
+    slotBoss.OnValueChanged += (anterior, nuevo) =>
+    {
+        ActualizarMensaje();
+        ActualizarHighlighter();
+        OnEstadoTurnoCambio?.Invoke();
+    };
+
+    if (gameManager != null)
+    {
+        gameManager.OnResultadoCambio += (nuevo) =>
+        {
+            ActualizarMensaje();
+            ActualizarHighlighter();
+            OnEstadoTurnoCambio?.Invoke();
+        };
     }
+
+    ActualizarMensaje();
+    ActualizarHighlighter();
+}
 
     /// <summary>
     /// SOLO debe llamarse desde el servidor (DeckManager, al presionar

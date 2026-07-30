@@ -292,6 +292,35 @@ public class HandManager : MonoBehaviour
         ArrangeHand();
     }
 
+    /// <summary>
+    /// Destruye TODAS las cartas de la mano y deja todos los slots vacios -
+    /// se usa al reiniciar la partida (GameRestartManager), para que cada
+    /// cliente arranque la ronda nueva con la mano completamente limpia
+    /// antes de que le lleguen las cartas repartidas de nuevo.
+    /// </summary>
+    public void LimpiarManoCompleta()
+    {
+        foreach (CardSlot slot in cardSlots)
+        {
+            if (slot == null)
+            {
+                continue;
+            }
+
+            for (int i = slot.transform.childCount - 1; i >= 0; i--)
+            {
+                Destroy(slot.transform.GetChild(i).gameObject);
+            }
+        }
+
+        activeSlots.Clear();
+        draggedSlot = null;
+        cardSeleccionada = null;
+
+        UpdateFreeSlot();
+        ArrangeHand();
+    }
+
     // ---------------------------------------------------------------
     // Intercambio de cartas
     // ---------------------------------------------------------------

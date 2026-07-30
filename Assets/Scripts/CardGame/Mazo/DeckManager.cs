@@ -189,6 +189,69 @@ public class DeckManager : NetworkBehaviour
     }
 
     /// <summary>
+    /// SOLO desde el servidor (GameRestartManager, boton "Volver a jugar").
+    /// Reinicia todo lo que le corresponde a este manager para una ronda
+    /// nueva, SIN salir de la sala: limpia drawPile/discardPile/
+    /// manoPorCliente, reconstruye y mezcla el mazo, limpia la mesa y las
+    /// manos visuales de TODOS los clientes, reparte una mano nueva a cada
+    /// uno (incluido el boss), reinicia el turno, y vuelve el resultado de
+    /// la partida a "En curso". No toca SuspicionManager - eso lo hace
+    /// GameRestartManager aparte, porque DeckManager no lo conoce.
+    /// </summary>
+    public void ReiniciarPartida()
+    {
+        if (!IsServer)
+        {
+            return;
+        }
+
+        drawPile.Clear();
+        discardPile.Clear();
+        manoPorCliente.Clear();
+
+        BuildLogicalDeck();
+        ShuffleDeck();
+        ActualizarContadoresDeMazo();
+
+        LimpiarManosClientRpc();
+        ReiniciarMesaDeDescarteClientRpc();
+
+        if (gameManager != null)
+        {
+            gameManager.ReiniciarResultado();
+        }
+
+        int cantidadJugadores = NetworkManager.Singleton.ConnectedClientsIds.Count;
+
+        foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
+        {
+            StartCoroutine(RepartirManoAJugador(clientId));
+        }
+
+        if (turnManager != null)
+        {
+            turnManager.IniciarPrimerTurno(cantidadJugadores);
+        }
+
+        if (bossManager != null)
+        {
+            bossManager.IniciarManoInicial();
+        }
+
+        Debug.Log($"[Servidor] Partida reiniciada para una ronda nueva. Repartiendo a {cantidadJugadores} jugador(es).");
+    }
+
+    /// <summary>Se ejecuta en TODOS los clientes: vacía la mano visual antes de que lleguen las cartas de la ronda nueva.</summary>
+    [ClientRpc]
+    private void LimpiarManosClientRpc()
+    {
+        if (handManager != null)
+        {
+            handManager.LimpiarManoCompleta();
+        }
+    }
+
+    /// <summary>
     /// SOLO debe llamarse desde el servidor. Actualiza cartasEnMazo (el
     /// conteo real) y cartasVisiblesEnMazo (el que usa la pila en pantalla,
     /// con piso de 1 mientras haya algo reciclable) juntos, para que nunca

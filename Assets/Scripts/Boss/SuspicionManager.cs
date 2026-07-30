@@ -58,6 +58,28 @@ public class SuspicionManager : NetworkBehaviour
         intercambioEnCurso.OnValueChanged += (anterior, nuevo) => OnIntercambioCambio?.Invoke(nuevo);
     }
 
+    /// <summary>
+    /// SOLO desde el servidor (GameRestartManager, al reiniciar la partida).
+    /// Vuelve la sospecha a 0 y corta cualquier intercambio que hubiera
+    /// quedado a mitad de camino de la ronda anterior.
+    /// </summary>
+    public void ReiniciarSospecha()
+    {
+        if (!IsServer)
+        {
+            return;
+        }
+
+        if (corrutinaIntercambio != null)
+        {
+            StopCoroutine(corrutinaIntercambio);
+            corrutinaIntercambio = null;
+        }
+
+        intercambioEnCurso.Value = false;
+        nivelSospecha.Value = 0f;
+    }
+
     // ---------- Decir / Pedir: instantáneas, dependen del estado del boss ----------
 
     [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
