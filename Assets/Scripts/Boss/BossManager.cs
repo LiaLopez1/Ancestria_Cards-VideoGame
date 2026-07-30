@@ -33,6 +33,7 @@ public class BossManager : NetworkBehaviour
     [Header("Referencias")]
     [SerializeField] private DeckManager deckManager;
     [SerializeField] private TurnManager turnManager;
+    [SerializeField] private SuspicionManager suspicionManager;
 
     [Header("Ritmo del boss")]
     [Tooltip("Espera artificial antes de robar/descartar en su turno. También sirve como perilla de dificultad.")]
@@ -51,6 +52,12 @@ public class BossManager : NetworkBehaviour
     [Tooltip("Rango de segundos entre cada cambio de atención (aleatorio dentro de este rango).")]
     [SerializeField] private float intervaloMinimoAtencion = 2f;
     [SerializeField] private float intervaloMaximoAtencion = 5f;
+
+    [Header("Visual: forma monstruo")]
+    [SerializeField] private Sprite spriteMonstruoConCuatroCartas;
+    [SerializeField] private Sprite spriteMonstruoConCincoCartas;
+    [SerializeField] private Sprite spriteMonstruoRevisandoCartas;
+    [SerializeField] private Sprite spriteMonstruoMirandoOponentes;
 
     [Header("Identidad")]
     [Tooltip("Fijo por ahora ('Boss'). Más adelante será la leyenda sorteada de la ronda, mismo patrón que la regla de victoria.")]
@@ -80,8 +87,7 @@ public class BossManager : NetworkBehaviour
     private Coroutine corrutinaAtencion;
     private Sprite spriteInicialBoss;
 
-    private readonly NetworkVariable<bool> partidaIniciada =
-    new NetworkVariable<bool>(false);
+    private readonly NetworkVariable<bool> partidaIniciada = new NetworkVariable<bool>(false);
 
     private void Awake()
     {
@@ -105,6 +111,11 @@ public class BossManager : NetworkBehaviour
         if (turnManager != null)
         {
             turnManager.OnEstadoTurnoCambio += ActualizarSpriteBoss;
+        }
+
+        if (suspicionManager != null)
+        {
+            suspicionManager.OnSospechaCambio += AlCambiarSospecha;
         }
 
         ActualizarSpriteBoss();
@@ -138,6 +149,11 @@ public class BossManager : NetworkBehaviour
         {
             turnManager.OnBossTurnStarted -= JugarTurno;
             turnManager.OnEstadoTurnoCambio -= ActualizarSpriteBoss;
+        }
+
+        if (suspicionManager != null)
+        {
+            suspicionManager.OnSospechaCambio -= AlCambiarSospecha;
         }
     }
 
@@ -197,8 +213,7 @@ public class BossManager : NetworkBehaviour
             return;
         }
 
-            // Antes de comenzar la partida conserva la imagen configurada
-        // originalmente en el componente Image.
+        // Antes de comenzar la partida conserva el sprite original.
         if (!partidaIniciada.Value)
         {
             bossImage.sprite = spriteInicialBoss;
@@ -210,16 +225,38 @@ public class BossManager : NetworkBehaviour
             return;
         }
 
+        bool usarFormaMonstruo =
+            suspicionManager != null &&
+            suspicionManager.AlcanzoMitadDeSospecha;
+
         if (turnManager.EsTurnoDelBoss())
         {
-            bossImage.sprite = tieneCincoCartas.Value ? spriteConCincoCartas : spriteConCuatroCartas;
+            if (tieneCincoCartas.Value)
+            {
+                bossImage.sprite = usarFormaMonstruo ? spriteMonstruoConCincoCartas:spriteConCincoCartas;
+            }
+            else
+            {
+                bossImage.sprite = usarFormaMonstruo? spriteMonstruoConCuatroCartas : spriteConCuatroCartas;
+            }
         }
         else
         {
-            bossImage.sprite = atencionActual.Value == EstadoAtencionBoss.RevisandoCartas
-                ? spriteRevisandoCartas
-                : spriteMirandoOponentes;
+            if (atencionActual.Value == EstadoAtencionBoss.RevisandoCartas)
+            {
+                bossImage.sprite = usarFormaMonstruo ? spriteMonstruoRevisandoCartas : spriteRevisandoCartas;
+            }
+            else
+            {
+                bossImage.sprite = usarFormaMonstruo ? spriteMonstruoMirandoOponentes : spriteMirandoOponentes;
+            }
         }
+    }
+
+//para  cambiar los sprites del boss
+    private void AlCambiarSospecha(float nuevoNivel)
+    {
+        ActualizarSpriteBoss();
     }
 
     /// <summary>
@@ -229,15 +266,12 @@ public class BossManager : NetworkBehaviour
     /// </summary>
     public void IniciarManoInicial()
     {
-        partidaIniciada.Value = true;
+        
 
         if (!IsServer)
         {
             return;
         }
-
-
-
         // Recien ahora arranca de verdad la partida - nos aseguramos de
         // empezar (o volver a empezar, si es una ronda nueva) quieto en
         // "Mirando oponentes", y ahi si arrancamos el ciclo de alternancia.

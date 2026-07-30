@@ -6221,6 +6221,7 @@ MonoBehaviour:
   - {x: 177, y: 39}
   - {x: 177, y: -45}
   posicionHighlighterBoss: {x: 177, y: 206}
+  NotifyTurn: {fileID: 0}
 --- !u!114 &979683348
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12578,6 +12579,7 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   deckManager: {fileID: 2066499337}
   turnManager: {fileID: 979683347}
+  suspicionManager: {fileID: 391290177}
   delayAntesDeActuar: 1.5
   delayEntreCartasReparto: 0.25
   bossImage: {fileID: 1452595172}
@@ -12587,6 +12589,10 @@ MonoBehaviour:
   spriteMirandoOponentes: {fileID: 21300000, guid: 858fdd769c59ac74280a4285eb5b7bf3, type: 3}
   intervaloMinimoAtencion: 2
   intervaloMaximoAtencion: 5
+  spriteMonstruoConCuatroCartas: {fileID: 21300000, guid: 20ae525254ff2f34db59770b0e90422e, type: 3}
+  spriteMonstruoConCincoCartas: {fileID: 21300000, guid: cbe5a6fb7626a874280cdee49f2d2623, type: 3}
+  spriteMonstruoRevisandoCartas: {fileID: 21300000, guid: 20ae525254ff2f34db59770b0e90422e, type: 3}
+  spriteMonstruoMirandoOponentes: {fileID: 21300000, guid: 0e0908bc70cc2cf4fb3cb32a5466bc92, type: 3}
   nombreInicial: Boss
 --- !u!114 &2032638370
 MonoBehaviour:
