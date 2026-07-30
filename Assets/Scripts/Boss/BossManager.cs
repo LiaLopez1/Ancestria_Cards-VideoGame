@@ -34,6 +34,7 @@ public class BossManager : NetworkBehaviour
     [SerializeField] private DeckManager deckManager;
     [SerializeField] private TurnManager turnManager;
     [SerializeField] private SuspicionManager suspicionManager;
+    [SerializeField] private GameManager gameManager;
 
     [Header("Ritmo del boss")]
     [Tooltip("Espera artificial antes de robar/descartar en su turno. También sirve como perilla de dificultad.")]
@@ -85,6 +86,7 @@ public class BossManager : NetworkBehaviour
     // reiniciarla limpio si IniciarManoInicial() se llama de nuevo (una
     // ronda nueva) sin dejar una copia vieja corriendo en paralelo.
     private Coroutine corrutinaAtencion;
+    private Coroutine corrutinaRepartoInicial;
     private Sprite spriteInicialBoss;
 
     private readonly NetworkVariable<bool> partidaIniciada = new NetworkVariable<bool>(false);
@@ -116,6 +118,11 @@ public class BossManager : NetworkBehaviour
         if (suspicionManager != null)
         {
             suspicionManager.OnSospechaCambio += AlCambiarSospecha;
+        }
+
+        if (gameManager != null)
+        {
+            gameManager.OnResultadoCambio += ManejarFinDePartida;
         }
 
         ActualizarSpriteBoss();
@@ -155,6 +162,41 @@ public class BossManager : NetworkBehaviour
         {
             suspicionManager.OnSospechaCambio -= AlCambiarSospecha;
         }
+
+        if (gameManager != null)
+        {
+            gameManager.OnResultadoCambio -= ManejarFinDePartida;
+        }
+    }
+
+    /// <summary>
+    /// Apenas la partida termina (no espera al reinicio real) - el boss
+    /// vuelve a su estado inicial: se para la alternancia de atencion, y
+    /// partidaIniciada vuelve a false, lo que hace que ActualizarSpriteBoss()
+    /// muestre de nuevo el sprite original (ver ese metodo). tieneCincoCartas
+    /// tambien se limpia, por si el boss quedo a mitad de su propio turno.
+    /// </summary>
+    private void ManejarFinDePartida(ResultadoPartida resultado)
+    {
+        if (!IsServer || resultado == ResultadoPartida.EnCurso)
+        {
+            return;
+        }
+
+        if (corrutinaAtencion != null)
+        {
+            StopCoroutine(corrutinaAtencion);
+            corrutinaAtencion = null;
+        }
+
+        if (corrutinaRepartoInicial != null)
+        {
+            StopCoroutine(corrutinaRepartoInicial);
+            corrutinaRepartoInicial = null;
+        }
+
+        partidaIniciada.Value = false;
+        tieneCincoCartas.Value = false;
     }
 
     /// <summary>
@@ -287,7 +329,15 @@ public class BossManager : NetworkBehaviour
 
         corrutinaAtencion = StartCoroutine(AlternarAtencionMientrasNoEsSuTurno());
 
-        StartCoroutine(RepartirManoInicial());
+        // Mismo motivo que IniciarRepartoParaCliente() en DeckManager: si
+        // una ronda anterior termino a mitad del reparto inicial del boss,
+        // esta corrutina vieja podia seguir viva y sumar cartas de mas.
+        if (corrutinaRepartoInicial != null)
+        {
+            StopCoroutine(corrutinaRepartoInicial);
+        }
+
+        corrutinaRepartoInicial = StartCoroutine(RepartirManoInicial());
     }
 
     private IEnumerator RepartirManoInicial()

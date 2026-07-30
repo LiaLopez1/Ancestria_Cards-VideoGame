@@ -102,6 +102,14 @@ public class DeckManager : NetworkBehaviour
     // el descarte (¿de verdad tienes esa carta?) ademas de reglas de conteo.
     private readonly Dictionary<ulong, List<int>> manoPorCliente = new Dictionary<ulong, List<int>>();
 
+    // Trackea la corrutina de reparto activa por cliente, para poder
+    // cancelar cualquier reparto anterior que hubiera quedado corriendo
+    // (por ejemplo, si la partida termino justo a mitad del reparto inicial)
+    // antes de arrancar uno nuevo - sin esto, dos corrutinas podian terminar
+    // agregando cartas a la misma mano, haciendo que el conteo se fuera
+    // acumulando de mas en vez de resetear limpio en cada ronda.
+    private readonly Dictionary<ulong, Coroutine> corrutinasDeReparto = new Dictionary<ulong, Coroutine>();
+
     public int CardsRemaining
     {
         get { return cartasEnMazo.Value; }
@@ -119,6 +127,11 @@ public class DeckManager : NetworkBehaviour
             ActualizarContadoresDeMazo();
         }
 
+        if (gameManager != null)
+        {
+            gameManager.OnResultadoCambio += ManejarFinDePartida;
+        }
+
         // El boton de iniciar partida solo lo puede usar el host.
         if (botonIniciarPartida != null)
         {
@@ -131,6 +144,48 @@ public class DeckManager : NetworkBehaviour
         // ejemplo, reconectando a mitad de partida), esto ya lo muestra
         // correctamente de una, gracias a partidaIniciada.Value.
         ActualizarMazoVisualSiCorresponde();
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        if (gameManager != null)
+        {
+            gameManager.OnResultadoCambio -= ManejarFinDePartida;
+        }
+    }
+
+    /// <summary>
+    /// SOLO actua del lado del servidor, apenas la partida termina (no
+    /// espera a "Volver a jugar" ni al reinicio real). Oculta el mazo de
+    /// nuevo (no debe verse hasta que el host arranque la ronda nueva) y
+    /// limpia la mesa de descarte - el resto (mano, mazo real, turno,
+    /// boss, sospecha) se reinicia recien cuando el host aprieta "Iniciar
+    /// partida" de nuevo (ver ReiniciarPartida).
+    /// </summary>
+    private void ManejarFinDePartida(ResultadoPartida resultado)
+    {
+        if (!IsServer || resultado == ResultadoPartida.EnCurso)
+        {
+            return;
+        }
+
+        partidaIniciada.Value = false;
+
+        discardPile.Clear();
+        ReiniciarMesaDeDescarteClientRpc();
+
+        // Por si algun reparto quedo a mitad de camino justo cuando termino
+        // la partida - se cancela para que no siga agregando cartas de mas
+        // cuando ya no corresponde.
+        foreach (Coroutine corrutina in corrutinasDeReparto.Values)
+        {
+            if (corrutina != null)
+            {
+                StopCoroutine(corrutina);
+            }
+        }
+
+        corrutinasDeReparto.Clear();
     }
 
     /// <summary>
@@ -149,10 +204,13 @@ public class DeckManager : NetworkBehaviour
     /// a medida que se conectan.
     /// </summary>
     /// <summary>
-    /// Conectar ESTO al boton "Iniciar partida" en el Inspector (no
-    /// OnIniciarPartidaPressed directo) - decide solo si hay que arrancar
-    /// por primera vez o reiniciar una ronda nueva, segun si la partida ya
-    /// se jugo antes. Asi el mismo boton sirve para las dos cosas.
+    /// Conectar ESTO al boton "Iniciar partida" en el Inspector. Antes
+    /// decidia entre "primera vez" y "reinicio" mirando partidaIniciada,
+    /// pero ahora ese flag tambien vuelve a false apenas termina una
+    /// partida (para ocultar el mazo) - asi que ya no sirve para distinguir
+    /// "primera vez" de "reinicio". ReiniciarPartida() es un superset seguro
+    /// de la logica original: reconstruye el mazo entero de cero, asi que
+    /// funciona igual de bien la primera vez que en cualquier reinicio.
     /// </summary>
     public void OnBotonIniciarPartidaPressed()
     {
@@ -162,19 +220,12 @@ public class DeckManager : NetworkBehaviour
             return;
         }
 
-        if (!partidaIniciada.Value)
-        {
-            OnIniciarPartidaPressed();
-        }
-        else
-        {
-            ReiniciarPartida();
-        }
-
         if (botonIniciarPartida != null)
         {
             botonIniciarPartida.SetActive(false);
         }
+
+        ReiniciarPartida();
     }
 
     /// <summary>
@@ -191,45 +242,25 @@ public class DeckManager : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// YA NO esta conectada al boton (ver OnBotonIniciarPartidaPressed, que
+    /// ahora llama directo a ReiniciarPartida()) - se deja sin usar por si
+    /// hace falta el flujo original puntual en algun otro lugar mas
+    /// adelante. No borra/reconstruye el mazo, asume que ya existe uno
+    /// (valido solo para un arranque desde OnNetworkSpawn recien hecho).
+    /// </summary>
+    /// <summary>
+    /// LEGACY: si el boton del Inspector todavia apunta a este metodo en vez
+    /// de OnBotonIniciarPartidaPressed, esto redirige igual a ReiniciarPartida()
+    /// para que funcione correctamente sin importar cual de los dos este
+    /// conectado - antes este metodo tenia su propia logica separada (que
+    /// no reconstruia el mazo ni limpiaba manoPorCliente), lo cual causaba
+    /// que el conteo de cartas se acumulara de mas en cada reinicio si el
+    /// boton quedaba apuntando aca.
+    /// </summary>
     public void OnIniciarPartidaPressed()
     {
-        if (!IsServer)
-        {
-            Debug.LogWarning("[DeckManager] Solo el host puede iniciar la partida.");
-            return;
-        }
-
-        if (partidaIniciada.Value)
-        {
-            Debug.LogWarning("[DeckManager] La partida ya fue iniciada.");
-            return;
-        }
-
-        partidaIniciada.Value = true;
-
-        if (botonIniciarPartida != null)
-        {
-            botonIniciarPartida.SetActive(false);
-        }
-
-        int cantidadJugadores = NetworkManager.Singleton.ConnectedClientsIds.Count;
-
-        foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
-        {
-            StartCoroutine(RepartirManoAJugador(clientId));
-        }
-
-        if (turnManager != null)
-        {
-            turnManager.IniciarPrimerTurno(cantidadJugadores);
-        }
-
-        if (bossManager != null)
-        {
-            bossManager.IniciarManoInicial();
-        }
-
-        Debug.Log($"[Servidor] Partida iniciada. Repartiendo a {cantidadJugadores} jugador(es).");
+        OnBotonIniciarPartidaPressed();
     }
 
     /// <summary>
@@ -247,6 +278,8 @@ public class DeckManager : NetworkBehaviour
         {
             return;
         }
+
+        partidaIniciada.Value = true;
 
         drawPile.Clear();
         discardPile.Clear();
@@ -273,7 +306,7 @@ public class DeckManager : NetworkBehaviour
 
         foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
         {
-            StartCoroutine(RepartirManoAJugador(clientId));
+            IniciarRepartoParaCliente(clientId);
         }
 
         if (turnManager != null)
@@ -473,6 +506,23 @@ public class DeckManager : NetworkBehaviour
     /// arranca una de estas corrutinas por jugador EN PARALELO, asi todos
     /// reciben sus cartas al mismo tiempo (no uno detras de otro).
     /// </summary>
+    /// <summary>
+    /// Arranca el reparto inicial para un cliente, cancelando primero
+    /// cualquier corrutina de reparto anterior que hubiera quedado
+    /// corriendo para ese mismo cliente - sin esto, si una ronda terminaba
+    /// justo a mitad de un reparto, la corrutina vieja podia seguir viva y
+    /// agregar cartas de mas a la mano en la ronda siguiente.
+    /// </summary>
+    private void IniciarRepartoParaCliente(ulong clientId)
+    {
+        if (corrutinasDeReparto.TryGetValue(clientId, out Coroutine corrutinaVieja) && corrutinaVieja != null)
+        {
+            StopCoroutine(corrutinaVieja);
+        }
+
+        corrutinasDeReparto[clientId] = StartCoroutine(RepartirManoAJugador(clientId));
+    }
+
     private IEnumerator RepartirManoAJugador(ulong clientId)
     {
         for (int i = 0; i < initialHandSize; i++)

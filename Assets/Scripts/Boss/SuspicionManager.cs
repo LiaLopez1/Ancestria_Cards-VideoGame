@@ -46,9 +46,14 @@ public class SuspicionManager : NetworkBehaviour
 
     public float NivelSospecha => nivelSospecha.Value;
     public float SospechaMaxima => sospechaMaxima;
-    public bool IntercambioEnCurso => intercambioEnCurso.Value;
 
-    public bool AlcanzoMitadDeSospecha => nivelSospecha.Value >= sospechaMaxima * 0.5f;
+    /// <summary>
+    /// ¿La sospecha ya llegó a la mitad del máximo? Lo usa BossManager para
+    /// decidir cuándo mostrar la forma "monstruo" en vez de la normal, y
+    /// SuspicionMusicController para cambiar la música.
+    /// </summary>
+    public bool AlcanzoMitadDeSospecha => nivelSospecha.Value >= sospechaMaxima / 2f;
+    public bool IntercambioEnCurso => intercambioEnCurso.Value;
 
     /// <summary>Para que la UI (barra, texto) se actualice sin tener que hacer polling.</summary>
     public event Action<float> OnSospechaCambio;
@@ -58,6 +63,34 @@ public class SuspicionManager : NetworkBehaviour
     {
         nivelSospecha.OnValueChanged += (anterior, nuevo) => OnSospechaCambio?.Invoke(nuevo);
         intercambioEnCurso.OnValueChanged += (anterior, nuevo) => OnIntercambioCambio?.Invoke(nuevo);
+
+        if (gameManager != null)
+        {
+            gameManager.OnResultadoCambio += ManejarFinDePartida;
+        }
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        if (gameManager != null)
+        {
+            gameManager.OnResultadoCambio -= ManejarFinDePartida;
+        }
+    }
+
+    /// <summary>
+    /// Apenas la partida termina (no espera al reinicio real) - vuelve la
+    /// sospecha a 0 de una, en vez de dejarla como quedo hasta que el host
+    /// arranque la ronda nueva.
+    /// </summary>
+    private void ManejarFinDePartida(ResultadoPartida resultado)
+    {
+        if (!IsServer || resultado == ResultadoPartida.EnCurso)
+        {
+            return;
+        }
+
+        ReiniciarSospecha();
     }
 
     /// <summary>
