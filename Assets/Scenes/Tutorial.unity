@@ -1888,8 +1888,8 @@ MonoBehaviour:
   contenedorImagen: {fileID: 1364535778}
   imagenMostrada: {fileID: 1364535780}
   pasos:
-  - texto: Cada partida enfrenta a un grupo de jugadores contra el Boss. Para arrancar,
-      el host presiona 'Iniciar partida' y se reparten las cartas.
+  - texto: "Cada partida enfrenta a un grupo de jugadores contra La Leyenda. Para
+      arrancar, el anfitri\xF3n presiona 'Iniciar partida' y se reparten las cartas."
     posicionPanel: {x: 451, y: 184}
     tipoDeMedia: 0
     clip: {fileID: 32900000, guid: b3d97ad5451e577468d8f354b1f88b54, type: 3}
