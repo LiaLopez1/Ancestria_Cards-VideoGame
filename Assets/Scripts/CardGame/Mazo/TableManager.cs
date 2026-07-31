@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Diagnostics;
 using UnityEngine;
 
 /// <summary>
@@ -24,6 +26,20 @@ public class TableManager : MonoBehaviour
     [SerializeField] private float positionRangeY = 5f;
     [SerializeField] private float rotationRangeZ = 8f;
 
+    [Header("Animación de caída")]
+    [Tooltip("Desde cuántos píxeles por encima de su posición final empieza a caer la carta.")]
+    [SerializeField] private float alturaCaida = 250f;
+    [Tooltip("Duración de la caída, antes de que arranque el rebote de escala/rotación.")]
+    [SerializeField] private float duracionCaida = 0.18f;
+
+    [Header("Animación de entrada (rebote)")]
+    [Tooltip("Duración total del rebote de escala y rotación al colocar la carta.")]
+    [SerializeField] private float duracionAnimacion = 0.35f;
+    [Tooltip("Cuánto 'overshoot' hace el rebote (más alto = rebote más exagerado).")]
+    [SerializeField] private float overshoot = 1.7f;
+    [Tooltip("Escala desde la que arranca el rebote al aterrizar (menor a 1 = se 'aplasta' un poco antes de asentarse).")]
+    [SerializeField] private float escalaInicialRebote = 0.8f;
+
     [Header("Audio")]
     [SerializeField] private SoundData discardCardSound;
 
@@ -31,7 +47,7 @@ public class TableManager : MonoBehaviour
     {
         if (tableCardPrefab == null)
         {
-            Debug.LogError("[TableManager] Falta asignar el Table Card Prefab.");
+            //Debug.LogError("[TableManager] Falta asignar el Table Card Prefab.");
             return;
         }
 
@@ -42,7 +58,7 @@ public class TableManager : MonoBehaviour
 
         if (display == null)
         {
-            Debug.LogError("El prefab de la mesa necesita un CardDisplay.");
+            //Debug.LogError("El prefab de la mesa necesita un CardDisplay.");
             Destroy(cartaVisual);
             return;
         }
@@ -53,7 +69,7 @@ public class TableManager : MonoBehaviour
 
         if (cardRect == null)
         {
-            Debug.LogError("El prefab de la mesa necesita RectTransform.");
+            //Debug.LogError("El prefab de la mesa necesita RectTransform.");
             Destroy(cartaVisual);
             return;
         }
@@ -62,19 +78,79 @@ public class TableManager : MonoBehaviour
         cardRect.SetAsLastSibling();
 
         Vector2 randomPosition = new Vector2(
-            Random.Range(-positionRangeX, positionRangeX),
-            Random.Range(-positionRangeY, positionRangeY)
+            UnityEngine.Random.Range(-positionRangeX, positionRangeX),
+            UnityEngine.Random.Range(-positionRangeY, positionRangeY)
         );
 
-        float randomRotation = Random.Range(-rotationRangeZ, rotationRangeZ);
+        float randomRotation = UnityEngine.Random.Range(-rotationRangeZ, rotationRangeZ);
 
-        cardRect.anchoredPosition = randomPosition;
-        cardRect.localRotation = Quaternion.Euler(0f, 0f, randomRotation);
+        // La posicion final es la del drag & drop (randomPosition). La carta
+        // arranca mas arriba de esa posicion para poder animar la caida.
         cardRect.localScale = Vector3.one;
+        cardRect.localRotation = Quaternion.identity;
+        cardRect.anchoredPosition = randomPosition + new Vector2(0f, alturaCaida);
 
         DesactivarInteraccion(cartaVisual);
 
         discardCardSound.Play();
+
+        StartCoroutine(AnimarEntradaCarta(cardRect, randomPosition, randomRotation));
+    }
+
+    /// <summary>
+    /// Anima la entrada de la carta en dos fases: primero cae desde arriba
+    /// hasta su posicion final, y despues rebota un poco en escala y
+    /// rotacion hasta asentarse del todo (el "pop").
+    /// </summary>
+    private IEnumerator AnimarEntradaCarta(RectTransform cardRect, Vector2 posicionFinal, float targetRotationZ)
+    {
+        // Fase 1: caida hacia la posicion final.
+        Vector2 posicionInicial = cardRect.anchoredPosition;
+        float tiempo = 0f;
+
+        while (tiempo < duracionCaida)
+        {
+            tiempo += Time.deltaTime;
+            float t = Mathf.Clamp01(tiempo / duracionCaida);
+            float easedT = t * t; // ease-in: arranca lenta y acelera, como la gravedad
+
+            cardRect.anchoredPosition = Vector2.LerpUnclamped(posicionInicial, posicionFinal, easedT);
+
+            yield return null;
+        }
+
+        cardRect.anchoredPosition = posicionFinal;
+
+        // Fase 2: rebote de escala y rotacion al aterrizar.
+        tiempo = 0f;
+
+        while (tiempo < duracionAnimacion)
+        {
+            tiempo += Time.deltaTime;
+            float t = Mathf.Clamp01(tiempo / duracionAnimacion);
+            float easedT = EaseOutBack(t);
+
+            cardRect.localScale = Vector3.one * Mathf.LerpUnclamped(escalaInicialRebote, 1f, easedT);
+            cardRect.localRotation = Quaternion.Euler(0f, 0f, Mathf.LerpUnclamped(0f, targetRotationZ, easedT));
+
+            yield return null;
+        }
+
+        cardRect.localScale = Vector3.one;
+        cardRect.localRotation = Quaternion.Euler(0f, 0f, targetRotationZ);
+    }
+
+    /// <summary>
+    /// Easing "back out": el valor supera el 1 (overshoot) antes de
+    /// asentarse, lo que da el efecto de rebote.
+    /// </summary>
+    private float EaseOutBack(float t)
+    {
+        float c1 = overshoot;
+        float c3 = c1 + 1f;
+        float tMenosUno = t - 1f;
+
+        return 1f + c3 * tMenosUno * tMenosUno * tMenosUno + c1 * tMenosUno * tMenosUno;
     }
 
     /// <summary>
