@@ -59,6 +59,25 @@ public class TutorialSequencer : MonoBehaviour
     }
 
     [Serializable]
+    private class MarcadorDePaso
+    {
+        [Tooltip("El objeto YA UBICADO en la escena (por ejemplo, la flechita que rebota) - NO un prefab para instanciar. Mismo patron que turnHighlighter en TurnManager: este script solo lo activa/desactiva.")]
+        public GameObject objetoEnEscena;
+
+        [Tooltip("Si esta tildado, ademas de activarlo se lo reposiciona a 'Posicion'. Si no, se deja donde ya este puesto en la escena.")]
+        public bool reposicionar;
+
+        [Tooltip("Solo se usa si 'Reposicionar' esta tildado.")]
+        public Vector2 posicion;
+
+        [Tooltip("Si esta tildado, ademas de activarlo se lo rota a 'Rotacion'. Si no, se deja con la rotacion que ya tenga en la escena.")]
+        public bool rotar;
+
+        [Tooltip("Solo se usa si 'Rotar' esta tildado - grados en el eje Z (el que usa la UI).")]
+        public float rotacion;
+    }
+
+    [Serializable]
     private class PasoTutorial
     {
         [TextArea(2, 5)]
@@ -80,6 +99,9 @@ public class TutorialSequencer : MonoBehaviour
 
         [Tooltip("Solo se usa si el tipo de espera es 'Duracion'.")]
         public float duracionSegundos = 3f;
+
+        [Tooltip("Objetos YA UBICADOS en la escena para ESTE paso en particular (por ejemplo, la flechita que rebota apuntando a algo) - agregá 0, 1, 2, o los que necesites. Se activan apenas se muestra el paso, y se desactivan automaticamente al pasar al siguiente.")]
+        public List<MarcadorDePaso> marcadores = new List<MarcadorDePaso>();
 
         [Tooltip("Se ejecuta apenas se MUESTRA este paso (antes de que arranque la espera).")]
         public UnityEvent alMostrarse;
@@ -111,6 +133,7 @@ public class TutorialSequencer : MonoBehaviour
 
     private int indicePasoActual = -1;
     private Coroutine corrutinaActual;
+    private readonly List<GameObject> marcadoresActivos = new List<GameObject>();
 
     private void Awake()
     {
@@ -243,6 +266,9 @@ public class TutorialSequencer : MonoBehaviour
                 panelRect.gameObject.SetActive(false);
             }
 
+            LimpiarMarcadores();
+
+            Debug.Log("[TutorialSequencer] Secuencia terminada - disparando OnSecuenciaTerminada.");
             OnSecuenciaTerminada?.Invoke();
             return;
         }
@@ -252,6 +278,8 @@ public class TutorialSequencer : MonoBehaviour
 
     private void MostrarPaso(PasoTutorial paso)
     {
+        LimpiarMarcadores();
+
         if (textoPanel != null)
         {
             textoPanel.text = paso.texto;
@@ -320,6 +348,70 @@ public class TutorialSequencer : MonoBehaviour
                 }
                 break;
         }
+
+        MostrarMarcadores(paso.marcadores);
+    }
+
+    /// <summary>
+    /// Activa los marcadores de este paso - son objetos YA UBICADOS en la
+    /// escena (no prefabs para instanciar), mismo patron que turnHighlighter
+    /// en TurnManager. Solo los prende (y opcionalmente los reposiciona).
+    /// </summary>
+    private void MostrarMarcadores(List<MarcadorDePaso> marcadores)
+    {
+        if (marcadores == null)
+        {
+            return;
+        }
+
+        foreach (MarcadorDePaso marcador in marcadores)
+        {
+            if (marcador.objetoEnEscena == null)
+            {
+                continue;
+            }
+
+            // Posicion y rotacion se fijan ANTES de activar - asi, cuando
+            // TurnHighlighterBounce (u otro componente similar) recaptura
+            // su base en OnEnable, ya encuentra al objeto en el lugar
+            // correcto.
+            if (marcador.reposicionar)
+            {
+                RectTransform rectMarcador = marcador.objetoEnEscena.GetComponent<RectTransform>();
+
+                if (rectMarcador != null)
+                {
+                    rectMarcador.anchoredPosition = marcador.posicion;
+                }
+                else
+                {
+                    marcador.objetoEnEscena.transform.localPosition = marcador.posicion;
+                }
+            }
+
+            if (marcador.rotar)
+            {
+                marcador.objetoEnEscena.transform.localRotation = Quaternion.Euler(0f, 0f, marcador.rotacion);
+            }
+
+            marcador.objetoEnEscena.SetActive(true);
+
+            marcadoresActivos.Add(marcador.objetoEnEscena);
+        }
+    }
+
+    /// <summary>Apaga (SetActive false) todos los marcadores que quedaron prendidos del paso anterior - se llama antes de mostrar cualquier paso nuevo, y al terminar la secuencia. No destruye nada, son objetos persistentes de la escena.</summary>
+    private void LimpiarMarcadores()
+    {
+        foreach (GameObject objeto in marcadoresActivos)
+        {
+            if (objeto != null)
+            {
+                objeto.SetActive(false);
+            }
+        }
+
+        marcadoresActivos.Clear();
     }
 
     private void MostrarVideo(VideoClip clip)
@@ -353,15 +445,26 @@ public class TutorialSequencer : MonoBehaviour
             contenedorVideo.SetActive(false);
         }
 
-        if (contenedorImagen != null)
+        if (contenedorImagen == null)
         {
-            contenedorImagen.SetActive(true);
+            Debug.LogWarning("[TutorialSequencer] Este paso es de tipo Imagen, pero 'Contenedor Imagen' no está asignado en el Inspector - no hay donde mostrarla.");
+            return;
         }
 
-        if (imagenMostrada != null)
+        contenedorImagen.SetActive(true);
+
+        if (imagenMostrada == null)
         {
-            imagenMostrada.sprite = sprite;
+            Debug.LogWarning("[TutorialSequencer] Este paso es de tipo Imagen, pero 'Imagen Mostrada' no está asignado en el Inspector.");
+            return;
         }
+
+        if (sprite == null)
+        {
+            Debug.LogWarning("[TutorialSequencer] Este paso es de tipo Imagen, pero no se asignó ningún sprite en el campo 'Imagen' de ese paso.");
+        }
+
+        imagenMostrada.sprite = sprite;
     }
 
     private IEnumerator EsperarDuracion(float segundos)
