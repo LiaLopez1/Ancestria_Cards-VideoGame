@@ -66,6 +66,12 @@ public class BossManager : NetworkBehaviour
     [Tooltip("Fijo por ahora ('Boss'). Más adelante será la leyenda sorteada de la ronda, mismo patrón que la regla de victoria.")]
     [SerializeField] private string nombreInicial = "Boss";
 
+    [Header("Alerta de tensión (boss a punto de ganar)")]
+    [Tooltip("Componente que anima el texto y reproduce el sonido (ver AlertaDeTension.cs). Se dispara en TODOS los clientes cuando, tras descartar, el boss queda a UNA sola carta de cumplir la regla activa.")]
+    [SerializeField] private AlertaDeTension alertaTension;
+    [Tooltip("PROVISORIO / DEBUG - si está activo, la alerta se dispara SIEMPRE al final de cada turno del boss, sin importar si de verdad está cerca de ganar. Sirve para probar el texto/animación/sonido sin tener que armar una partida hasta que el boss casi gane. Apagar antes de la entrega final.")]
+    [SerializeField] private bool debugForzarAlertaSiempre = false;
+
     // Sincronizado a todos - así el panel del boss muestra el mismo nombre
     // en cualquier cliente, sin importar cuándo se conecte.
     private readonly NetworkVariable<FixedString64Bytes> nombreBoss = new NetworkVariable<FixedString64Bytes>();
@@ -444,6 +450,44 @@ public class BossManager : NetworkBehaviour
         // Recién descartó - vuelve a su cantidad "normal" de cartas.
         tieneCincoCartas.Value = false;
 
+        // Tensión: si con la mano que le quedó (ya sin la carta descartada)
+        // alcanzaría con UNA carta más para cumplir la regla activa, se
+        // avisa a todos los jugadores. Se chequea DESPUÉS del descarte a
+        // propósito - lo que importa es la mano con la que se queda, no la
+        // de 5 cartas de antes de elegir qué tirar.
+        List<int> manoFinal = deckManager.ObtenerManoDelBoss();
+        bool bossAPuntoDeGanar = BossStrategy.EstaAUnaCartaDeGanar(manoFinal, turnManager.ReglaActiva, categoriaInfiltrada);
+
+        if (debugForzarAlertaSiempre)
+        {
+            Debug.Log("[Boss][Tensión] Forzada por 'debugForzarAlertaSiempre' - no representa que el boss esté realmente cerca de ganar.");
+        }
+
+        if (bossAPuntoDeGanar || debugForzarAlertaSiempre)
+        {
+            if (bossAPuntoDeGanar)
+            {
+                Debug.Log("[Boss][Tensión] Quedó a una sola carta de ganar.");
+            }
+
+            MostrarAlertaDeTensionClientRpc();
+        }
+
         Debug.Log("[Boss] Termina su turno.");
+    }
+
+    /// <summary>
+    /// Avisa a TODOS los clientes (no solo al servidor) que el boss quedó
+    /// cerca de ganar, para que cada uno reproduzca la animación/sonido de
+    /// tensión en su propia pantalla. No revela ninguna carta - solo el
+    /// hecho de que está cerca.
+    /// </summary>
+    [ClientRpc]
+    private void MostrarAlertaDeTensionClientRpc()
+    {
+        if (alertaTension != null)
+        {
+            alertaTension.Mostrar();
+        }
     }
 }

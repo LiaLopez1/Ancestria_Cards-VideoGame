@@ -364,4 +364,142 @@ public static class BossStrategy
 
         return resto;
     }
+
+    // ---------------- Tension: "¿le falta una sola carta para ganar?" ----------------
+
+    /// <summary>
+    /// Evalua la mano FINAL del boss (4 cartas, ya despues de descartar) y
+    /// devuelve true si le alcanzaria con UNA carta mas (la correcta) para
+    /// cumplir la regla activa. Pensado para disparar una alerta de tension
+    /// a los jugadores - no afecta ninguna decision del boss, solo informa.
+    /// </summary>
+    public static bool EstaAUnaCartaDeGanar(List<int> manoFinal, VictoryRuleType reglaActiva, CardCategory? categoriaInfiltrada = null)
+    {
+        if (manoFinal == null || manoFinal.Count != 4)
+        {
+            return false;
+        }
+
+        switch (reglaActiva)
+        {
+            case VictoryRuleType.CuatroIguales:
+                return AUnaCartaDeGanarCuatroIguales(manoFinal);
+
+            case VictoryRuleType.CategoriaCompleta:
+                return AUnaCartaDeGanarCategoriaCompleta(manoFinal);
+
+            case VictoryRuleType.CartaInfiltrada:
+                return AUnaCartaDeGanarCartaInfiltrada(manoFinal, categoriaInfiltrada);
+
+            case VictoryRuleType.CartaInfiltrada2:
+                return AUnaCartaDeGanarCartaInfiltrada2(manoFinal, categoriaInfiltrada);
+
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>True si algun cardId aparece exactamente 3 veces (le falta 1 copia mas para las 4 iguales).</summary>
+    private static bool AUnaCartaDeGanarCuatroIguales(List<int> mano)
+    {
+        foreach (KeyValuePair<int, int> par in ContarPorCardId(mano))
+        {
+            if (par.Value == 3)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>True si alguna categoria tiene exactamente 3 cardIds DISTINTOS (le falta 1 mas para completarla).</summary>
+    private static bool AUnaCartaDeGanarCategoriaCompleta(List<int> mano)
+    {
+        foreach (KeyValuePair<CardCategory, List<int>> par in AgruparPorCategoria(mano))
+        {
+            if (new HashSet<int>(par.Value).Count == 3)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Ya tiene el comodin (carta de la categoria infiltrada) reservado -
+    /// true si, entre las 3 cartas restantes, hay 2 DISTINTAS de una misma
+    /// categoria (le falta 1 mas para el trio completo).
+    /// </summary>
+    private static bool AUnaCartaDeGanarCartaInfiltrada(List<int> mano, CardCategory? categoriaInfiltrada)
+    {
+        if (categoriaInfiltrada == null)
+        {
+            return false;
+        }
+
+        int comodinId = BuscarComodin(mano, categoriaInfiltrada.Value);
+
+        if (comodinId == -1)
+        {
+            return false; // sin comodin todavia, esta a mas de una carta
+        }
+
+        List<int> resto = QuitarComodin(mano, comodinId);
+
+        foreach (KeyValuePair<CardCategory, List<int>> par in AgruparPorCategoria(resto))
+        {
+            if (new HashSet<int>(par.Value).Count == 2)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Ya tiene el comodin reservado - true si, entre las 3 cartas
+    /// restantes, hay 2 copias IDENTICAS del mismo cardId (le falta 1 mas
+    /// para las 3 copias completas).
+    /// </summary>
+    private static bool AUnaCartaDeGanarCartaInfiltrada2(List<int> mano, CardCategory? categoriaInfiltrada)
+    {
+        if (categoriaInfiltrada == null)
+        {
+            return false;
+        }
+
+        int comodinId = BuscarComodin(mano, categoriaInfiltrada.Value);
+
+        if (comodinId == -1)
+        {
+            return false;
+        }
+
+        List<int> resto = QuitarComodin(mano, comodinId);
+
+        foreach (KeyValuePair<int, int> par in ContarPorCardId(resto))
+        {
+            if (par.Value == 2)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static Dictionary<int, int> ContarPorCardId(List<int> cardIds)
+    {
+        Dictionary<int, int> conteo = new Dictionary<int, int>();
+
+        foreach (int id in cardIds)
+        {
+            conteo[id] = conteo.TryGetValue(id, out int actual) ? actual + 1 : 1;
+        }
+
+        return conteo;
+    }
 }
