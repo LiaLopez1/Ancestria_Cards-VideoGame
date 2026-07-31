@@ -48,6 +48,12 @@ public class TurnManager : NetworkBehaviour
     [Tooltip("Posición fija del panel del boss - a diferencia de los jugadores, el slot del boss cambia según cuántos humanos se conecten (1, 2 o 3), pero su panel en pantalla siempre está en el mismo lugar.")]
     [SerializeField] private Vector2 posicionHighlighterBoss;
 
+    [Header("Indicadores de accion (flecha de robar / descartar)")]
+    [Tooltip("Icono fijo sobre el mazo - se prende SOLO en este cliente cuando puede robar (CanDraw()).")]
+    [SerializeField] private GameObject indicadorRobar;
+    [Tooltip("Icono fijo sobre la mano/zona de descarte - se prende SOLO en este cliente cuando puede descartar (CanDiscard()).")]
+    [SerializeField] private GameObject indicadorDescartar;
+
     [Header("Audio")]
     [SerializeField] private SoundData NotifyTurn;
 
@@ -68,8 +74,20 @@ public class TurnManager : NetworkBehaviour
     [Tooltip("Un icono por cada valor de CardCategory - se muestra el que corresponda a la categoria infiltrada sorteada.")]
     [SerializeField] private IconoPorCategoria[] iconosPorCategoriaInfiltrada;
 
+    [Header("Reglas fijas por ronda (para la muestra del juego)")]
+    [Tooltip("Si está activo, cada ronda usa la regla indicada en 'reglasPorRonda' según el número de ronda actual (GameManager.RondaActual), en vez de sortear al azar. Tiene PRIORIDAD sobre 'usarReglaFijaParaPruebas'.")]
+    [SerializeField] private bool usarReglasFijasPorRonda = true;
+    [Tooltip("Regla para cada ronda, en orden: [0]=ronda 1, [1]=ronda 2, [2]=ronda 3. Cada una debe existir en VictoryRules.ReglasDisponibles.")]
+    [SerializeField]
+    private VictoryRuleType[] reglasPorRonda = new VictoryRuleType[]
+    {
+        VictoryRuleType.CategoriaCompleta, // ronda 1 - la mas facil, para que la conozcan primero
+        VictoryRuleType.CartaInfiltrada,   // ronda 2
+        VictoryRuleType.CuatroIguales,     // ronda 3 - la mas dificil
+    };
+
     [Header("Debug / Pruebas")]
-    [Tooltip("Si está activo, la regla de la ronda NO se sortea al azar - siempre se usa 'reglaParaPruebas'. Apágalo para volver al comportamiento normal (aleatorio).")]
+    [Tooltip("Solo aplica si 'usarReglasFijasPorRonda' esta apagado. Si está activo, la regla de la ronda NO se sortea al azar - siempre se usa 'reglaParaPruebas'. Apágalo para volver al comportamiento normal (aleatorio).")]
     [SerializeField] private bool usarReglaFijaParaPruebas = false;
     [Tooltip("Solo se usa si 'usarReglaFijaParaPruebas' está activo. Debe existir en VictoryRules.ReglasDisponibles (descoméntala ahí si está comentada).")]
     [SerializeField] private VictoryRuleType reglaParaPruebas = VictoryRuleType.CartaInfiltrada;
@@ -90,6 +108,23 @@ public class TurnManager : NetworkBehaviour
     private readonly NetworkVariable<int> slotBoss = new NetworkVariable<int>(-1);
 
     private int cantidadJugadores = 1;
+
+    /// <summary>
+    /// Red de seguridad: aparte de actualizarse en cada cambio de
+    /// turno/estado/resultado, se re-chequea todos los frames. Esto cubre
+    /// el caso donde el estado (WaitingToDraw) y la mano recien repartida
+    /// llegan por red casi al mismo tiempo pero no exactamente en el mismo
+    /// frame - sin esto, si CanDraw() se evalua un instante antes de que la
+    /// mano ya tenga sus 4 cartas, la flecha se queda apagada y nada la
+    /// vuelve a prender despues. El costo es minimo (dos comparaciones y,
+    /// como mucho, dos SetActive por frame).
+    /// </summary>
+    private void Update()
+    {
+        if (!IsSpawned) return;
+
+        ActualizarIndicadoresDeAccion();
+    }
 
     public VictoryRuleType ReglaActiva => VictoryRules.ReglasDisponibles[indiceReglaActual.Value];
 
@@ -120,6 +155,7 @@ public class TurnManager : NetworkBehaviour
     turnoActual.OnValueChanged += (anterior, nuevo) =>
     {
         ActualizarHighlighter();
+        ActualizarIndicadoresDeAccion();
         OnEstadoTurnoCambio?.Invoke();
     };
 
@@ -127,6 +163,7 @@ public class TurnManager : NetworkBehaviour
     {
         ActualizarMensaje();
         ActualizarHighlighter();
+        ActualizarIndicadoresDeAccion();
         OnEstadoTurnoCambio?.Invoke();
 
         if (nuevo == TurnState.WaitingToDraw && EsMiTurno())
@@ -139,6 +176,7 @@ public class TurnManager : NetworkBehaviour
     {
         ActualizarMensaje();
         ActualizarHighlighter();
+        ActualizarIndicadoresDeAccion();
         OnEstadoTurnoCambio?.Invoke();
     };
 
@@ -148,6 +186,7 @@ public class TurnManager : NetworkBehaviour
         {
             ActualizarMensaje();
             ActualizarHighlighter();
+            ActualizarIndicadoresDeAccion();
             OnEstadoTurnoCambio?.Invoke();
         };
     }
@@ -165,6 +204,7 @@ public class TurnManager : NetworkBehaviour
 
     ActualizarMensaje();
     ActualizarHighlighter();
+    ActualizarIndicadoresDeAccion();
 }
 
     /// <summary>
@@ -189,13 +229,22 @@ public class TurnManager : NetworkBehaviour
     }
 
     /// <summary>
-    /// Normalmente sortea al azar entre VictoryRules.ReglasDisponibles.
-    /// Si 'usarReglaFijaParaPruebas' está activo, en cambio devuelve siempre
-    /// el indice de 'reglaParaPruebas' - util para probar la logica del
-    /// boss (o la propia regla) sin depender de que salga por sorteo.
+    /// Decide la regla de esta ronda, en orden de prioridad:
+    /// 1) 'usarReglasFijasPorRonda' - una regla fija segun el numero de
+    ///    ronda (para la muestra del juego, de menos a mas dificil).
+    /// 2) 'usarReglaFijaParaPruebas' - siempre la misma regla, sin importar
+    ///    la ronda (util para probar la logica del boss o de una regla
+    ///    puntual sin depender del sorteo).
+    /// 3) Sorteo al azar (comportamiento original) - el modo normal para
+    ///    el juego completo, una vez terminada la muestra.
     /// </summary>
     private int SortearIndiceDeRegla()
     {
+        if (usarReglasFijasPorRonda)
+        {
+            return ObtenerIndiceReglaFijaPorRonda();
+        }
+
         if (!usarReglaFijaParaPruebas)
         {
             return UnityEngine.Random.Range(0, VictoryRules.ReglasDisponibles.Length);
@@ -208,6 +257,37 @@ public class TurnManager : NetworkBehaviour
             Debug.LogError($"[TurnManager] La regla '{reglaParaPruebas}' no está en VictoryRules.ReglasDisponibles " +
                 "- agregala ahí (descomentala si está comentada) para poder forzarla en pruebas. " +
                 "Usando sorteo aleatorio en su lugar por esta vez.");
+            return UnityEngine.Random.Range(0, VictoryRules.ReglasDisponibles.Length);
+        }
+
+        return indice;
+    }
+
+    /// <summary>
+    /// Busca en 'reglasPorRonda' la regla que corresponde a
+    /// GameManager.RondaActual (1-based) y devuelve su indice dentro de
+    /// VictoryRules.ReglasDisponibles. Si falta la referencia a GameManager,
+    /// el array no tiene esa posicion, o la regla configurada no existe en
+    /// ReglasDisponibles, cae de vuelta al sorteo aleatorio (avisando por
+    /// que) en vez de trabar la partida.
+    /// </summary>
+    private int ObtenerIndiceReglaFijaPorRonda()
+    {
+        int rondaIndex = (gameManager != null ? gameManager.RondaActual : 1) - 1;
+
+        if (reglasPorRonda == null || rondaIndex < 0 || rondaIndex >= reglasPorRonda.Length)
+        {
+            Debug.LogWarning($"[TurnManager] No hay una regla fija configurada para la ronda {rondaIndex + 1} en 'reglasPorRonda' - sorteando al azar en su lugar.");
+            return UnityEngine.Random.Range(0, VictoryRules.ReglasDisponibles.Length);
+        }
+
+        VictoryRuleType reglaDeEstaRonda = reglasPorRonda[rondaIndex];
+        int indice = System.Array.IndexOf(VictoryRules.ReglasDisponibles, reglaDeEstaRonda);
+
+        if (indice < 0)
+        {
+            Debug.LogError($"[TurnManager] La regla '{reglaDeEstaRonda}' (configurada para la ronda {rondaIndex + 1}) " +
+                "no está en VictoryRules.ReglasDisponibles - agregala ahí. Sorteando al azar en su lugar por esta vez.");
             return UnityEngine.Random.Range(0, VictoryRules.ReglasDisponibles.Length);
         }
 
@@ -382,6 +462,20 @@ public class TurnManager : NetworkBehaviour
         }
 
         turnHighlighter.anchoredPosition = posicionesHighlighterPorSlot[slot];
+    }
+
+    /// <summary>
+    /// Prende/apaga los iconos fijos de robar y descartar segun lo que
+    /// ESTE cliente puede hacer ahora mismo - reusa CanDraw()/CanDiscard(),
+    /// asi que respeta las mismas condiciones (mi turno, estado correcto,
+    /// cantidad de cartas en mano) que ya usan los botones de robar/descartar.
+    /// No hace falta que sea el servidor - cada cliente decide su propia
+    /// flecha en base a su propio slot.
+    /// </summary>
+    private void ActualizarIndicadoresDeAccion()
+    {
+        if (indicadorRobar != null) indicadorRobar.SetActive(CanDraw());
+        if (indicadorDescartar != null) indicadorDescartar.SetActive(CanDiscard());
     }
 
     /// <summary>
