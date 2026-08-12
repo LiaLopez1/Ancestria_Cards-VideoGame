@@ -14,11 +14,13 @@ using UnityEngine;
 public class CardDatabase : MonoBehaviour
 {
     public static CardDatabase Instance { get; private set; }
+    //Patron singleton, solo existe un Cardatabase en la escena y cualquier script puede acceder a el con un
+    // CardDatabase.Instance.ObtenerPorId(...)
 
     [Header("Todas las cartas del juego (una copia por carta unica)")]
     [SerializeField] private List<CardData> allCards;
 
-    private readonly Dictionary<int, CardData> cardsById = new Dictionary<int, CardData>();
+    private readonly Dictionary<int, CardData> cardsById = new Dictionary<int, CardData>(); 
 
     private void Awake()
     {
@@ -47,6 +49,7 @@ public class CardDatabase : MonoBehaviour
         Debug.Log($"[CardDatabase] Tabla construida con {cardsById.Count} carta(s).");
     }
 
+//para que cualquier otro script, dado un número que llegó por red, recupere el CardData real con sus sprites y nombre.
     public CardData ObtenerPorId(int cardId)
     {
         if (cardsById.TryGetValue(cardId, out CardData carta))

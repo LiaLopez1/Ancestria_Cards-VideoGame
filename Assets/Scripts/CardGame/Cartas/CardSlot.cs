@@ -21,26 +21,18 @@ public class CardSlot : MonoBehaviour
     {
         rectTransform = GetComponent<RectTransform>();
 
-        targetPosition = rectTransform.anchoredPosition;
+        targetPosition = rectTransform.anchoredPosition; // se guarda la posición actual de un elemento UI con respecto a sus anchors.
         targetRotation = rectTransform.localRotation;
     }
 
     private void Update()
     {
-        rectTransform.anchoredPosition = Vector2.Lerp(
-            rectTransform.anchoredPosition,
-            targetPosition,
-            Time.deltaTime * moveSpeed
-        );
+        rectTransform.anchoredPosition = Vector2.Lerp(rectTransform.anchoredPosition, targetPosition,Time.deltaTime * moveSpeed );
 
-        rectTransform.localRotation = Quaternion.Slerp(
-            rectTransform.localRotation,
-            targetRotation,
-            Time.deltaTime * rotationSpeed
-        );
+        rectTransform.localRotation = Quaternion.Slerp( rectTransform.localRotation, targetRotation, Time.deltaTime * rotationSpeed );
     }
 
-    public void SetTarget(Vector2 position, float rotationZ)
+    public void SetTarget(Vector2 position, float rotationZ) // a donde debe llegar la carta
     {
         targetPosition = position;
         targetRotation = Quaternion.Euler(0f, 0f, rotationZ);

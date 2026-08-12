@@ -25,7 +25,7 @@ using UnityEngine;
 /// siguiente paso (ServerRpc de robo). Por ahora solo se blinda con un
 /// aviso claro en vez de fallar en silencio.
 /// </summary>
-public class DeckManager : NetworkBehaviour
+public class DeckManager : NetworkBehaviour // hereda de networkBehavior porque usa UnityNetcode
 {
     [Header("Reparto inicial")]
     [SerializeField] private int initialHandSize = 4;
@@ -74,9 +74,9 @@ public class DeckManager : NetworkBehaviour
     // Cartas disponibles para robar. SOLO tiene contenido real en el servidor.
     private readonly List<CardData> drawPile = new List<CardData>();
 
-    // Cartas descartadas por todos los jugadores. SOLO tiene contenido real
-    // en el servidor - igual que drawPile, es la fuente de verdad para
-    // reciclar cartas cuando el mazo para robar se queda vacio.
+    // Cartas descartadas por todos los jugadores. SOLO tiene contenido real en el servidor - 
+    // igual que drawPile, es la fuente de verdad para
+ //reciclar cartas cuando el mazo para robar se queda vacio.
     private readonly List<CardData> discardPile = new List<CardData>();
 
     // Objetos que representan las cartas apiladas en pantalla (genericos,
@@ -495,9 +495,11 @@ public class DeckManager : NetworkBehaviour
             return null;
         }
 
-        int topCardIndex = drawPile.Count - 1;
+        int topCardIndex = drawPile.Count - 1; //roba del final de la lista
         CardData drawnCard = drawPile[topCardIndex];
-        drawPile.RemoveAt(topCardIndex);
+        drawPile.RemoveAt(topCardIndex); 
+        //sacar el último elemento con RemoveAt es una operación instantánea (no hay que correr nada de lugar), e4s mas barato computacionalmente
+    
 
         ActualizarContadoresDeMazo();
 
@@ -525,9 +527,7 @@ public class DeckManager : NetworkBehaviour
         discardPile.Clear();
 
         ShuffleDeck();
-
         ActualizarContadoresDeMazo();
-
         ReiniciarMesaDeDescarteClientRpc();
     }
 

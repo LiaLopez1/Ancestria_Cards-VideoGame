@@ -77,9 +77,10 @@ public class HandManager : MonoBehaviour
 
     public void ArrangeHand()
     {
-        List<CardSlot> visibleSlots = GetVisibleSlots();
+        List<CardSlot> visibleSlots = GetVisibleSlots(); 
+        //lista que contiene únicamente las cartas que actualmente deben mostrarse.
 
-        int count = visibleSlots.Count;
+        int count = visibleSlots.Count; // ese dato lo guardamos aqui
 
         if (count == 0)
             return;
@@ -88,14 +89,16 @@ public class HandManager : MonoBehaviour
 
         for (int i = 0; i < count; i++)
         {
-            float offset = i - center;
+            float offset = i - center; // espacio de la carta al centro
 
             float x = offset * spacing;
-            float y = -Mathf.Abs(offset) * curveHeight;
+            float y = -Mathf.Abs(offset) * curveHeight; // Mathf.Abs(offset) = valor absoluto
+            // esta es la que le da la forma de abanico 
+
             float rotationZ = -offset * maxRotation;
 
 
-            CardSlot slot = visibleSlots[i];
+            CardSlot slot = visibleSlots[i]; // pide la carta que corresponde al indice
 
         // Actaulizamos el orden visual en la jerarquia
             slot.transform.SetSiblingIndex(i);
@@ -103,12 +106,6 @@ public class HandManager : MonoBehaviour
             slot.SetTarget( new Vector2(x, y), rotationZ);
 
 
-            /*visibleSlots[i].SetTarget(     
-                new Vector2(x, y),
-                rotationZ
-            );
-            este es para actualizar el slot solo en juego, no en la jerarquia
-            esto hace que debido a la posición en la jerarquia se vean unas enciam de otras y no en orden*/
         }
     }
 
@@ -116,9 +113,7 @@ public class HandManager : MonoBehaviour
     {
         if (cardData == null)
         {
-            Debug.LogWarning(
-                "No se recibió información para crear la carta."
-            );
+            Debug.LogWarning( "No se recibió información para crear la carta.");
 
             return false;
         }
@@ -130,24 +125,18 @@ public class HandManager : MonoBehaviour
 
         if (freeSlot == null)
         {
-            Debug.LogWarning(
-                "No quedan espacios vacíos en la mano."
-            );
+            Debug.LogWarning( "No quedan espacios vacíos en la mano.");
 
             return false;
         }
 
         CardSlot destinationSlot = freeSlot;
 
-        GameObject newCard = Instantiate(
-            cardPrefab,
-            destinationSlot.RectTransform
-        );
+        GameObject newCard = Instantiate( cardPrefab, destinationSlot.RectTransform );
 
         newCard.name = "Card - " + cardData.cardName;
 
-        RectTransform cardRect =
-            newCard.GetComponent<RectTransform>();
+        RectTransform cardRect = newCard.GetComponent<RectTransform>();
 
         if (cardRect != null)
         {
@@ -156,14 +145,11 @@ public class HandManager : MonoBehaviour
             cardRect.localScale = Vector3.one;
         }
 
-        CardDisplay cardDisplay =
-            newCard.GetComponent<CardDisplay>();
+        CardDisplay cardDisplay = newCard.GetComponent<CardDisplay>();
 
         if (cardDisplay == null)
         {
-            Debug.LogError(
-                "El prefab Card no contiene CardDisplay."
-            );
+            Debug.LogError( "El prefab Card no contiene CardDisplay." );
 
             Destroy(newCard);
             return false;
@@ -178,9 +164,7 @@ public class HandManager : MonoBehaviour
 
         UpdateFreeSlot();
 
-        Debug.Log(
-            "Carta agregada a la mano: " +
-            cardData.cardName
+        Debug.Log( "Carta agregada a la mano: " + cardData.cardName
         );
 
         ArrangeHand();
