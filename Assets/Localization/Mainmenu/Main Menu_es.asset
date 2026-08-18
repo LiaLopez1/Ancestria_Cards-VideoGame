@@ -1,0 +1,75 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9620f8c34305754d8cc9a7e49e852d9, type: 3}
+  m_Name: Main Menu_es
+  m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Tables.StringTable
+  m_LocaleId:
+    m_Code: es
+  m_SharedData: {fileID: 11400000, guid: a66adb36b0ed02149bebeba62eaae47c, type: 2}
+  m_Metadata:
+    m_Items: []
+  m_TableData:
+  - m_Id: 33926189056
+    m_Localized: CREAR SALA
+    m_Metadata:
+      m_Items: []
+  - m_Id: 472847519744
+    m_Localized: Unirse a una sala
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734878273536
+    m_Localized: Regresar
+    m_Metadata:
+      m_Items: []
+  - m_Id: 850464903168
+    m_Localized: "\xBFC\xF3mo te llamar\xE1n las leyendas?"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1212940849152
+    m_Localized: Confirmar
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3551869589295104
+    m_Localized: Las historias toman forma...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1493325877248
+    m_Localized: Salir del juego
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3550762116878336
+    m_Localized: Salas disponibles
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3550915636793344
+    m_Localized: Unirse
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3551118745964544
+    m_Localized: Configuraciones
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3551226359222272
+    m_Localized: "M\xFAsica ambiente"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3551577699291136
+    m_Localized: Idioma
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3551979467476992
+    m_Localized: "El anfitri\xF3n abandon\xF3 la partida. Regresando al men\xFA principal..."
+    m_Metadata:
+      m_Items: []
+  references:
+    version: 2
+    RefIds: []
