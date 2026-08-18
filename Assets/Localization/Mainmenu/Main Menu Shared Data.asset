@@ -16,31 +16,55 @@ MonoBehaviour:
   m_TableCollectionNameGuidString: a66adb36b0ed02149bebeba62eaae47c
   m_Entries:
   - m_Id: 33926189056
-    m_Key: Btn_crearSala
+    m_Key: btn_create_game
     m_Metadata:
       m_Items: []
   - m_Id: 472847519744
-    m_Key: Btn_unirse
+    m_Key: btn_join_room
     m_Metadata:
       m_Items: []
   - m_Id: 734878273536
-    m_Key: btn_atras
+    m_Key: btn_back
     m_Metadata:
       m_Items: []
   - m_Id: 850464903168
-    m_Key: text_name
+    m_Key: lbl_player_name
     m_Metadata:
       m_Items: []
   - m_Id: 1212940849152
-    m_Key: Btn_Confirmar
-    m_Metadata:
-      m_Items: []
-  - m_Id: 1374664822784
-    m_Key: text_confi
+    m_Key: btn_confirm
     m_Metadata:
       m_Items: []
   - m_Id: 1493325877248
-    m_Key: btn_salirjuego
+    m_Key: btn_exit_game
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3550762116878336
+    m_Key: title_available_rooms
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3550915636793344
+    m_Key: btn_join
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3551118745964544
+    m_Key: title_settings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3551226359222272
+    m_Key: setting_ambient_music
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3551577699291136
+    m_Key: setting_language
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3551869589295104
+    m_Key: lbl_carga
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3551979467476992
+    m_Key: msg_host_left
     m_Metadata:
       m_Items: []
   m_Metadata:

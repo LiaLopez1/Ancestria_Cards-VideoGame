@@ -19,11 +19,11 @@ MonoBehaviour:
     m_Items: []
   m_TableData:
   - m_Id: 33926189056
-    m_Localized: CREATE A ROOM
+    m_Localized: Create Room
     m_Metadata:
       m_Items: []
   - m_Id: 472847519744
-    m_Localized: Join the room
+    m_Localized: Join a Room
     m_Metadata:
       m_Items: []
   - m_Id: 734878273536
@@ -38,12 +38,36 @@ MonoBehaviour:
     m_Localized: Confirm
     m_Metadata:
       m_Items: []
-  - m_Id: 1374664822784
-    m_Localized: Options
+  - m_Id: 3551869589295104
+    m_Localized: The stories take shape...
     m_Metadata:
       m_Items: []
   - m_Id: 1493325877248
-    m_Localized: Exit the game
+    m_Localized: Exit Game
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3550762116878336
+    m_Localized: Available Rooms
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3550915636793344
+    m_Localized: Join
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3551118745964544
+    m_Localized: Settings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3551226359222272
+    m_Localized: Ambient Music
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3551577699291136
+    m_Localized: Language
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3551979467476992
+    m_Localized: The host has left the game. Returning to the main menu...
     m_Metadata:
       m_Items: []
   references:

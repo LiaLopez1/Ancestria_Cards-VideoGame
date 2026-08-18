@@ -29,7 +29,18 @@ public class LanguagePillToggle : MonoBehaviour
     private void Start()
     {
         toggleButton.onClick.AddListener(ToggleLanguage);
-        StartCoroutine(InitializeLanguage());
+        SyncToggleVisual();
+    }
+
+    private void SyncToggleVisual()
+    {
+        string currentCode = LocalizationSettings.SelectedLocale.Identifier.Code;
+        isEnglish = currentCode == "en";
+
+        targetPos = new Vector2(isEnglish ? rightPosX : leftPosX, slider.anchoredPosition.y);
+        slider.anchoredPosition = targetPos;
+
+        UpdateTextStyle();
     }
 
     private void Update()
@@ -42,7 +53,8 @@ public class LanguagePillToggle : MonoBehaviour
         // Espera a que el sistema de Localization esté listo
         yield return LocalizationSettings.InitializationOperation;
 
-        string savedCode = PlayerPrefs.GetString(PREF_KEY, "en");
+        // Si nunca ha jugado antes (no hay nada guardado), usa "es" por defecto
+        string savedCode = PlayerPrefs.GetString(PREF_KEY, "es");
         var locale = LocalizationSettings.AvailableLocales.GetLocale(savedCode);
 
         if (locale != null)

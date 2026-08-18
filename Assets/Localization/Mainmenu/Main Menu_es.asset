@@ -23,11 +23,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 472847519744
-    m_Localized: Unirse a sala
+    m_Localized: Unirse a una sala
     m_Metadata:
       m_Items: []
   - m_Id: 734878273536
-    m_Localized: "Atr\xE1s"
+    m_Localized: Regresar
     m_Metadata:
       m_Items: []
   - m_Id: 850464903168
@@ -38,12 +38,36 @@ MonoBehaviour:
     m_Localized: Confirmar
     m_Metadata:
       m_Items: []
-  - m_Id: 1374664822784
-    m_Localized: Configuraciones
+  - m_Id: 3551869589295104
+    m_Localized: Las historias toman forma...
     m_Metadata:
       m_Items: []
   - m_Id: 1493325877248
     m_Localized: Salir del juego
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3550762116878336
+    m_Localized: Salas disponibles
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3550915636793344
+    m_Localized: Unirse
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3551118745964544
+    m_Localized: Configuraciones
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3551226359222272
+    m_Localized: "M\xFAsica ambiente"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3551577699291136
+    m_Localized: Idioma
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3551979467476992
+    m_Localized: "El anfitri\xF3n abandon\xF3 la partida. Regresando al men\xFA principal..."
     m_Metadata:
       m_Items: []
   references:
