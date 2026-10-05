@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// Los 5 desenlaces posibles:
@@ -32,6 +33,11 @@ public enum ResultadoPartida
 /// SuspicionManager avisa aparte (DeclararDerrotaPorSospecha) - eso SIEMPRE
 /// termina la partida entera, sin importar en que ronda vamos.
 /// Autoridad de servidor: solo el servidor decide, sincronizado a todos.
+///
+/// PROGRESION DE JEFES: al ganar la partida (VictoriaJugadores), si quedan
+/// jefes por vencer, el host ve el boton "Siguiente jefe" (que llama a
+/// BossProgressionManager.SiguienteJefe). Los invitados ven "Esperando al
+/// anfitrion...". Si ya no quedan jefes, solo queda "Volver al menu".
 /// </summary>
 public class GameManager : NetworkBehaviour
 {
@@ -44,6 +50,17 @@ public class GameManager : NetworkBehaviour
     [SerializeField] private GameObject panelVictoria;
     [SerializeField] private GameObject panelDerrotaPorBoss;
     [SerializeField] private GameObject panelDerrotaPorSospecha;
+
+    [Header("Panel de victoria: progresion de jefes")]
+    [Tooltip("Solo lo ve el host, y solo si quedan jefes por vencer.")]
+    [SerializeField] private GameObject botonSiguienteJefe;
+    [Tooltip("Lo ven los invitados mientras el host decide, si quedan jefes.")]
+    [SerializeField] private GameObject textoEsperandoHost;
+    [Tooltip("Se muestra cuando se vencio al ultimo jefe (opcional).")]
+    [SerializeField] private GameObject textoRunCompletada;
+
+    [Tooltip("Panel de victoria FINAL: se vencio al ultimo jefe. Solo lleva 'Volver al menu'.")]
+    [SerializeField] private GameObject panelVictoriaFinal;
 
     [Header("Panel de RONDA ganada (compartido - jugador o boss, con el nombre correspondiente)")]
     [SerializeField] private GameObject panelRondaGanada;
@@ -65,6 +82,11 @@ public class GameManager : NetworkBehaviour
     // Solo tiene sentido cuando resultado == VictoriaJugadores/RondaGanadaJugador -
     // que slot ganó, para poder mostrar su nombre en el panel.
     private readonly NetworkVariable<int> slotGanador = new NetworkVariable<int>(-1);
+
+    // Lo escribe el servidor ANTES de declarar la victoria, para que los
+    // invitados sepan si quedan mas jefes (ellos no tienen el orden de jefes,
+    // solo existe en el BossProgressionManager del host).
+    private readonly NetworkVariable<bool> hayMasJefes = new NetworkVariable<bool>(false);
 
     // Arranca en 1 (no en 0) - "ronda 1 de 3" desde el principio.
     private readonly NetworkVariable<int> rondaActual = new NetworkVariable<int>(1);
@@ -120,6 +142,10 @@ public class GameManager : NetworkBehaviour
         // desfase de red). Sin esto, a veces se leia el valor viejo de una
         // ronda anterior, mostrando el nombre equivocado.
         slotGanador.OnValueChanged += (anterior, nuevo) => ActualizarPaneles(resultado.Value);
+
+        // Igual que slotGanador: si hayMasJefes llega despues que resultado
+        // en un cliente invitado, el panel de victoria se vuelve a pintar bien.
+        hayMasJefes.OnValueChanged += (anterior, nuevo) => ActualizarPaneles(resultado.Value);
 
         resultadosPorRonda.OnListChanged += (cambio) =>
         {
@@ -304,6 +330,11 @@ public class GameManager : NetworkBehaviour
 
         if (rondasGanadasJugadores.Value >= rondasParaGanarLaPartida)
         {
+            // IMPORTANTE: se escribe ANTES que resultado, asi llega primero
+            // a los invitados y el panel de victoria ya sabe que botones mostrar.
+            hayMasJefes.Value = BossProgressionManager.Instance != null
+                && BossProgressionManager.Instance.HayMasJefes;
+
             resultado.Value = ResultadoPartida.VictoriaJugadores;
         }
         else
@@ -327,6 +358,68 @@ public class GameManager : NetworkBehaviour
         Debug.Log("[Servidor] Derrota: la barra de sospecha llegó al máximo.");
     }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    // ---------- ATAJO DE PRUEBAS ----------
+    // Solo existe en el Editor y en builds de desarrollo: en una build final
+    // este bloque ni se compila, asi que no hay trampa posible para jugadores.
+    [Header("Atajo de pruebas (solo Editor / Development Build)")]
+    [SerializeField] private bool permitirAtajoGanarRonda = true;
+
+    private void Update()
+    {
+        if (!permitirAtajoGanarRonda || !IsSpawned || !IsServer || PartidaTerminada)
+        {
+            return;
+        }
+
+        if (TeclaWPresionada())
+        {
+            // Gana la ronda el slot del host (en offline, el unico jugador).
+            int slot = PlayerCube.MiSlot >= 0 ? PlayerCube.MiSlot : 0;
+            Debug.Log("[DEBUG GameManager] Tecla W: ganando la ronda automaticamente.");
+            DeclararVictoriaJugador(slot);
+        }
+    }
+
+    private bool TeclaWPresionada()
+    {
+#if ENABLE_INPUT_SYSTEM
+        return UnityEngine.InputSystem.Keyboard.current != null
+            && UnityEngine.InputSystem.Keyboard.current.wKey.wasPressedThisFrame;
+#else
+        return Input.GetKeyDown(KeyCode.W);
+#endif
+    }
+#endif
+
+    /// <summary>
+    /// Boton "Siguiente jefe" del panel de victoria (enlazalo en el OnClick
+    /// del boton). Solo el host lo ve y solo el servidor puede cargar la
+    /// siguiente escena - BossProgressionManager hace el cambio de escena
+    /// y recoloca a los jugadores.
+    /// </summary>
+    public void OnSiguienteJefePressed()
+    {
+        if (!IsServer)
+        {
+            return;
+        }
+
+        if (botonSiguienteJefe != null)
+        {
+            var boton = botonSiguienteJefe.GetComponent<Button>();
+            if (boton != null) boton.interactable = false; // evita doble clic
+        }
+
+        if (BossProgressionManager.Instance == null)
+        {
+            Debug.LogError("[GameManager] No existe BossProgressionManager. Ponlo en la escena del menu (con DontDestroyOnLoad).");
+            return;
+        }
+
+        BossProgressionManager.Instance.SiguienteJefe();
+    }
+
     /// <summary>
     /// Puramente local (no toca la NetworkVariable de resultado) - lo llama
     /// GameRestartManager cuando ESTE cliente aprieta "Volver a jugar"
@@ -341,6 +434,7 @@ public class GameManager : NetworkBehaviour
         if (panelDerrotaPorBoss != null) panelDerrotaPorBoss.SetActive(false);
         if (panelDerrotaPorSospecha != null) panelDerrotaPorSospecha.SetActive(false);
         if (panelRondaGanada != null) panelRondaGanada.SetActive(false);
+        if (panelVictoriaFinal != null) panelVictoriaFinal.SetActive(false);
     }
 
     private void ActualizarPaneles(ResultadoPartida nuevoResultado)
@@ -350,9 +444,19 @@ public class GameManager : NetworkBehaviour
         AvisarSiFalta(panelDerrotaPorSospecha, nameof(panelDerrotaPorSospecha));
         AvisarSiFalta(panelRondaGanada, nameof(panelRondaGanada));
 
-        if (panelVictoria != null) panelVictoria.SetActive(nuevoResultado == ResultadoPartida.VictoriaJugadores);
+        bool esVictoria = nuevoResultado == ResultadoPartida.VictoriaJugadores;
+
+        if (panelVictoria != null) panelVictoria.SetActive(esVictoria && hayMasJefes.Value);
+        if (panelVictoriaFinal != null) panelVictoriaFinal.SetActive(esVictoria && !hayMasJefes.Value);
         if (panelDerrotaPorBoss != null) panelDerrotaPorBoss.SetActive(nuevoResultado == ResultadoPartida.DerrotaPorBoss);
         if (panelDerrotaPorSospecha != null) panelDerrotaPorSospecha.SetActive(nuevoResultado == ResultadoPartida.DerrotaPorSospecha);
+
+        // Progresion de jefes (dentro del panel de victoria):
+        // - host + quedan jefes   -> boton "Siguiente jefe"
+        // - invitado + quedan     -> "Esperando al anfitrion..."
+        // - ya no quedan jefes    -> "¡Venciste a todos los jefes!" (solo queda Volver al menu)
+        if (botonSiguienteJefe != null) botonSiguienteJefe.SetActive(esVictoria && hayMasJefes.Value && IsServer);
+        if (textoEsperandoHost != null) textoEsperandoHost.SetActive(esVictoria && hayMasJefes.Value && !IsServer);
 
         bool esRondaGanada = nuevoResultado == ResultadoPartida.RondaGanadaJugador
             || nuevoResultado == ResultadoPartida.RondaGanadaBoss;
@@ -376,7 +480,7 @@ public class GameManager : NetworkBehaviour
             textoRondaGanada.text = $"¡{nombre} ganó la ronda {rondaActual.Value}!";
         }
 
-        if (nuevoResultado == ResultadoPartida.VictoriaJugadores && textoNombreGanador != null)
+        if (esVictoria && textoNombreGanador != null)
         {
             string nombre = ObtenerNombrePorSlot(slotGanador.Value);
             textoNombreGanador.text = $"¡{nombre} ganó!";

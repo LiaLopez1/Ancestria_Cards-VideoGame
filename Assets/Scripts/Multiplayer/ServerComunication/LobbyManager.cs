@@ -163,7 +163,14 @@ public class LobbyManager : MonoBehaviour
         SetEstadoCrearSala("Iniciando partida sin conexión...", 1f);
 
         // Mismo metodo que el flujo online: el host carga la escena por Netcode.
-        LoadingScreenManager.Instance.LoadNetworkScene(gameSceneName);
+        string escenaInicial = BossProgressionManager.Instance.IniciarNuevaRun();
+        if (string.IsNullOrEmpty(escenaInicial))
+        {
+            // en CrearSalaOffline: reutiliza tu bloque de error (HideLoadingOnError + onError)
+            // en OnCreateLobbySuccess: igual, y apaga Netcode con Shutdown()
+            return;
+        }
+        LoadingScreenManager.Instance.LoadNetworkScene(escenaInicial);
     }
 
     /// <summary>
@@ -371,7 +378,14 @@ public class LobbyManager : MonoBehaviour
         // El host ya esta conectado por Netcode (arrancado dentro de
         // IniciarHostYObtenerJoinCode). Es el host quien controla la carga de
         // escena para que se sincronice automaticamente con quien se una despues.
-        LoadingScreenManager.Instance.LoadNetworkScene(gameSceneName);
+       string escenaInicial = BossProgressionManager.Instance.IniciarNuevaRun();
+        if (string.IsNullOrEmpty(escenaInicial))
+        {
+            // en CrearSalaOffline: reutiliza tu bloque de error (HideLoadingOnError + onError)
+            // en OnCreateLobbySuccess: igual, y apaga Netcode con Shutdown()
+            return;
+        }
+        LoadingScreenManager.Instance.LoadNetworkScene(escenaInicial);
     }
 
     public void BuscarSalas()

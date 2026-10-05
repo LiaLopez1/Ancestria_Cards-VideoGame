@@ -70,6 +70,10 @@ MonoBehaviour:
     m_Localized: "El anfitri\xF3n abandon\xF3 la partida. Regresando al men\xFA principal..."
     m_Metadata:
       m_Items: []
+  - m_Id: 20915982587457536
+    m_Localized: "Modo sin Conexi\xF3n"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

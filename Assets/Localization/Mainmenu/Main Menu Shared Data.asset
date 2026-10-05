@@ -67,6 +67,10 @@ MonoBehaviour:
     m_Key: msg_host_left
     m_Metadata:
       m_Items: []
+  - m_Id: 20915982587457536
+    m_Key: btn_offline
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
