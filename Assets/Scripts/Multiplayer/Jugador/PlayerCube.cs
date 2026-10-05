@@ -82,7 +82,8 @@ public class PlayerCube : NetworkBehaviour
         {
             // Cada cliente solo conoce su propio nick (PlayFab es local a cada
             // maquina) - lo publicamos para que los demas lo puedan leer.
-            nickJugador.Value = PlayFabAuthManager.Instance.DisplayName;
+            string nick = PlayFabAuthManager.Instance?.DisplayName;
+            nickJugador.Value = string.IsNullOrEmpty(nick) ? "Jugador" : nick;
         }
 
         if (IsServer)

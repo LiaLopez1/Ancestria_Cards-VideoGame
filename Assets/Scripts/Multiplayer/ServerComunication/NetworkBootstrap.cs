@@ -32,6 +32,10 @@ public class NetworkBootstrap : MonoBehaviour
     [Header("Escena a la que volver si se pierde la conexion")]
     [SerializeField] private string escenaMenuInicial = "Menu";
 
+    [Header("Modo offline (host local, sin Relay)")]
+    [SerializeField] private string direccionLocal = "127.0.0.1";
+    [SerializeField] private ushort puertoLocal = 7777;
+
     // Mensaje que StartupFlowUI debe mostrar apenas recargue la escena de menu
     // (por ejemplo, "El dueno de la sala se desconecto"). Estatico porque la
     // instancia de StartupFlowUI se recrea de cero al recargar la escena.
@@ -129,6 +133,20 @@ public class NetworkBootstrap : MonoBehaviour
     }
 
     /// <summary>
+    /// Reinicia los slots: cada sesion de hosting es nueva, sin importar
+    /// cuantas veces se haya hosteado antes en este mismo proceso.
+    /// </summary>
+    private void ReiniciarSlots()
+    {
+        slotsAsignados.Clear();
+        slotsLibres.Clear();
+        for (int i = 0; i < TotalSlots; i++)
+        {
+            slotsLibres.Add(i);
+        }
+    }
+
+    /// <summary>
     /// Para el host: crea la asignacion de Relay, configura el transporte,
     /// arranca Netcode como host, y devuelve el join code para guardarlo
     /// en el LobbyData de PlayFab (asi los invitados lo pueden leer).
@@ -138,15 +156,7 @@ public class NetworkBootstrap : MonoBehaviour
         await AsegurarServiciosInicializados();
 
         SalidaVoluntaria = false;
-
-        // Reinicia los slots: esta es una sesion de hosting nueva, sin importar
-        // cuantas veces se haya hosteado antes en este mismo proceso.
-        slotsAsignados.Clear();
-        slotsLibres.Clear();
-        for (int i = 0; i < TotalSlots; i++)
-        {
-            slotsLibres.Add(i);
-        }
+        ReiniciarSlots();
 
         Allocation allocation = await RelayService.Instance.CreateAllocationAsync(MaxJugadoresInvitados);
 
@@ -158,6 +168,23 @@ public class NetworkBootstrap : MonoBehaviour
         networkManager.StartHost();
 
         return joinCode;
+    }
+
+    /// <summary>
+    /// MODO OFFLINE: arranca un host local directo, SIN Relay ni servicios de
+    /// Unity (no necesita internet). Solo escucha en la direccion local, asi
+    /// que nadie mas puede conectarse. SetConnectionData tambien cambia el
+    /// transporte a conexion directa, aunque antes se haya usado Relay.
+    /// </summary>
+    public bool IniciarHostOffline()
+    {
+        SalidaVoluntaria = false;
+        ReiniciarSlots();
+
+        var transport = networkManager.GetComponent<UnityTransport>();
+        transport.SetConnectionData(direccionLocal, puertoLocal);
+
+        return networkManager.StartHost();
     }
 
     /// <summary>

@@ -130,9 +130,40 @@ public class LobbyManager : MonoBehaviour
         // 1. Tapar la pantalla PRIMERO, antes de tocar PlayFab o Netcode
         yield return LoadingScreenManager.Instance.ShowLoading();
 
+        // MODO OFFLINE: host local, sin PlayFab ni Relay.
+        if (authManager.ModoOffline)
+        {
+            CrearSalaOffline(onError);
+            yield break;
+        }
+
         // 2. Ya tapado, arranca tu flujo normal sin cambios
         SetEstadoCrearSala("Creando sala...", 0.1f);
         LimpiarMisSalasAnteriores(() => CrearSalaInterno(onError));
+    }
+
+    /// <summary>
+    /// Modo offline: arranca un host local directo (sin Relay, sin lobby de
+    /// PlayFab) y carga la escena de juego. Funciona sin internet.
+    /// </summary>
+    private void CrearSalaOffline(System.Action onError)
+    {
+        SetEstadoCrearSala("Iniciando partida sin conexión...", 0.5f);
+
+        if (!networkBootstrap.IniciarHostOffline())
+        {
+            Debug.LogError("[Lobby] No se pudo iniciar el host offline.");
+            SetEstadoCrearSala("Error al iniciar la partida.");
+            OcultarProgresoCrearSala();
+            LoadingScreenManager.Instance.HideLoadingOnError();
+            onError?.Invoke();
+            return;
+        }
+
+        SetEstadoCrearSala("Iniciando partida sin conexión...", 1f);
+
+        // Mismo metodo que el flujo online: el host carga la escena por Netcode.
+        LoadingScreenManager.Instance.LoadNetworkScene(gameSceneName);
     }
 
     /// <summary>
@@ -345,6 +376,12 @@ public class LobbyManager : MonoBehaviour
 
     public void BuscarSalas()
     {
+        if (authManager.ModoOffline)
+        {
+            SetEstadoUnirse("Sin conexión: no hay salas disponibles.");
+            return;
+        }
+
         SetEstadoUnirse("Preparando búsqueda...");
         LimpiarMisSalasAnteriores(IniciarBusquedaPeriodica);
     }

@@ -8,6 +8,10 @@ using UnityEngine;
 /// Maneja el login del jugador contra PlayFab.
 /// Para el prototipo usamos LoginWithCustomID con el DeviceUniqueIdentifier,
 /// asi no pedimos usuario/contrasena todavia (eso lo agregamos despues).
+///
+/// MODO OFFLINE: el jugador lo elige a mano (boton "Modo offline" en
+/// StartupFlowUI). No se activa solo: asi un fallo puntual de red nunca
+/// deja a un jugador online atrapado en offline sin saberlo.
 /// </summary>
 public class PlayFabAuthManager : MonoBehaviour
 {
@@ -26,7 +30,19 @@ public class PlayFabAuthManager : MonoBehaviour
     /// </summary>
     public bool TutorialCompletado { get; private set; }
 
+    /// <summary>true cuando el jugador eligio jugar 100% local (sin PlayFab ni Relay).</summary>
+    public bool ModoOffline { get; private set; }
+
+    /// <summary>
+    /// true si el ultimo intento de login fallo por falta de conexion
+    /// (no por otro tipo de error, como cuenta bloqueada o titulo mal configurado).
+    /// </summary>
+    public bool ErrorDeConexion { get; private set; }
+
     private const string TutorialCompletadoKey = "TutorialCompletado";
+
+    // Copia local del estado del tutorial, para poder usarlo sin conexion.
+    private const string TutorialLocalKey = "TutorialCompletadoLocal";
 
     public bool HasDisplayName => !string.IsNullOrEmpty(DisplayName);
 
@@ -49,8 +65,24 @@ public class PlayFabAuthManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    public void Login()
+    /// <summary>
+    /// ignorarChequeoDeRed = true: intenta el login de verdad aunque el
+    /// dispositivo diga que no hay red (Application.internetReachability
+    /// puede dar falsos "sin conexion" con VPN o portales cautivos).
+    /// </summary>
+    public void Login(bool ignorarChequeoDeRed = false)
     {
+        ModoOffline = false;
+        ErrorDeConexion = false;
+
+        if (!ignorarChequeoDeRed && Application.internetReachability == NetworkReachability.NotReachable)
+        {
+            ErrorDeConexion = true;
+            Debug.LogWarning("[PlayFab] El dispositivo reporta que no hay conexion a internet.");
+            OnLoginFailed?.Invoke("Sin conexión a internet.");
+            return;
+        }
+
         string customId = SystemInfo.deviceUniqueIdentifier;
 
         var request = new LoginWithCustomIDRequest
@@ -66,8 +98,40 @@ public class PlayFabAuthManager : MonoBehaviour
         PlayFabClientAPI.LoginWithCustomID(request, OnLoginResult, OnLoginError);
     }
 
+    /// <summary>
+    /// Activa el modo 100% local. Lo llama StartupFlowUI cuando el jugador
+    /// aprieta "Modo offline". No toca la red para nada.
+    /// </summary>
+    public void IniciarModoOffline()
+    {
+        ModoOffline = true;
+        ErrorDeConexion = false;
+        PlayFabId = "offline";
+        EntityId = null;
+        EntityType = null;
+        TutorialCompletado = PlayerPrefs.GetInt(TutorialLocalKey, 0) == 1;
+
+        Debug.Log("[PlayFab] Modo OFFLINE activado por el jugador.");
+        OnLoginSuccess?.Invoke();
+    }
+
+    /// <summary>
+    /// Limpia el estado de sesion para poder reintentar el login desde cero
+    /// (por ejemplo, desde el boton "Reintentar").
+    /// </summary>
+    public void ReiniciarSesion()
+    {
+        ModoOffline = false;
+        ErrorDeConexion = false;
+        PlayFabId = null;
+    }
+
     private void OnLoginResult(LoginResult result)
     {
+        // El jugador eligio offline mientras el login seguia en curso:
+        // la respuesta tardia no debe pisar ese modo.
+        if (ModoOffline) return;
+
         PlayFabId = result.PlayFabId;
         DisplayName = result.InfoResultPayload?.PlayerProfile?.DisplayName;
         EntityId = result.EntityToken?.Entity?.Id;
@@ -88,9 +152,15 @@ public class PlayFabAuthManager : MonoBehaviour
         PlayFabClientAPI.GetUserData(request,
             result =>
             {
+                if (ModoOffline) return;
+
                 TutorialCompletado = result.Data != null
                     && result.Data.TryGetValue(TutorialCompletadoKey, out UserDataRecord registro)
                     && registro.Value == "true";
+
+                // Guardamos una copia local para poder usarla sin conexion.
+                PlayerPrefs.SetInt(TutorialLocalKey, TutorialCompletado ? 1 : 0);
+                PlayerPrefs.Save();
 
                 Debug.Log($"[PlayFab] Estado del tutorial: {(TutorialCompletado ? "ya completado" : "todavía no")}.");
 
@@ -98,12 +168,18 @@ public class PlayFabAuthManager : MonoBehaviour
             },
             error =>
             {
+                if (ModoOffline) return;
+
                 Debug.LogError($"[PlayFab] Error al consultar el estado del tutorial: {error.GenerateErrorReport()}");
 
-                // Si no podemos saberlo, asumimos que YA lo completo - mejor
-                // eso que bloquear a un jugador existente por un error de red
+                // Si no podemos saberlo por PlayFab, usamos la copia local. Si
+                // tampoco hay copia, asumimos que YA lo completo - mejor eso
+                // que bloquear a un jugador existente por un error de red
                 // puntual al consultar este dato.
-                TutorialCompletado = true;
+                TutorialCompletado = PlayerPrefs.HasKey(TutorialLocalKey)
+                    ? PlayerPrefs.GetInt(TutorialLocalKey) == 1
+                    : true;
+
                 OnLoginSuccess?.Invoke();
             }
         );
@@ -111,7 +187,12 @@ public class PlayFabAuthManager : MonoBehaviour
 
     private void OnLoginError(PlayFabError error)
     {
+        // El jugador ya eligio offline mientras esperaba: ignoramos el error.
+        if (ModoOffline) return;
+
         Debug.LogError($"[PlayFab] Error de login: {error.GenerateErrorReport()}");
+
+        ErrorDeConexion = error.Error == PlayFabErrorCode.ConnectionError;
         OnLoginFailed?.Invoke(error.ErrorMessage);
     }
 
@@ -135,10 +216,20 @@ public class PlayFabAuthManager : MonoBehaviour
     /// Llamar cuando el jugador termina el tutorial - guarda el progreso en
     /// PlayFab (UserData, no exige unicidad, a diferencia del nick viejo)
     /// para que la proxima vez que este mismo PC/cuenta inicie sesion, ya
-    /// no se le vuelva a pedir el tutorial.
+    /// no se le vuelva a pedir el tutorial. Tambien se guarda una copia local.
     /// </summary>
     public void MarcarTutorialCompletado()
     {
+        PlayerPrefs.SetInt(TutorialLocalKey, 1);
+        PlayerPrefs.Save();
+
+        if (ModoOffline)
+        {
+            TutorialCompletado = true;
+            OnTutorialCompletadoConfirmado?.Invoke();
+            return;
+        }
+
         var request = new UpdateUserDataRequest
         {
             Data = new Dictionary<string, string> { { TutorialCompletadoKey, "true" } }
@@ -164,6 +255,16 @@ public class PlayFabAuthManager : MonoBehaviour
     /// </summary>
     public void ResetearTutorialCompletado()
     {
+        PlayerPrefs.DeleteKey(TutorialLocalKey);
+        PlayerPrefs.Save();
+
+        if (ModoOffline)
+        {
+            TutorialCompletado = false;
+            Debug.Log("[PlayFab] Tutorial reseteado en local (modo offline).");
+            return;
+        }
+
         var request = new UpdateUserDataRequest
         {
             KeysToRemove = new List<string> { TutorialCompletadoKey }

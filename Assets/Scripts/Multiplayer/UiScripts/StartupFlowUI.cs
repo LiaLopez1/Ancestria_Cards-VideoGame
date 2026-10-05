@@ -8,20 +8,27 @@ using UnityEngine.UI;
 /// menu (ya no espera a que aprieten un boton) porque hace falta saber si
 /// el tutorial esta completo ANTES de habilitar los botones correctos.
 ///
-/// 1) CREAR SALA (host): boton "Crear sala" ->
+/// Hay 3 botones en la pantalla de inicio:
+///
+/// 1) CREAR SALA (host, online): boton "Crear sala" ->
 ///    - si el tutorial NO esta completo: carga la escena del tutorial
 ///      directo (sin nick, sin sala real - es practica en solitario).
 ///    - si ya esta completo: pedir nick (siempre, es "oneshot") ->
 ///      LobbyManager crea la sala -> entra directo al GameScene, donde
 ///      espera a que otros se unan.
 ///
-/// 2) UNIRSE (guest): solo habilitado si el tutorial ya esta completo.
+/// 2) UNIRSE (guest, online): solo habilitado si el tutorial ya esta completo.
 ///    boton "Unirse" -> pedir nick (siempre) -> se muestra la lista de
 ///    salas disponibles -> al elegir una, LobbyManager se une -> entra
 ///    al GameScene.
 ///
-/// Este script necesita una referencia directa a un PlayFabAuthManager y a un
-/// LobbyManager (arrastralas en el Inspector).
+/// 3) MODO OFFLINE (100% local): no usa PlayFab ni Relay. Pide nick ->
+///    LobbyManager arranca un host local -> entra al GameScene en solitario.
+///    Siempre esta disponible, incluso si el login online falla.
+///
+/// Si se detecta que no hay conexion, "Crear sala" y "Unirse" se desactivan
+/// y se avisa en el texto de estado. El jugador puede usar "Modo offline" o
+/// "Reintentar" (este ultimo es opcional).
 /// </summary>
 public class StartupFlowUI : MonoBehaviour
 {
@@ -39,6 +46,9 @@ public class StartupFlowUI : MonoBehaviour
     [SerializeField] private GameObject panelInicio;
     [SerializeField] private Button crearSalaButton;
     [SerializeField] private Button unirseButton;
+    [SerializeField] private Button jugarOfflineButton;
+    [Tooltip("Opcional. Aparece solo cuando no hay conexion, para volver a intentar el login online.")]
+    [SerializeField] private Button reintentarButton;
     [SerializeField] private TMP_Text estadoInicioText;
 
     [Header("Panel: nickname")]
@@ -66,9 +76,11 @@ public class StartupFlowUI : MonoBehaviour
 
     private const int MinNickLength = 3;
     private const int MaxNickLength = 16;
+    private const string TextoSinConexion = "No hay conexión para jugar en línea.";
 
     // Recuerda que boton se presiono originalmente (Crear sala o Unirse),
     // para saber que hacer una vez el nick quede confirmado.
+    // En modo offline siempre es true (se comporta como host local).
     private bool intentaSerHost;
 
     // true una vez que el login (con el estado del tutorial ya conocido)
@@ -85,6 +97,7 @@ public class StartupFlowUI : MonoBehaviour
 
         if (nicknameErrorText != null) nicknameErrorText.gameObject.SetActive(false);
         if (panelAvisoDesconexion != null) panelAvisoDesconexion.SetActive(false);
+        if (reintentarButton != null) reintentarButton.gameObject.SetActive(false);
 
         lobbyManager.RegistrarReferenciasUI(
             listaSalasContent, filaSalaPrefab,
@@ -105,7 +118,8 @@ public class StartupFlowUI : MonoBehaviour
         if (!string.IsNullOrEmpty(authManager.PlayFabId))
         {
             // Ya nos habiamos logueado antes en esta misma sesion (por
-            // ejemplo, al volver del tutorial) - no hace falta repetirlo.
+            // ejemplo, al volver del tutorial o de una partida offline) -
+            // no hace falta repetirlo.
             HandleLoginSuccess();
         }
         else
@@ -140,6 +154,8 @@ public class StartupFlowUI : MonoBehaviour
 
     public void OnCrearSalaButtonPressed()
     {
+        if (authManager.ModoOffline) return;
+
         intentaSerHost = true;
 
         if (!sesionIniciada)
@@ -162,6 +178,8 @@ public class StartupFlowUI : MonoBehaviour
 
     public void OnUnirseButtonPressed()
     {
+        if (authManager.ModoOffline) return;
+
         intentaSerHost = false;
 
         if (!sesionIniciada)
@@ -173,39 +191,104 @@ public class StartupFlowUI : MonoBehaviour
         ShowOnly(panelNickname);
     }
 
-    private void IniciarLoginInicial()
+    /// <summary>
+    /// Boton "Modo offline": juego 100% local, sin PlayFab ni Relay.
+    /// Activa el modo offline en el AuthManager (eso dispara
+    /// HandleLoginSuccess) y sigue el flujo normal: nick -> CrearSala
+    /// (que en modo offline arranca el host local) -> juego.
+    /// </summary>
+    public void OnJugarOfflinePressed()
+    {
+        authManager.IniciarModoOffline();
+        intentaSerHost = true;
+        ShowOnly(panelNickname);
+    }
+
+    /// <summary>
+    /// Boton "Reintentar" (opcional): borra el estado de sesion y fuerza un
+    /// intento real de login, ignorando el chequeo de red del dispositivo.
+    /// </summary>
+    public void OnReintentarPressed()
+    {
+        sesionIniciada = false;
+        authManager.ReiniciarSesion();
+        IniciarLoginInicial(forzar: true);
+    }
+
+    private void IniciarLoginInicial(bool forzar = false)
     {
         crearSalaButton.interactable = false;
         unirseButton.interactable = false;
+        if (reintentarButton != null) reintentarButton.gameObject.SetActive(false);
         SetEstadoInicio("Conectando...");
-        authManager.Login();
+        authManager.Login(forzar);
     }
 
     private void HandleLoginSuccess()
     {
         sesionIniciada = true;
         ActualizarBotonesInicio();
-        SetEstadoInicio(string.Empty);
+        SetEstadoInicio(TextoEstadoConexion());
     }
 
     /// <summary>
-    /// "Crear sala" siempre esta disponible una vez logueado (si el tutorial
-    /// no esta completo, igual lo lleva ahi - ver OnCrearSalaButtonPressed).
-    /// "Unirse" queda deshabilitado hasta completar el tutorial: un jugador
-    /// nuevo no deberia poder entrar a la sala de otro todavia.
+    /// "Crear sala" siempre esta disponible una vez logueado online (si el
+    /// tutorial no esta completo, igual lo lleva ahi - ver
+    /// OnCrearSalaButtonPressed). "Unirse" queda deshabilitado hasta completar
+    /// el tutorial: un jugador nuevo no deberia poder entrar a la sala de
+    /// otro todavia. En modo offline ambos quedan deshabilitados.
     /// </summary>
     private void ActualizarBotonesInicio()
     {
-        crearSalaButton.interactable = sesionIniciada;
-        unirseButton.interactable = sesionIniciada && authManager.TutorialCompletado;
+        bool online = sesionIniciada && !authManager.ModoOffline;
+
+        crearSalaButton.interactable = online;
+        unirseButton.interactable = online && authManager.TutorialCompletado;
+
+        ActualizarBotonesExtra();
+    }
+
+    /// <summary>
+    /// El boton offline siempre esta disponible. "Reintentar" solo aparece
+    /// cuando no hay conexion (modo offline activo o login fallido por red).
+    /// </summary>
+    private void ActualizarBotonesExtra()
+    {
+        if (jugarOfflineButton != null) jugarOfflineButton.interactable = true;
+
+        if (reintentarButton != null)
+        {
+            reintentarButton.gameObject.SetActive(authManager.ModoOffline || authManager.ErrorDeConexion);
+        }
+    }
+
+    private string TextoEstadoConexion()
+    {
+        bool sinConexion = authManager.ModoOffline || (authManager.ErrorDeConexion && !sesionIniciada);
+        return sinConexion ? TextoSinConexion : string.Empty;
     }
 
     private void HandleLoginFailed(string error)
     {
-        crearSalaButton.interactable = true;
-        unirseButton.interactable = true;
-        SetEstadoInicio("No se pudo conectar. Intenta de nuevo.");
         Debug.LogWarning($"[StartupFlowUI] Login fallido: {error}");
+
+        if (authManager.ErrorDeConexion)
+        {
+            // Sin conexion: no tiene sentido dejar los botones online activos.
+            crearSalaButton.interactable = false;
+            unirseButton.interactable = false;
+            SetEstadoInicio(TextoSinConexion);
+        }
+        else
+        {
+            // Otro tipo de error (no es de red): se mantiene el comportamiento
+            // de siempre, el jugador puede volver a intentar con los botones.
+            crearSalaButton.interactable = true;
+            unirseButton.interactable = true;
+            SetEstadoInicio("No se pudo conectar. Intenta de nuevo.");
+        }
+
+        ActualizarBotonesExtra();
     }
 
     public void OnConfirmNicknamePressed()
@@ -228,6 +311,7 @@ public class StartupFlowUI : MonoBehaviour
         {
             // Host: se crea la sala y se entra directo al GameScene,
             // ahi mismo se espera a que se unan los demas jugadores.
+            // (En modo offline, LobbyManager arranca el host local.)
             lobbyManager.CrearSala(onError: () => confirmNicknameButton.interactable = true);
         }
         else
@@ -265,7 +349,7 @@ public class StartupFlowUI : MonoBehaviour
         if (nicknameErrorText != null) nicknameErrorText.gameObject.SetActive(false);
 
         ActualizarBotonesInicio();
-        SetEstadoInicio(string.Empty);
+        SetEstadoInicio(TextoEstadoConexion());
 
         ShowOnly(panelInicio);
     }
