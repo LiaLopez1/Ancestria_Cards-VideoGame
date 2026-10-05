@@ -139,16 +139,18 @@ public class TurnManager : NetworkBehaviour
     /// TurnManager no conoce a BossManager, solo avisa que "le toca a alguien
     /// que resulta ser el boss".
     /// </summary>
-    public event Action OnBossTurnStarted;
+   public event Action OnBossTurnStarted;
 
-        /// <summary>
-    /// A diferencia de OnBossTurnStarted (que SOLO se dispara en el
-    /// servidor), este se dispara en TODOS los clientes cada vez que cambia
-    /// el turno o el estado - lo usa BossManager para saber, del lado de
-    /// cualquier cliente, cuándo recalcular qué sprite mostrar (turno propio
-    /// vs. estado de atención).
+    /// <summary>
+    /// Se dispara SOLO en el servidor cuando el turno llega a un bot.
+    /// El int corresponde al slot del bot (1 o 2).
     /// </summary>
+    public event Action<int> OnBotTurnStarted;
+
     public event Action OnEstadoTurnoCambio;
+
+
+
 
     public override void OnNetworkSpawn()
 {
@@ -379,6 +381,10 @@ public class TurnManager : NetworkBehaviour
         if (EsTurnoDelBoss())
         {
             OnBossTurnStarted?.Invoke();
+        }
+        else if (NetworkBootstrap.ModoLocalConBots && BotIds.EsSlotDeBot(turnoActual.Value))
+        {
+            OnBotTurnStarted?.Invoke(turnoActual.Value);
         }
     }
 

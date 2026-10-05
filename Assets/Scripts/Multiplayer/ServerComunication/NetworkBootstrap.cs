@@ -36,6 +36,8 @@ public class NetworkBootstrap : MonoBehaviour
     [SerializeField] private string direccionLocal = "127.0.0.1";
     [SerializeField] private ushort puertoLocal = 7777;
 
+    public static bool ModoLocalConBots { get; private set; }
+
     // Mensaje que StartupFlowUI debe mostrar apenas recargue la escena de menu
     // (por ejemplo, "El dueno de la sala se desconecto"). Estatico porque la
     // instancia de StartupFlowUI se recrea de cero al recargar la escena.
@@ -153,6 +155,7 @@ public class NetworkBootstrap : MonoBehaviour
     /// </summary>
     public async Task<string> IniciarHostYObtenerJoinCode()
     {
+        ModoLocalConBots = false;
         await AsegurarServiciosInicializados();
 
         SalidaVoluntaria = false;
@@ -184,7 +187,10 @@ public class NetworkBootstrap : MonoBehaviour
         var transport = networkManager.GetComponent<UnityTransport>();
         transport.SetConnectionData(direccionLocal, puertoLocal);
 
-        return networkManager.StartHost();
+        //return networkManager.StartHost();
+        bool ok = networkManager.StartHost();
+        ModoLocalConBots = ok;
+        return ok;
     }
 
     /// <summary>
@@ -195,6 +201,7 @@ public class NetworkBootstrap : MonoBehaviour
     /// </summary>
     public async Task UnirseComoClienteConJoinCode(string joinCode)
     {
+        ModoLocalConBots = false;
         await AsegurarServiciosInicializados();
 
         SalidaVoluntaria = false;

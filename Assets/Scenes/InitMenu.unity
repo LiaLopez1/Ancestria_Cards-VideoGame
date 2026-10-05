@@ -14444,6 +14444,7 @@ MonoBehaviour:
   botonSiguienteJefe: {fileID: 0}
   textoEsperandoHost: {fileID: 0}
   textoRunCompletada: {fileID: 0}
+  panelVictoriaFinal: {fileID: 0}
   panelRondaGanada: {fileID: 0}
   textoRondaGanada: {fileID: 0}
   botonSiguienteRonda: {fileID: 0}

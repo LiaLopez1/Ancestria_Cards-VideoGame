@@ -25,7 +25,7 @@ using UnityEngine;
 /// siguiente paso (ServerRpc de robo). Por ahora solo se blinda con un
 /// aviso claro en vez de fallar en silencio.
 /// </summary>
-public class DeckManager : NetworkBehaviour // hereda de networkBehavior porque usa UnityNetcode
+public partial class DeckManager : NetworkBehaviour // hereda de networkBehavior porque usa UnityNetcode
 {
     [Header("Reparto inicial")]
     [SerializeField] private int initialHandSize = 4;
@@ -335,12 +335,13 @@ public class DeckManager : NetworkBehaviour // hereda de networkBehavior porque 
     {
         yield return new WaitForSecondsRealtime(delayAfterShuffle);
 
-        int cantidadJugadores = NetworkManager.Singleton.ConnectedClientsIds.Count;
+         int cantidadJugadores = NetworkManager.Singleton.ConnectedClientsIds.Count + CantidadDeBotsActivos();
 
         foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
         {
             IniciarRepartoParaCliente(clientId);
         }
+        IniciarRepartoDeBots();
 
         if (turnManager != null)
         {
