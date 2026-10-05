@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Unity.Netcode;
@@ -8,6 +9,7 @@ using Unity.Services.Core;
 using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 
 /// <summary>
@@ -19,6 +21,13 @@ using UnityEngine.SceneManagement;
 /// mismo patron singleton que PlayFabAuthManager: si al recargar la escena de
 /// menu se crea una copia nueva, esa copia se autodestruye (la que sobrevive
 /// de verdad es la original, marcada DontDestroyOnLoad).
+///
+/// VIGILANCIA DE INTERNET: en partidas ONLINE (host o invitado) se comprueba
+/// cada pocos segundos que haya internet de verdad. Si falla varias veces
+/// seguidas, se saca al jugador al menu. Esto es necesario porque Netcode
+/// por si solo tarda mucho en notar la caida (y si el que pierde internet es
+/// el HOST, Netcode nunca lanza una desconexion para el). En modo offline
+/// la vigilancia NUNCA corre.
 /// </summary>
 public class NetworkBootstrap : MonoBehaviour
 {
@@ -35,6 +44,14 @@ public class NetworkBootstrap : MonoBehaviour
     [Header("Modo offline (host local, sin Relay)")]
     [SerializeField] private string direccionLocal = "127.0.0.1";
     [SerializeField] private ushort puertoLocal = 7777;
+
+    [Header("Vigilancia de internet (solo partidas online)")]
+    [SerializeField] private bool vigilarInternet = true;
+    [Tooltip("URL liviana que responde si hay internet de verdad.")]
+    [SerializeField] private string urlChequeoRed = "https://clients3.google.com/generate_204";
+    [SerializeField] private float intervaloChequeoRed = 4f;
+    [Tooltip("Chequeos fallidos SEGUIDOS antes de sacar al jugador al menu.")]
+    [SerializeField] private int fallosParaDesconectar = 3;
 
     // Mensaje que StartupFlowUI debe mostrar apenas recargue la escena de menu
     // (por ejemplo, "El dueno de la sala se desconecto"). Estatico porque la
@@ -63,6 +80,18 @@ public class NetworkBootstrap : MonoBehaviour
     // proximo que se conecte, en vez de seguir avanzando indefinidamente.
     private readonly Dictionary<ulong, int> slotsAsignados = new Dictionary<ulong, int>();
     private readonly SortedSet<int> slotsLibres = new SortedSet<int>();
+
+    private Coroutine vigilancia;
+
+    // true si en ESTA sesion yo soy el host (online u offline). Se usa en vez
+    // de networkManager.IsServer porque durante un Shutdown ese valor puede
+    // cambiar justo cuando llega el aviso de desconexion.
+    private bool soyHostDeEstaSesion;
+
+    // true apenas se decide volver al menu por una desconexion: asi el
+    // vigilante de internet y el callback de Netcode no se pisan entre si
+    // (gana el primero, el otro se ignora).
+    private bool saliendoAlMenu;
 
     private void Awake()
     {
@@ -157,6 +186,8 @@ public class NetworkBootstrap : MonoBehaviour
 
         SalidaVoluntaria = false;
         ReiniciarSlots();
+        soyHostDeEstaSesion = true;
+        saliendoAlMenu = false;
 
         Allocation allocation = await RelayService.Instance.CreateAllocationAsync(MaxJugadoresInvitados);
 
@@ -167,6 +198,8 @@ public class NetworkBootstrap : MonoBehaviour
 
         networkManager.StartHost();
 
+        IniciarVigilancia();
+
         return joinCode;
     }
 
@@ -175,11 +208,16 @@ public class NetworkBootstrap : MonoBehaviour
     /// Unity (no necesita internet). Solo escucha en la direccion local, asi
     /// que nadie mas puede conectarse. SetConnectionData tambien cambia el
     /// transporte a conexion directa, aunque antes se haya usado Relay.
+    /// La vigilancia de internet se apaga: offline nunca debe cortarse.
     /// </summary>
     public bool IniciarHostOffline()
     {
+        DetenerVigilancia();
+
         SalidaVoluntaria = false;
         ReiniciarSlots();
+        soyHostDeEstaSesion = true;
+        saliendoAlMenu = false;
 
         var transport = networkManager.GetComponent<UnityTransport>();
         transport.SetConnectionData(direccionLocal, puertoLocal);
@@ -198,6 +236,8 @@ public class NetworkBootstrap : MonoBehaviour
         await AsegurarServiciosInicializados();
 
         SalidaVoluntaria = false;
+        soyHostDeEstaSesion = false;
+        saliendoAlMenu = false;
 
         JoinAllocation allocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
 
@@ -205,6 +245,77 @@ public class NetworkBootstrap : MonoBehaviour
         transport.SetRelayServerData(new RelayServerData(allocation, TipoConexion));
 
         networkManager.StartClient();
+
+        IniciarVigilancia();
+    }
+
+    // ---------- Vigilancia de internet ----------
+
+    private void IniciarVigilancia()
+    {
+        DetenerVigilancia();
+
+        if (!vigilarInternet)
+        {
+            Debug.Log("[Red] Vigilancia de internet desactivada en el Inspector.");
+            return;
+        }
+
+        Debug.Log($"[Red] Vigilancia de internet ACTIVADA (cada {intervaloChequeoRed}s, {fallosParaDesconectar} fallos seguidos = salir).");
+        vigilancia = StartCoroutine(VigilarInternet());
+    }
+
+    private void DetenerVigilancia()
+    {
+        if (vigilancia != null)
+        {
+            StopCoroutine(vigilancia);
+            vigilancia = null;
+            Debug.Log("[Red] Vigilancia de internet detenida.");
+        }
+    }
+
+    private IEnumerator VigilarInternet()
+    {
+        int fallos = 0;
+        var espera = new WaitForSecondsRealtime(intervaloChequeoRed);
+
+        while (true)
+        {
+            yield return espera;
+
+            // Si Netcode ya no esta activo (salida normal), no hay nada que vigilar.
+            if (!networkManager.IsListening)
+            {
+                Debug.Log("[Red] Netcode ya no esta activo, termina la vigilancia.");
+                vigilancia = null;
+                yield break;
+            }
+
+            bool hayInternet = false;
+
+            if (Application.internetReachability != NetworkReachability.NotReachable)
+            {
+                using (var req = UnityWebRequest.Get(urlChequeoRed))
+                {
+                    req.timeout = 4;
+                    yield return req.SendWebRequest();
+                    hayInternet = req.result == UnityWebRequest.Result.Success;
+                }
+            }
+
+            fallos = hayInternet ? 0 : fallos + 1;
+            Debug.Log($"[Red] Chequeo de internet: {(hayInternet ? "OK" : "FALLO")} (fallos seguidos: {fallos}/{fallosParaDesconectar})");
+
+            if (fallos >= fallosParaDesconectar)
+            {
+                Debug.LogWarning("[Red] Sin internet de forma sostenida. Volviendo al menu.");
+                vigilancia = null;
+                SalidaVoluntaria = true; // evita el mensaje falso de "el dueno se desconecto"
+                VolverAlMenuPorDesconexion("Perdiste la conexión.");
+                yield break;
+            }
+        }
     }
 
     /// <summary>
@@ -218,12 +329,35 @@ public class NetworkBootstrap : MonoBehaviour
     /// </summary>
     private void ManejarDesconexion(ulong clientId)
     {
-        if (networkManager.IsServer)
+        // Ya se decidio volver al menu (por ejemplo, lo hizo el vigilante de
+        // internet): este aviso de Netcode es consecuencia de eso, se ignora.
+        if (saliendoAlMenu) return;
+
+        // ---- SOY EL HOST ----
+        // Nunca debe ver "el host abandono": si lo que se cayo es mi propia
+        // conexion, el mensaje es "Perdiste la conexion". Si se fue un
+        // invitado, solo se libera su slot.
+        if (soyHostDeEstaSesion)
         {
+            if (clientId == networkManager.LocalClientId)
+            {
+                if (SalidaVoluntaria)
+                {
+                    SalidaVoluntaria = false;
+                    return;
+                }
+
+                Debug.Log("[Netcode] El host perdio su propia conexion. Volviendo al menu.");
+                DetenerVigilancia();
+                VolverAlMenuPorDesconexion("Perdiste la conexión.");
+                return;
+            }
+
             LiberarSlot(clientId);
             return;
         }
 
+        // ---- SOY INVITADO ----
         if (clientId != networkManager.LocalClientId) return;
 
         if (SalidaVoluntaria)
@@ -234,12 +368,48 @@ public class NetworkBootstrap : MonoBehaviour
             return;
         }
 
-        Debug.Log("[Netcode] Se perdio la conexion con el host. Volviendo al menu.");
-        VolverAlMenuPorDesconexion("El dueño de la sala se desconectó.");
+        // Me desconectaron, pero Netcode no dice por que: puede ser que el
+        // host se fue O que yo me quede sin internet. Se comprueba mi red.
+        DetenerVigilancia();
+        StartCoroutine(DeterminarCausaDeDesconexion());
+    }
+
+    /// <summary>
+    /// Solo para invitados. Si yo tengo internet, la causa es que el host se
+    /// fue ("El host ha abandonado la partida"). Si yo NO tengo internet, la
+    /// causa soy yo ("Perdiste la conexion").
+    /// </summary>
+    private IEnumerator DeterminarCausaDeDesconexion()
+    {
+        bool hayInternet = false;
+
+        if (Application.internetReachability != NetworkReachability.NotReachable)
+        {
+            using (var req = UnityWebRequest.Get(urlChequeoRed))
+            {
+                req.timeout = 4;
+                yield return req.SendWebRequest();
+                hayInternet = req.result == UnityWebRequest.Result.Success;
+            }
+        }
+
+        if (hayInternet)
+        {
+            Debug.Log("[Netcode] Desconectado pero con internet: el host abandono la partida.");
+            VolverAlMenuPorDesconexion("El host ha abandonado la partida.");
+        }
+        else
+        {
+            Debug.Log("[Netcode] Desconectado y sin internet: el invitado perdio su conexion.");
+            VolverAlMenuPorDesconexion("Perdiste la conexión.");
+        }
     }
 
     private void VolverAlMenuPorDesconexion(string mensaje)
     {
+        if (saliendoAlMenu) return;
+        saliendoAlMenu = true;
+
         MensajePendiente = mensaje;
 
         LobbyManager.Instance?.SalirDeSalaActual();
