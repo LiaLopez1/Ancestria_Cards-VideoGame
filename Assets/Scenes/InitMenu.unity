@@ -11317,6 +11317,10 @@ MonoBehaviour:
   escenaMenuInicial: InitMenu
   direccionLocal: 127.0.0.1
   puertoLocal: 7777
+  vigilarInternet: 1
+  urlChequeoRed: https://clients3.google.com/generate_204
+  intervaloChequeoRed: 3
+  fallosParaDesconectar: 2
 --- !u!4 &1326799378
 Transform:
   m_ObjectHideFlags: 0
@@ -13000,6 +13004,8 @@ MonoBehaviour:
   avisoDesconexionText: {fileID: 1549335204}
   cerrarAvisoButton: {fileID: 125982091}
   nombreEscenaTutorial: Tutorial
+  intervaloReconexion: 5
+  tiempoMaximoLogin: 20
 --- !u!4 &1626878709
 Transform:
   m_ObjectHideFlags: 0
@@ -14444,6 +14450,7 @@ MonoBehaviour:
   botonSiguienteJefe: {fileID: 0}
   textoEsperandoHost: {fileID: 0}
   textoRunCompletada: {fileID: 0}
+  panelVictoriaFinal: {fileID: 0}
   panelRondaGanada: {fileID: 0}
   textoRondaGanada: {fileID: 0}
   botonSiguienteRonda: {fileID: 0}
