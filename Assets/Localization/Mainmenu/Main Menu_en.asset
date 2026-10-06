@@ -74,6 +74,22 @@ MonoBehaviour:
     m_Localized: Offline Mode
     m_Metadata:
       m_Items: []
+  - m_Id: 21250642577760256
+    m_Localized: Connecting...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 21250781249839104
+    m_Localized: No internet connection. Online play is unavailable.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 21250860689956864
+    m_Localized: Could not connect. Please try again.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 21254542747803648
+    m_Localized: Nickname must be between {0} and {1} characters.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

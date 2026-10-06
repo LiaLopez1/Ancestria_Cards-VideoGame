@@ -74,6 +74,22 @@ MonoBehaviour:
     m_Localized: "Modo sin Conexi\xF3n"
     m_Metadata:
       m_Items: []
+  - m_Id: 21250642577760256
+    m_Localized: Conectando...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 21250781249839104
+    m_Localized: "No hay conexi\xF3n para jugar en l\xEDnea."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 21250860689956864
+    m_Localized: No se pudo conectar. Intenta de nuevo.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 21254542747803648
+    m_Localized: El nick debe tener entre {0} y {1} caracteres.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
