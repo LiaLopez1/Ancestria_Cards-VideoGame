@@ -1,4 +1,6 @@
+using System.Collections;
 using TMPro;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -26,9 +28,10 @@ using UnityEngine.UI;
 ///    LobbyManager arranca un host local -> entra al GameScene en solitario.
 ///    Siempre esta disponible, incluso si el login online falla.
 ///
-/// Si se detecta que no hay conexion, "Crear sala" y "Unirse" se desactivan
-/// y se avisa en el texto de estado. El jugador puede usar "Modo offline" o
-/// "Reintentar" (este ultimo es opcional).
+/// CONEXION: cada vez que se entra al menu se verifica la conexion de verdad
+/// (login online forzado). Si no hay conexion se muestra "No hay conexion para
+/// jugar en linea" y, mientras se este en la pantalla de inicio, se reintenta
+/// el login cada pocos segundos hasta que vuelva la red.
 /// </summary>
 public class StartupFlowUI : MonoBehaviour
 {
@@ -74,6 +77,12 @@ public class StartupFlowUI : MonoBehaviour
     [Tooltip("Nombre de la escena del tutorial - se carga en vez de crear una sala si el jugador todavia no lo completo.")]
     [SerializeField] private string nombreEscenaTutorial = "Tutorial";
 
+    [Header("Reconexion automatica")]
+    [Tooltip("Cada cuantos segundos se reintenta el login online mientras no haya sesion online.")]
+    [SerializeField, Range(3f, 60f)] private float intervaloReconexion = 8f;
+    [Tooltip("Si un intento de login lleva mas de estos segundos sin responder, se da por perdido y se permite otro.")]
+    [SerializeField] private float tiempoMaximoLogin = 20f;
+
     private const int MinNickLength = 3;
     private const int MaxNickLength = 16;
     private const string TextoSinConexion = "No hay conexión para jugar en línea.";
@@ -87,6 +96,14 @@ public class StartupFlowUI : MonoBehaviour
     // se resolvio con exito - antes de eso, ningun boton debe hacer nada
     // mas que reintentar el login.
     private bool sesionIniciada;
+
+    // true mientras hay un login en curso (para no lanzar dos a la vez).
+    private bool loginEnCurso;
+    private float inicioLogin;
+
+    // Recuerda si el ultimo intento de login fallo por falta de red, aunque
+    // luego se entre en modo offline (que borra ErrorDeConexion en el AuthManager).
+    private bool sinConexionDetectada;
 
     private void Start()
     {
@@ -111,20 +128,56 @@ public class StartupFlowUI : MonoBehaviour
         authManager.OnLoginFailed += HandleLoginFailed;
         authManager.OnDisplayNameUpdated += HandleDisplayNameUpdated;
 
-        // El login YA NO espera a que el jugador apriete un boton - arranca
-        // solo apenas se muestra el menu, porque necesitamos saber si ya
-        // completo el tutorial ANTES de poder habilitar los botones
-        // correctos (un jugador nuevo solo debe ver "Crear sala" habilitado).
-        if (!string.IsNullOrEmpty(authManager.PlayFabId))
+        // Cada vez que se entra al menu se verifica la conexion DE VERDAD
+        // (por ejemplo, al volver de una partida o de que el vigilante de
+        // internet nos saque). Si no hay red, el login falla y se muestra el
+        // mensaje de "sin conexion"; si hay, se rehabilitan los botones.
+        authManager.ReiniciarSesion();
+        IniciarLoginInicial(forzar: true);
+
+        StartCoroutine(ReconexionPeriodica());
+    }
+
+    /// <summary>
+    /// Mientras no haya sesion online, reintenta el login cada
+    /// intervaloReconexion segundos, SOLO si el jugador esta en la pantalla de
+    /// inicio (nunca mientras escribe su nick o mira la lista de salas) y no
+    /// hay una partida de Netcode en marcha.
+    /// </summary>
+    private IEnumerator ReconexionPeriodica()
+    {
+        var espera = new WaitForSecondsRealtime(intervaloReconexion);
+
+        while (true)
         {
-            // Ya nos habiamos logueado antes en esta misma sesion (por
-            // ejemplo, al volver del tutorial o de una partida offline) -
-            // no hace falta repetirlo.
-            HandleLoginSuccess();
-        }
-        else
-        {
-            IniciarLoginInicial();
+            yield return espera;
+
+            if (authManager == null) yield break;
+
+            // Ya hay sesion online: no hace falta seguir intentando.
+            if (sesionIniciada && !authManager.ModoOffline)
+            {
+                Debug.Log("[StartupFlowUI] Sesion online activa, termina la reconexion automatica.");
+                yield break;
+            }
+
+            // Un login que nunca respondio no puede bloquear los reintentos para siempre.
+            if (loginEnCurso)
+            {
+                if (Time.unscaledTime - inicioLogin < tiempoMaximoLogin) continue;
+
+                Debug.LogWarning("[StartupFlowUI] El intento de login anterior no respondio a tiempo, se permite uno nuevo.");
+                loginEnCurso = false;
+            }
+
+            if (!panelInicio.activeInHierarchy) continue;
+
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) continue;
+
+            Debug.Log("[StartupFlowUI] Reintentando conexion online en segundo plano...");
+            loginEnCurso = true;
+            inicioLogin = Time.unscaledTime;
+            authManager.Login(ignorarChequeoDeRed: true);
         }
     }
 
@@ -221,12 +274,23 @@ public class StartupFlowUI : MonoBehaviour
         unirseButton.interactable = false;
         if (reintentarButton != null) reintentarButton.gameObject.SetActive(false);
         SetEstadoInicio("Conectando...");
+
+        loginEnCurso = true;
+        inicioLogin = Time.unscaledTime;
         authManager.Login(forzar);
     }
 
     private void HandleLoginSuccess()
     {
+        loginEnCurso = false;
         sesionIniciada = true;
+
+        // Modo offline elegido a mano no cuenta como "sin conexion detectada";
+        // solo un login online exitoso la borra.
+        if (!authManager.ModoOffline) sinConexionDetectada = false;
+
+        Debug.Log($"[StartupFlowUI] Login OK (offline: {authManager.ModoOffline}).");
+
         ActualizarBotonesInicio();
         SetEstadoInicio(TextoEstadoConexion());
     }
@@ -258,21 +322,27 @@ public class StartupFlowUI : MonoBehaviour
 
         if (reintentarButton != null)
         {
-            reintentarButton.gameObject.SetActive(authManager.ModoOffline || authManager.ErrorDeConexion);
+            reintentarButton.gameObject.SetActive(authManager.ModoOffline || sinConexionDetectada);
         }
     }
 
+    /// <summary>
+    /// Solo habla de conexion cuando de verdad no la hay. No avisa nada por
+    /// estar en modo offline.
+    /// </summary>
     private string TextoEstadoConexion()
     {
-        bool sinConexion = authManager.ModoOffline || (authManager.ErrorDeConexion && !sesionIniciada);
-        return sinConexion ? TextoSinConexion : string.Empty;
+        return sinConexionDetectada ? TextoSinConexion : string.Empty;
     }
 
     private void HandleLoginFailed(string error)
     {
-        Debug.LogWarning($"[StartupFlowUI] Login fallido: {error}");
+        loginEnCurso = false;
+        sinConexionDetectada = authManager.ErrorDeConexion;
 
-        if (authManager.ErrorDeConexion)
+        Debug.LogWarning($"[StartupFlowUI] Login fallido: {error} (sin conexion: {sinConexionDetectada})");
+
+        if (sinConexionDetectada)
         {
             // Sin conexion: no tiene sentido dejar los botones online activos.
             crearSalaButton.interactable = false;
