@@ -25,7 +25,7 @@ using UnityEngine;
 /// siguiente paso (ServerRpc de robo). Por ahora solo se blinda con un
 /// aviso claro en vez de fallar en silencio.
 /// </summary>
-public class DeckManager : NetworkBehaviour // hereda de networkBehavior porque usa UnityNetcode
+public partial class DeckManager : NetworkBehaviour // hereda de networkBehavior porque usa UnityNetcode
 {
     [Header("Reparto inicial")]
     [SerializeField] private int initialHandSize = 4;
@@ -335,12 +335,13 @@ public class DeckManager : NetworkBehaviour // hereda de networkBehavior porque 
     {
         yield return new WaitForSecondsRealtime(delayAfterShuffle);
 
-        int cantidadJugadores = NetworkManager.Singleton.ConnectedClientsIds.Count;
+         int cantidadJugadores = NetworkManager.Singleton.ConnectedClientsIds.Count + CantidadDeBotsActivos();
 
         foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
         {
             IniciarRepartoParaCliente(clientId);
         }
+        IniciarRepartoDeBots();
 
         if (turnManager != null)
         {
@@ -418,7 +419,7 @@ public class DeckManager : NetworkBehaviour // hereda de networkBehavior porque 
             ReproducirSonidoBarajadoClientRpc();
         }
 
-        Debug.Log("[Servidor] El mazo fue mezclado.");
+        //Debug.Log("[Servidor] El mazo fue mezclado.");
     }
     [ClientRpc]
     private void ReproducirSonidoBarajadoClientRpc()
@@ -503,7 +504,7 @@ public class DeckManager : NetworkBehaviour // hereda de networkBehavior porque 
 
         ActualizarContadoresDeMazo();
 
-        Debug.Log("[Servidor] Carta robada: " + drawnCard.cardName + " | Cartas restantes: " + drawPile.Count);
+        //Debug.Log("[Servidor] Carta robada: " + drawnCard.cardName + " | Cartas restantes: " + drawPile.Count);
 
         return drawnCard;
     }
@@ -755,7 +756,7 @@ public class DeckManager : NetworkBehaviour // hereda de networkBehavior porque 
             turnManager.NotificarRoboRealizado();
         }
 
-        Debug.Log($"[Servidor] Cliente {clienteSolicitante} robó correctamente. Ahora tiene {cartasActuales + 1} carta(s).");
+       // Debug.Log($"[Servidor] Cliente {clienteSolicitante} robó correctamente. Ahora tiene {cartasActuales + 1} carta(s).");
     }
 
     /// <summary>

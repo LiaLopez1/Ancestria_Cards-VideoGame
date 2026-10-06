@@ -198,6 +198,13 @@ public class SuspicionManager : NetworkBehaviour
         Debug.Log($"[Sospecha] Intercambio cancelado antes de elegir compañero - deja de subir. Total: {nivelSospecha.Value}/{sospechaMaxima}");
     }
 
+        public void DetenerIntercambioDesdeServidor()
+    {
+        if (!IsServer) return;
+
+        DetenerIncrementoSiEstaEnCurso();
+    }
+
     /// <summary>Para tanto Aceptar como Cancelar - detiene el incremento si habia uno en curso. Devuelve false si no habia nada que detener.</summary>
     private bool DetenerIncrementoSiEstaEnCurso()
     {

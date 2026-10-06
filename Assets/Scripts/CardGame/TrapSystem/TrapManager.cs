@@ -12,6 +12,13 @@ using UnityEngine;
 ///
 /// Esto es solo la DECLARACION/visual de la trampa por ahora - todavia no
 /// intercambia cartas entre jugadores, eso lo definimos despues.
+///
+/// CAMBIOS PARA BOTS:
+///  - OnTrampaDeclarada: evento SOLO del servidor, se dispara por cada
+///    declaracion (de un humano o de un bot) para que los bots aprendan
+///    de la informacion publica.
+///  - DeclararComoBot(): entrada directa por slot para que un bot declare,
+///    sin pasar por ServerRpc (un bot no tiene cliente real).
 /// </summary>
 public class TrapManager : NetworkBehaviour
 {
@@ -24,6 +31,12 @@ public class TrapManager : NetworkBehaviour
 
     [Header("Iconos por categoria")]
     [SerializeField] private IconoPorCategoria[] iconosPorCategoria;
+
+    /// <summary>
+    /// SOLO servidor. (slot, categoria, tieneCategoria): true = "tengo"
+    /// (mostrar), false = "necesito" (pedir).
+    /// </summary>
+    public event System.Action<int, CardCategory, bool> OnTrampaDeclarada;
 
     /// <summary>
     /// Llamado por CategoryRequestPanelUI cuando el jugador elige una
@@ -43,6 +56,23 @@ public class TrapManager : NetworkBehaviour
         SolicitarCategoriaServerRpc(categoria, tieneCategoria: true);
     }
 
+    /// <summary>
+    /// SOLO servidor (BotController). Un bot declara una categoria. No
+    /// valida turno: igual que con los humanos, pedir/mostrar es libre.
+    /// </summary>
+    public void DeclararComoBot(int slot, CardCategory categoria, bool tieneCategoria)
+    {
+        if (!IsServer)
+        {
+            return;
+        }
+
+        string verbo = tieneCategoria ? "tiene" : "solicitó";
+        Debug.Log($"[Servidor] Bot del slot {slot} {verbo} la categoría {categoria}.");
+
+        PublicarDeclaracion(slot, categoria, tieneCategoria);
+    }
+
     [ServerRpc(RequireOwnership = false)]
     private void SolicitarCategoriaServerRpc(CardCategory categoria, bool tieneCategoria, ServerRpcParams rpcParams = default)
     {
@@ -57,7 +87,14 @@ public class TrapManager : NetworkBehaviour
         string verbo = tieneCategoria ? "tiene" : "solicitó";
         Debug.Log($"[Servidor] Slot {slot} {verbo} la categoría {categoria}.");
 
+        PublicarDeclaracion(slot, categoria, tieneCategoria);
+    }
+
+    /// <summary>SOLO servidor. Avisa a todos los clientes (visual) y a los suscriptores locales (bots).</summary>
+    private void PublicarDeclaracion(int slot, CardCategory categoria, bool tieneCategoria)
+    {
         MostrarSolicitudClientRpc(slot, categoria, tieneCategoria);
+        OnTrampaDeclarada?.Invoke(slot, categoria, tieneCategoria);
     }
 
     /// <summary>Se ejecuta en TODOS los clientes: la solicitud es pública.</summary>

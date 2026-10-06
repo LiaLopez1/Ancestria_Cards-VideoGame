@@ -46,11 +46,16 @@ public class TradeManager : NetworkBehaviour
     [Header("Mano local (de este cliente)")]
     [SerializeField] private HandManager handManager;
 
+    [SerializeField] private SuspicionManager suspicionManager;
+
+    private BotController botController;
+
     [Header("UI local (de este cliente)")]
     [SerializeField] private TradeUIManager tradeUI;
 
     // ------------------- Estado SOLO en el servidor -------------------
     private bool intercambioEnProgreso;
+    public bool IntercambioEnProgreso => intercambioEnProgreso;
     private ulong clienteIniciador;
     private ulong clienteObjetivo;
     private int cardIdIniciador = -1;
@@ -58,6 +63,8 @@ public class TradeManager : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
+        botController = FindFirstObjectByType<BotController>();
+
         if (gameManager != null)
         {
             gameManager.OnResultadoCambio += ManejarFinDePartida;
@@ -113,7 +120,7 @@ public class TradeManager : NetworkBehaviour
         List<int> slots = new List<int>();
         List<FixedString64Bytes> nombres = new List<FixedString64Bytes>();
 
-        foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
+        foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds) //para jugadores
         {
             if (clientId == solicitante)
             {
@@ -127,6 +134,15 @@ public class TradeManager : NetworkBehaviour
 
             slots.Add(slot);
             nombres.Add(new FixedString64Bytes(ObtenerNombrePorSlot(slot)));
+        }
+
+        if (NetworkBootstrap.ModoLocalConBots) // para bots
+        {
+            for (int slot = BotIds.PrimerSlot; slot < BotIds.PrimerSlot + BotIds.Cantidad; slot++)
+            {
+                slots.Add(slot);
+                nombres.Add(new FixedString64Bytes(ObtenerNombrePorSlot(slot)));
+            }
         }
 
         MostrarListaDeJugadoresClientRpc(slots.ToArray(), nombres.ToArray(), EnviarSoloA(solicitante));
@@ -171,10 +187,18 @@ public class TradeManager : NetworkBehaviour
             return;
         }
 
-        if (!TryObtenerClientePorSlot(slotObjetivo, out ulong clienteDestino) || clienteDestino == solicitante)
+        ulong clienteDestino;
+        if (NetworkBootstrap.ModoLocalConBots && BotIds.EsSlotDeBot(slotObjetivo))
         {
-            Debug.LogWarning($"[Servidor] Slot objetivo invalido para intercambio: {slotObjetivo}.");
-            return;
+            clienteDestino = BotIds.IdDeSlot(slotObjetivo);
+        }
+        else
+        {
+            if (!TryObtenerClientePorSlot(slotObjetivo, out clienteDestino) || clienteDestino == solicitante)
+            {
+                Debug.LogWarning($"[Servidor] Slot objetivo invalido para intercambio: {slotObjetivo}.");
+                return;
+            }
         }
 
         intercambioEnProgreso = true;
@@ -222,8 +246,13 @@ public class TradeManager : NetworkBehaviour
 
         cardIdIniciador = cardId;
 
-        FixedString64Bytes nombreIniciador = new FixedString64Bytes(ObtenerNombreDeCliente(clienteIniciador));
+        if (BotIds.EsBot(clienteObjetivo))
+        {
+            ProcesarIntercambioConBot();
+            return;
+        }
 
+        FixedString64Bytes nombreIniciador = new FixedString64Bytes(ObtenerNombreDeCliente(clienteIniciador));
         MostrarPropuestaClientRpc(nombreIniciador, EnviarSoloA(clienteObjetivo));
     }
 
@@ -253,16 +282,19 @@ public class TradeManager : NetworkBehaviour
             return;
         }
 
-        if (!acepta)
+    if (!acepta)
+    {
+        if (!BotIds.EsBot(clienteIniciador))
         {
-            Debug.Log($"[Servidor] Cliente {remitente} rechazo el intercambio.");
             AvisarRechazoClientRpc(EnviarSoloA(clienteIniciador));
-            CancelarIntercambio();
-            return;
         }
 
-        PedirSeleccionObjetivoClientRpc(EnviarSoloA(clienteObjetivo));
+        CancelarIntercambio();
+        return;
     }
+
+    PedirSeleccionObjetivoClientRpc(EnviarSoloA(clienteObjetivo));
+}
 
     [ClientRpc]
     private void PedirSeleccionObjetivoClientRpc(ClientRpcParams rpcParams = default)
@@ -286,6 +318,7 @@ public class TradeManager : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
+    
     private void ConfirmarCartaObjetivoServerRpc(int cardId, ServerRpcParams rpcParams = default)
     {
         ulong remitente = rpcParams.Receive.SenderClientId;
@@ -308,16 +341,16 @@ public class TradeManager : NetworkBehaviour
 
         if (!exito)
         {
-            Debug.LogError("[Servidor] El intercambio fallo al ejecutarse (alguna de las dos cartas ya no estaba disponible).");
             CancelarIntercambio();
             return;
         }
 
-        // A cada uno le llega la carta que le dio el OTRO.
-        EjecutarAnimacionDeIntercambioClientRpc(cardIdObjetivo, EnviarSoloA(clienteIniciador));
-        EjecutarAnimacionDeIntercambioClientRpc(cardIdIniciador, EnviarSoloA(clienteObjetivo));
+        if (!BotIds.EsBot(clienteIniciador))
+        {
+            EjecutarAnimacionDeIntercambioClientRpc(cardIdObjetivo, EnviarSoloA(clienteIniciador));
+        }
 
-        Debug.Log($"[Servidor] Intercambio finalizado entre {clienteIniciador} y {clienteObjetivo}.");
+        EjecutarAnimacionDeIntercambioClientRpc(cardIdIniciador, EnviarSoloA(clienteObjetivo));
 
         CancelarIntercambio();
     }
@@ -341,9 +374,60 @@ public class TradeManager : NetworkBehaviour
     // ---------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------
+    private void ProcesarIntercambioConBot()
+    {
+        if (!BotIds.TryObtenerSlot(clienteObjetivo, out int slotBot))
+        {
+            CancelarIntercambio();
+            return;
+        }
+
+        if (!NetworkBootstrap.Instance.TryObtenerSlot(clienteIniciador, out int slotHumano))
+        {
+            CancelarIntercambio();
+            return;
+        }
+
+        if (botController == null)
+        {
+            CancelarIntercambio();
+            return;
+        }
+
+        bool acepta = botController.BotAceptaIntercambio(slotBot, slotHumano);
+
+        if (!acepta)
+        {
+            AvisarRechazoClientRpc(EnviarSoloA(clienteIniciador));
+            CancelarIntercambio();
+            return;
+        }
+
+        cardIdObjetivo = botController.ObtenerCartaParaIntercambio(slotBot);
+
+        if (cardIdObjetivo < 0)
+        {
+            CancelarIntercambio();
+            return;
+        }
+
+        bool exito = deckManager.EjecutarIntercambio(clienteIniciador, cardIdIniciador, clienteObjetivo, cardIdObjetivo);
+
+        if (!exito)
+        {
+            CancelarIntercambio();
+            return;
+        }
+
+        EjecutarAnimacionDeIntercambioClientRpc(cardIdObjetivo, EnviarSoloA(clienteIniciador));
+
+        CancelarIntercambio();
+    }
 
     private void CancelarIntercambio()
     {
+        suspicionManager?.DetenerIntercambioDesdeServidor();
+        
         intercambioEnProgreso = false;
         clienteIniciador = 0;
         clienteObjetivo = 0;
@@ -399,5 +483,48 @@ public class TradeManager : NetworkBehaviour
         {
             Send = new ClientRpcSendParams { TargetClientIds = new[] { clientId } }
         };
+    }
+    //Intercambio entre Bot - Humano
+    public void IniciarIntercambioBotConHumano(int slotBot, int slotHumano, int cardIdBot)
+    {
+        if (!IsServer) return;
+
+        if (intercambioEnProgreso)
+        {
+            Debug.LogWarning("[TradeManager] Ya hay un intercambio en curso.");
+            return;
+        }
+
+        if (!BotIds.EsSlotDeBot(slotBot))
+        {
+            Debug.LogWarning($"[TradeManager] El slot {slotBot} no corresponde a un bot.");
+            return;
+        }
+
+        if (!TryObtenerClientePorSlot(slotHumano, out ulong clienteHumano))
+        {
+            Debug.LogWarning($"[TradeManager] No se encontró un cliente humano para el slot {slotHumano}.");
+            return;
+        }
+
+        ulong botId = BotIds.IdDeSlot(slotBot);
+
+        if (!deckManager.ClienteTieneCarta(botId, cardIdBot))
+        {
+            Debug.LogWarning($"[TradeManager] El bot del slot {slotBot} no tiene la carta {cardIdBot}.");
+            return;
+        }
+
+        intercambioEnProgreso = true;
+        suspicionManager?.IniciarIntercambioRpc();
+        clienteIniciador = botId;
+        clienteObjetivo = clienteHumano;
+        cardIdIniciador = cardIdBot;
+        cardIdObjetivo = -1;
+
+        Debug.Log($"[TradeManager][Bot-Humano] Bot slot {slotBot} propone intercambio al humano slot {slotHumano}.");
+
+        FixedString64Bytes nombreBot = new FixedString64Bytes(ObtenerNombrePorSlot(slotBot));
+        MostrarPropuestaClientRpc(nombreBot, EnviarSoloA(clienteHumano));
     }
 }
