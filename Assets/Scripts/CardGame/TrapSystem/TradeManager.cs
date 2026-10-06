@@ -405,16 +405,12 @@ public class TradeManager : NetworkBehaviour
 
         if (!acepta)
         {
-            Debug.Log($"[Servidor] Cliente {remitente} rechazo el intercambio.");
-
-            if (BotIds.EsBot(clienteIniciador))
-            {
-                suspicionManager?.CancelarIntercambioRpc();
-                CancelarIntercambio();
-                return;
-            }
+            Debug.Log($"[TradeManager][Humano-Bot] El bot del slot {slotBot} rechazó el intercambio del humano del slot {slotHumano}.");
 
             AvisarRechazoClientRpc(EnviarSoloA(clienteIniciador));
+
+            suspicionManager?.CancelarIntercambioRpc();
+
             CancelarIntercambio();
             return;
         }

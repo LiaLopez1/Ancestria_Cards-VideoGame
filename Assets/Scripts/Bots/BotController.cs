@@ -266,11 +266,7 @@ public class BotController : MonoBehaviour
     /// sube mientras "deliberan", igual que en un intercambio de humanos
     /// (IniciarIntercambioRpc empieza a sumar, Aceptar/Cancelar la frena).
     /// </summary>
-<<<<<<< Updated upstream
-=======
-    /// 
-    
->>>>>>> Stashed changes
+
     private IEnumerator IntercambioEntreBots(BotBrain iniciador, int slotObjetivo, int cardIdOfrecido, int gen)
     {
         BotBrain objetivo = cerebros[slotObjetivo - BotIds.PrimerSlot];
@@ -298,30 +294,16 @@ public class BotController : MonoBehaviour
 
         suspicionManager.AceptarIntercambioRpc();
 
-<<<<<<< Updated upstream
+        Debug.Log($"[Bots][ANTES] {iniciador.Nombre}: {string.Join(", ", deckManager.ObtenerManoDeBot(idIniciador))} | {objetivo.Nombre}: {string.Join(", ", deckManager.ObtenerManoDeBot(idObjetivo))}");
+
         bool exito = deckManager.EjecutarIntercambio(idIniciador, cardIdOfrecido, idObjetivo, cardIdObjetivo);
+
+        Debug.Log($"[Bots][DESPUÉS] {iniciador.Nombre}: {string.Join(", ", deckManager.ObtenerManoDeBot(idIniciador))} | {objetivo.Nombre}: {string.Join(", ", deckManager.ObtenerManoDeBot(idObjetivo))}");
 
         Debug.Log(exito
             ? $"[Bots] Intercambio hecho entre {iniciador.Nombre} y {objetivo.Nombre}."
             : "[Bots] El intercambio falló (alguna carta ya no estaba disponible).");
     }
-=======
-        Debug.Log(
-            $"[Bots][ANTES] " +
-            $"{iniciador.Nombre}: {string.Join(", ", deckManager.ObtenerManoDeBot(idIniciador))} | " +
-            $"{objetivo.Nombre}: {string.Join(", ", deckManager.ObtenerManoDeBot(idObjetivo))}"
-        );
-
-        Debug.Log(
-            $"[Bots][DESPUÉS] " +
-            $"{iniciador.Nombre}: {string.Join(", ", deckManager.ObtenerManoDeBot(idIniciador))} | " +
-            $"{objetivo.Nombre}: {string.Join(", ", deckManager.ObtenerManoDeBot(idObjetivo))}"
-        );
-
-
-
-
->>>>>>> Stashed changes
 
     // ------------------------------------------------------------------
     // Pensar: pedir / mostrar categorías fuera de su turno
@@ -379,8 +361,7 @@ public class BotController : MonoBehaviour
         }
     }
 
-<<<<<<< Updated upstream
-=======
+
     public bool BotAceptaIntercambio(int slotBot, int slotIniciador)
     {
         if (!listo) return false;
@@ -414,7 +395,7 @@ public class BotController : MonoBehaviour
         return cerebros[indice].ElegirDescarte(mano, turnManager.ReglaActiva, CategoriaInfiltrada());
     }
 
->>>>>>> Stashed changes
+
     // ------------------------------------------------------------------
     // Utilidades
     // ------------------------------------------------------------------
@@ -469,8 +450,6 @@ public class BotController : MonoBehaviour
 
         return slots;
     }
-<<<<<<< Updated upstream
-=======
 
     private string DescribirManoBot(ulong botId)
     {
@@ -493,5 +472,5 @@ public class BotController : MonoBehaviour
 
         return "[" + string.Join(", ", cartas) + "]";
     }
->>>>>>> Stashed changes
+
 }
