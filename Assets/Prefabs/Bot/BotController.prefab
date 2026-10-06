@@ -50,7 +50,7 @@ MonoBehaviour:
     sospechaTope: 0.392
     cooldownTrampa: {x: 8, y: 18}
     probMostrar: 0.6
-    probAceptarIntercambio: 0.6
+    probAceptarIntercambio: 0.8
     probIntercambioEspeculativo: 0.15
     vidaMemoria: 45
   perfilBot2:
@@ -59,7 +59,7 @@ MonoBehaviour:
     sospechaTope: 0.8
     cooldownTrampa: {x: 8, y: 18}
     probMostrar: 0.6
-    probAceptarIntercambio: 0.6
+    probAceptarIntercambio: 0.8
     probIntercambioEspeculativo: 0.15
     vidaMemoria: 45
   esperaAntesDeRobar: {x: 1.2, y: 2.5}
