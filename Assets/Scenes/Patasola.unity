@@ -11639,7 +11639,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 344ee2cc1c2c60f479970bf8c99bc634, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 4eb5d5dae81a4b94398951b41dffa0f0, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -17595,17 +17595,17 @@ MonoBehaviour:
   delayAntesDeActuar: 1.5
   delayEntreCartasReparto: 0.25
   bossImage: {fileID: 1452595172}
-  spriteConCuatroCartas: {fileID: 21300000, guid: b0f9b1e1aaf805a45be7feac294afc03, type: 3}
-  spriteConCincoCartas: {fileID: 21300000, guid: b806784572334454f84294dd7947f41c, type: 3}
-  spriteRevisandoCartas: {fileID: 21300000, guid: b0f9b1e1aaf805a45be7feac294afc03, type: 3}
-  spriteMirandoOponentes: {fileID: 21300000, guid: d8282733cf2205344860dd306db9adb4, type: 3}
+  spriteConCuatroCartas: {fileID: 21300000, guid: 60f893d2d423b0241a867ff8d48f0012, type: 3}
+  spriteConCincoCartas: {fileID: 21300000, guid: c8644e918fd0e2a4ba72e8227bf51b83, type: 3}
+  spriteRevisandoCartas: {fileID: 21300000, guid: 60f893d2d423b0241a867ff8d48f0012, type: 3}
+  spriteMirandoOponentes: {fileID: 21300000, guid: d969586d6e2cf434d8c6cce19bc7a853, type: 3}
   intervaloMinimoAtencion: 2
   intervaloMaximoAtencion: 5
-  spriteMonstruoConCuatroCartas: {fileID: 21300000, guid: 771a5e8f27818e84d9facf8572b528bb, type: 3}
-  spriteMonstruoConCincoCartas: {fileID: 21300000, guid: f35df90920227f9469d5bd0c3fb5d59f, type: 3}
-  spriteMonstruoRevisandoCartas: {fileID: 21300000, guid: 771a5e8f27818e84d9facf8572b528bb, type: 3}
-  spriteMonstruoMirandoOponentes: {fileID: 21300000, guid: 83c0ef052fc1e62419bbe999afe1e303, type: 3}
-  nombreInicial: Hombre Caiman
+  spriteMonstruoConCuatroCartas: {fileID: 21300000, guid: 95c9abccf7abc1c4e82a78cfb9427e2b, type: 3}
+  spriteMonstruoConCincoCartas: {fileID: 21300000, guid: 2f291f4ef9911254bbd2dc0d709576de, type: 3}
+  spriteMonstruoRevisandoCartas: {fileID: 21300000, guid: 95c9abccf7abc1c4e82a78cfb9427e2b, type: 3}
+  spriteMonstruoMirandoOponentes: {fileID: 21300000, guid: 4627b3d9e50ad56419f8bfa2c01e1187, type: 3}
+  nombreInicial: Patasola
   alertaTension: {fileID: 1031589673}
   debugForzarAlertaSiempre: 0
 --- !u!114 &2032638370
