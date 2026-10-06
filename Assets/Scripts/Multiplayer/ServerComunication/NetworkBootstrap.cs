@@ -410,13 +410,37 @@ public class NetworkBootstrap : MonoBehaviour
         if (saliendoAlMenu) return;
         saliendoAlMenu = true;
 
+        Debug.Log($"[Red] Volviendo al menu. Mensaje: \"{mensaje}\"");
+
         MensajePendiente = mensaje;
 
-        LobbyManager.Instance?.SalirDeSalaActual();
-
-        if (networkManager.IsListening)
+        // Salir de la sala de PlayFab es "mejor esfuerzo": sin internet puede
+        // fallar, y eso NUNCA debe impedir que el jugador vuelva al menu.
+        try
         {
-            networkManager.Shutdown();
+            LobbyManager.Instance?.SalirDeSalaActual();
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"[Red] No se pudo salir de la sala de PlayFab (se ignora): {e.Message}");
+        }
+
+        try
+        {
+            if (networkManager.IsListening)
+            {
+                networkManager.Shutdown();
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"[Red] Error al apagar Netcode (se ignora): {e.Message}");
+        }
+
+        if (!Application.CanStreamedLevelBeLoaded(escenaMenuInicial))
+        {
+            Debug.LogError($"[Red] La escena '{escenaMenuInicial}' no existe en Build Settings o el nombre no coincide: no se puede volver al menu.");
+            return;
         }
 
         SceneManager.LoadScene(escenaMenuInicial);
