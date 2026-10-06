@@ -9678,6 +9678,7 @@ MonoBehaviour:
   turnManager: {fileID: 979683347}
   gameManager: {fileID: 340926873}
   handManager: {fileID: 1437311224}
+  suspicionManager: {fileID: 0}
   tradeUI: {fileID: 1124723466}
 --- !u!114 &1124723466
 MonoBehaviour:
@@ -11989,7 +11990,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 344ee2cc1c2c60f479970bf8c99bc634, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 3d768ef4c7fa75546b4b38e21d927ead, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -12016,14 +12017,14 @@ RectTransform:
   m_GameObject: {fileID: 1452595171}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.66954887, y: 0.83952403, z: 0.89550185}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 763169452}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -23.999512, y: 325}
+  m_AnchoredPosition: {x: -19, y: 356}
   m_SizeDelta: {x: -411.9784, y: -36.4385}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1456573047
@@ -17595,17 +17596,17 @@ MonoBehaviour:
   delayAntesDeActuar: 1.5
   delayEntreCartasReparto: 0.25
   bossImage: {fileID: 1452595172}
-  spriteConCuatroCartas: {fileID: 21300000, guid: b0f9b1e1aaf805a45be7feac294afc03, type: 3}
-  spriteConCincoCartas: {fileID: 21300000, guid: b806784572334454f84294dd7947f41c, type: 3}
-  spriteRevisandoCartas: {fileID: 21300000, guid: b0f9b1e1aaf805a45be7feac294afc03, type: 3}
-  spriteMirandoOponentes: {fileID: 21300000, guid: d8282733cf2205344860dd306db9adb4, type: 3}
+  spriteConCuatroCartas: {fileID: 21300000, guid: ef7c237096a73d441a7865339a358456, type: 3}
+  spriteConCincoCartas: {fileID: 21300000, guid: affaa9653b5bebd47869695474a479f7, type: 3}
+  spriteRevisandoCartas: {fileID: 21300000, guid: ef7c237096a73d441a7865339a358456, type: 3}
+  spriteMirandoOponentes: {fileID: 21300000, guid: dcab4903ab2c21549a60f26d0f476ed9, type: 3}
   intervaloMinimoAtencion: 2
   intervaloMaximoAtencion: 5
-  spriteMonstruoConCuatroCartas: {fileID: 21300000, guid: 771a5e8f27818e84d9facf8572b528bb, type: 3}
-  spriteMonstruoConCincoCartas: {fileID: 21300000, guid: f35df90920227f9469d5bd0c3fb5d59f, type: 3}
-  spriteMonstruoRevisandoCartas: {fileID: 21300000, guid: 771a5e8f27818e84d9facf8572b528bb, type: 3}
-  spriteMonstruoMirandoOponentes: {fileID: 21300000, guid: 83c0ef052fc1e62419bbe999afe1e303, type: 3}
-  nombreInicial: Hombre Caiman
+  spriteMonstruoConCuatroCartas: {fileID: 21300000, guid: 71ff6ba6f1a62ea409c3e2ecbdec915e, type: 3}
+  spriteMonstruoConCincoCartas: {fileID: 21300000, guid: 93ac8c4e473be82439e1ad90f47287db, type: 3}
+  spriteMonstruoRevisandoCartas: {fileID: 21300000, guid: 71ff6ba6f1a62ea409c3e2ecbdec915e, type: 3}
+  spriteMonstruoMirandoOponentes: {fileID: 21300000, guid: 5a15cef7021fdda44af50124be47eabf, type: 3}
+  nombreInicial: Juan Machete
   alertaTension: {fileID: 1031589673}
   debugForzarAlertaSiempre: 0
 --- !u!114 &2032638370

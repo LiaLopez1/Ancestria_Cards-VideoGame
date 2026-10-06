@@ -2,6 +2,7 @@ using System.Collections;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -83,6 +84,16 @@ public class StartupFlowUI : MonoBehaviour
     [Tooltip("Si un intento de login lleva mas de estos segundos sin responder, se da por perdido y se permite otro.")]
     [SerializeField] private float tiempoMaximoLogin = 20f;
 
+    [Header("Vigilancia de la sesion online (mientras se esta en el menu)")]
+    [Tooltip("Cada cuantos segundos se comprueba que siga habiendo internet cuando la sesion online esta activa.")]
+    [SerializeField, Range(2f, 30f)] private float intervaloChequeoMenu = 4f;
+    [Tooltip("URL liviana que responde si hay internet de verdad.")]
+    [SerializeField] private string urlChequeoRed = "https://clients3.google.com/generate_204";
+    [Tooltip("Chequeos fallidos SEGUIDOS antes de dar la sesion online por perdida.")]
+    [SerializeField, Range(1, 5)] private int fallosParaPerderSesion = 2;
+
+    private int fallosChequeoMenu;
+
     private const int MinNickLength = 3;
     private const int MaxNickLength = 16;
     private const string TextoSinConexion = "No hay conexión para jugar en línea.";
@@ -150,15 +161,22 @@ public class StartupFlowUI : MonoBehaviour
 
         while (true)
         {
-            yield return espera;
+            // Con sesion online activa se vigila mas seguido (para detectar la
+            // caida rapido); sin sesion online, se reintenta al ritmo normal.
+            bool sesionOnlineActiva = sesionIniciada && authManager != null && !authManager.ModoOffline;
+            yield return sesionOnlineActiva
+                ? new WaitForSecondsRealtime(intervaloChequeoMenu)
+                : espera;
 
             if (authManager == null) yield break;
 
-            // Ya hay sesion online: no hace falta seguir intentando.
+            // Ya hay sesion online: ya no se reintenta el login, pero SI se
+            // vigila que la red siga ahi. Si se cae, se da la sesion por
+            // perdida y el siguiente ciclo vuelve a reintentar el login.
             if (sesionIniciada && !authManager.ModoOffline)
             {
-                Debug.Log("[StartupFlowUI] Sesion online activa, termina la reconexion automatica.");
-                yield break;
+                yield return VerificarSesionOnline();
+                continue;
             }
 
             // Un login que nunca respondio no puede bloquear los reintentos para siempre.
@@ -178,6 +196,69 @@ public class StartupFlowUI : MonoBehaviour
             loginEnCurso = true;
             inicioLogin = Time.unscaledTime;
             authManager.Login(ignorarChequeoDeRed: true);
+        }
+    }
+
+    /// <summary>
+    /// Comprueba que haya internet de verdad mientras el jugador esta en el
+    /// menu con la sesion online activa. Tras varios fallos seguidos, la
+    /// sesion se da por perdida.
+    /// </summary>
+    private IEnumerator VerificarSesionOnline()
+    {
+        if (loginEnCurso) yield break;
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) yield break;
+
+        bool hayInternet = false;
+
+        if (Application.internetReachability != NetworkReachability.NotReachable)
+        {
+            using (var req = UnityWebRequest.Get(urlChequeoRed))
+            {
+                req.timeout = 4;
+                yield return req.SendWebRequest();
+                hayInternet = req.result == UnityWebRequest.Result.Success;
+            }
+        }
+
+        fallosChequeoMenu = hayInternet ? 0 : fallosChequeoMenu + 1;
+        Debug.Log($"[StartupFlowUI] Chequeo de red en el menu: {(hayInternet ? "OK" : "FALLO")} ({fallosChequeoMenu}/{fallosParaPerderSesion})");
+
+        if (fallosChequeoMenu < fallosParaPerderSesion) yield break;
+
+        // Mientras se esperaba la respuesta, el estado pudo cambiar
+        // (por ejemplo, el jugador eligio modo offline o ya empezo una partida).
+        if (!sesionIniciada || authManager.ModoOffline) yield break;
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) yield break;
+
+        fallosChequeoMenu = 0;
+        PerderSesionOnline();
+    }
+
+    /// <summary>
+    /// La red se cayo con la sesion online abierta: se bloquean los modos
+    /// online, se avisa, y el bucle de reconexion empieza a reintentar.
+    /// </summary>
+    private void PerderSesionOnline()
+    {
+        Debug.LogWarning("[StartupFlowUI] Se perdio la conexion con la sesion online abierta.");
+
+        sesionIniciada = false;
+        sinConexionDetectada = true;
+
+        lobbyManager.DetenerBusquedaPeriodica();
+        authManager.ReiniciarSesion();
+
+        if (panelInicio.activeSelf)
+        {
+            ActualizarBotonesInicio();
+            SetEstadoInicio(TextoSinConexion);
+        }
+        else
+        {
+            // Estaba escribiendo el nick o viendo la lista de salas online:
+            // se le devuelve al inicio (ahi se actualizan botones y mensaje).
+            VolverAlInicio();
         }
     }
 
@@ -209,6 +290,12 @@ public class StartupFlowUI : MonoBehaviour
     {
         if (authManager.ModoOffline) return;
 
+        if (sinConexionDetectada)
+        {
+            SetEstadoInicio(TextoSinConexion);
+            return;
+        }
+
         intentaSerHost = true;
 
         if (!sesionIniciada)
@@ -232,6 +319,12 @@ public class StartupFlowUI : MonoBehaviour
     public void OnUnirseButtonPressed()
     {
         if (authManager.ModoOffline) return;
+
+        if (sinConexionDetectada)
+        {
+            SetEstadoInicio(TextoSinConexion);
+            return;
+        }
 
         intentaSerHost = false;
 

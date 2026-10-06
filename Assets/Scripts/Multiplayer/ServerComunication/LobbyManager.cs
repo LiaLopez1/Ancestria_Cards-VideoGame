@@ -12,9 +12,10 @@ using UnityEngine.UI;
 /// segun el nick del host ("Juego de <nick>"), buscar salas abiertas y unirse a una.
 ///
 /// Lo llama StartupFlowUI una vez el nick ya quedo confirmado:
-/// - CrearSala(): usado por el camino de host -> al crear la sala, carga el GameScene.
+/// - CrearSala(): usado por el camino de host -> al crear la sala, carga la
+///   primera escena de jefe (la decide BossProgressionManager, al azar).
 /// - BuscarSalas(): usado por el camino de guest -> llena la lista para elegir una sala;
-///   al unirse a una, tambien carga el GameScene.
+///   al unirse a una, tambien carga la escena que el host ya tiene cargada.
 ///
 /// Requiere que el jugador ya haya iniciado sesion (PlayFabAuthManager) y tenga
 /// su EntityId/EntityType asignados, ya que la API de Lobby los necesita.
@@ -26,9 +27,12 @@ public class LobbyManager : MonoBehaviour
 {
     public static LobbyManager Instance { get; private set; }
 
-    [Header("Referencias")]
-    [SerializeField] private PlayFabAuthManager authManager;
-    [SerializeField] private NetworkBootstrap networkBootstrap;
+    // authManager y networkBootstrap YA NO se arrastran en el Inspector: son
+    // singletons persistentes, y una referencia arrastrada puede apuntar a una
+    // copia que se autodestruye (ver explicacion en StartupFlowUI). Se resuelven
+    // siempre por .Instance, que apunta al objeto que de verdad sigue vivo.
+    private PlayFabAuthManager authManager => PlayFabAuthManager.Instance;
+    private NetworkBootstrap networkBootstrap => NetworkBootstrap.Instance;
 
     [Header("Colores del relleno del slider (inicio -> fin)")]
     [SerializeField] private Color colorProgresoInicio = Color.red;
@@ -40,8 +44,10 @@ public class LobbyManager : MonoBehaviour
 
     [Header("Sondeo de salas disponibles")]
     [Tooltip("Cada cuantos segundos se vuelve a buscar salas mientras el jugador ve la lista.")]
-    [Range(1f, 10f)]
-    [SerializeField] private float intervaloBusquedaSalas = 3f;
+    [Range(3f, 30f)]
+    [SerializeField] private float intervaloBusquedaSalas = 8f;
+    [Tooltip("Espera maxima entre reintentos cuando la busqueda falla (backoff).")]
+    [SerializeField] private float esperaMaximaConBackoff = 60f;
 
     private Coroutine busquedaPeriodicaCoroutine;
 
@@ -87,7 +93,9 @@ public class LobbyManager : MonoBehaviour
         if (sliderUnirse != null) sliderUnirse.gameObject.SetActive(false);
     }
 
-    [Header("Escena de destino")]
+    [Header("Escena de destino (solo para que el INVITADO espere la sincronizacion)")]
+    [Tooltip("El host ya no carga esta escena: la primera escena de jefe la decide BossProgressionManager. " +
+             "Se conserva solo porque LoadingScreenManager.WaitForSceneSync la recibe como parametro.")]
     [SerializeField] private string gameSceneName = "Game";
 
     private const int MaxJugadoresPorSala = 3;
@@ -104,6 +112,9 @@ public class LobbyManager : MonoBehaviour
     private string lobbyIdActual;
     private string connectionStringActual;
 
+    // true cuando ya se limpiaron las salas viejas de esta cuenta en esta sesion.
+    private bool limpiezaDeSalasHecha;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -116,12 +127,15 @@ public class LobbyManager : MonoBehaviour
         // Debe sobrevivir el cambio de escena hacia GameScene: si no, se pierde
         // lobbyIdActual y el OnApplicationQuit ya no puede limpiar la sala al cerrar.
         DontDestroyOnLoad(gameObject);
+
+        // El valor guardado en el Inspector pisa el del codigo: si quedo en 3 s
+        // de una version anterior, se corrige aqui para no martillar la API.
+        intervaloBusquedaSalas = Mathf.Max(intervaloBusquedaSalas, 10f);
     }
 
     public void CrearSala(System.Action onError = null)
     {
         SetEstadoCrearSala("Creando sala...", 0.1f);
-        //LimpiarMisSalasAnteriores(() => CrearSalaInterno(onError));
         StartCoroutine(CrearSalaConLoading(onError));
     }
 
@@ -137,9 +151,25 @@ public class LobbyManager : MonoBehaviour
             yield break;
         }
 
-        // 2. Ya tapado, arranca tu flujo normal sin cambios
+        // 2. Ya tapado, arranca el flujo normal
         SetEstadoCrearSala("Creando sala...", 0.1f);
         LimpiarMisSalasAnteriores(() => CrearSalaInterno(onError));
+    }
+
+    /// <summary>
+    /// Pide a BossProgressionManager la primera escena de la run (baraja los
+    /// jefes de nuevo). Devuelve null si no se puede (no existe el manager o
+    /// no hay escenas validas).
+    /// </summary>
+    private string ObtenerEscenaInicial()
+    {
+        if (BossProgressionManager.Instance == null)
+        {
+            Debug.LogError("[Lobby] No existe BossProgressionManager. Ponlo en la escena del menu (con DontDestroyOnLoad).");
+            return null;
+        }
+
+        return BossProgressionManager.Instance.IniciarNuevaRun();
     }
 
     /// <summary>
@@ -153,24 +183,42 @@ public class LobbyManager : MonoBehaviour
         if (!networkBootstrap.IniciarHostOffline())
         {
             Debug.LogError("[Lobby] No se pudo iniciar el host offline.");
-            SetEstadoCrearSala("Error al iniciar la partida.");
-            OcultarProgresoCrearSala();
-            LoadingScreenManager.Instance.HideLoadingOnError();
-            onError?.Invoke();
+            FalloCrearSala("Error al iniciar la partida.", onError);
+            return;
+        }
+
+        string escenaInicial = ObtenerEscenaInicial();
+        if (string.IsNullOrEmpty(escenaInicial))
+        {
+            FalloCrearSala("No hay jefes configurados.", onError);
             return;
         }
 
         SetEstadoCrearSala("Iniciando partida sin conexión...", 1f);
 
         // Mismo metodo que el flujo online: el host carga la escena por Netcode.
-        string escenaInicial = BossProgressionManager.Instance.IniciarNuevaRun();
-        if (string.IsNullOrEmpty(escenaInicial))
-        {
-            // en CrearSalaOffline: reutiliza tu bloque de error (HideLoadingOnError + onError)
-            // en OnCreateLobbySuccess: igual, y apaga Netcode con Shutdown()
-            return;
-        }
         LoadingScreenManager.Instance.LoadNetworkScene(escenaInicial);
+    }
+
+    /// <summary>
+    /// Camino comun para TODOS los fallos de "crear sala": apaga Netcode si
+    /// el host ya habia arrancado (si no, el siguiente intento fallaria porque
+    /// Netcode ya estaria escuchando), sale de la sala de PlayFab si ya se
+    /// habia creado, destapa la pantalla de carga y avisa a la UI.
+    /// </summary>
+    private void FalloCrearSala(string mensaje, System.Action onError)
+    {
+        SalirDeSalaActual();
+
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+        {
+            NetworkManager.Singleton.Shutdown();
+        }
+
+        SetEstadoCrearSala(mensaje);
+        OcultarProgresoCrearSala();
+        LoadingScreenManager.Instance.HideLoadingOnError();
+        onError?.Invoke();
     }
 
     /// <summary>
@@ -325,10 +373,8 @@ public class LobbyManager : MonoBehaviour
         }
         catch (System.Exception e)
         {
-            Debug.LogError($"[Lobby] Error preparando Relay: {e.Message}");
-            SetEstadoCrearSala("Error de conexion. Intenta de nuevo.");
-            OcultarProgresoCrearSala();
-            onError?.Invoke();
+            Debug.LogError($"[Lobby] Error preparando Relay: {e}");
+            FalloCrearSala("Error de conexion. Intenta de nuevo.", onError);
             return;
         }
 
@@ -357,34 +403,36 @@ public class LobbyManager : MonoBehaviour
             }
         };
 
-        PlayFabMultiplayerAPI.CreateLobby(request, OnCreateLobbySuccess, error =>
-        {
-            SetEstadoCrearSala("Error: " + error.ErrorMessage);
-            Debug.LogError($"[Lobby] Error creando sala: {error.GenerateErrorReport()}");
-            OcultarProgresoCrearSala();
-            onError?.Invoke();
-        });
+        PlayFabMultiplayerAPI.CreateLobby(request,
+            result => OnCreateLobbySuccess(result, onError),
+            error =>
+            {
+                Debug.LogError($"[Lobby] Error creando sala: {error.GenerateErrorReport()}");
+                FalloCrearSala("Error: " + error.ErrorMessage, onError);
+            });
     }
 
-    private void OnCreateLobbySuccess(CreateLobbyResult result)
+    private void OnCreateLobbySuccess(CreateLobbyResult result, System.Action onError)
     {
         lobbyIdActual = result.LobbyId;
         connectionStringActual = result.ConnectionString;
 
         Debug.Log($"[Lobby] Creada. LobbyId: {lobbyIdActual}, ConnectionString: {connectionStringActual}");
 
-        SetEstadoCrearSala("Creando sala...", 1f);
-
         // El host ya esta conectado por Netcode (arrancado dentro de
         // IniciarHostYObtenerJoinCode). Es el host quien controla la carga de
         // escena para que se sincronice automaticamente con quien se una despues.
-       string escenaInicial = BossProgressionManager.Instance.IniciarNuevaRun();
+        string escenaInicial = ObtenerEscenaInicial();
         if (string.IsNullOrEmpty(escenaInicial))
         {
-            // en CrearSalaOffline: reutiliza tu bloque de error (HideLoadingOnError + onError)
-            // en OnCreateLobbySuccess: igual, y apaga Netcode con Shutdown()
+            // Sala creada pero sin jefes que jugar: se deshace todo (sale de
+            // la sala, apaga Netcode, destapa la pantalla).
+            FalloCrearSala("No hay jefes configurados.", onError);
             return;
         }
+
+        SetEstadoCrearSala("Creando sala...", 1f);
+
         LoadingScreenManager.Instance.LoadNetworkScene(escenaInicial);
     }
 
@@ -397,7 +445,21 @@ public class LobbyManager : MonoBehaviour
         }
 
         SetEstadoUnirse("Preparando búsqueda...");
-        LimpiarMisSalasAnteriores(IniciarBusquedaPeriodica);
+
+        // La limpieza de salas viejas son 2 busquedas + varias llamadas mas
+        // (GetLobby, RemoveMember, LeaveLobby). Con hacerla UNA vez por
+        // sesion basta: despues, SalirDeSalaActual ya sale de la sala al volver.
+        if (limpiezaDeSalasHecha)
+        {
+            IniciarBusquedaPeriodica();
+            return;
+        }
+
+        LimpiarMisSalasAnteriores(() =>
+        {
+            limpiezaDeSalasHecha = true;
+            IniciarBusquedaPeriodica();
+        });
     }
 
     /// <summary>
@@ -428,10 +490,32 @@ public class LobbyManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Sondeo periodico con BACKOFF REAL: cuando una busqueda falla (por
+    /// ejemplo, por limite de llamadas de la API), la espera crece cada vez
+    /// (x2, hasta esperaMaximaConBackoff) en vez de insistir al mismo ritmo.
+    /// IMPORTANTE: los errores NO llaman a IniciarBusquedaPeriodica() - eso
+    /// destruiria esta corrutina (y su espera) y reiniciaria la busqueda al
+    /// instante, justo lo contrario de lo que se quiere.
+    /// </summary>
     private System.Collections.IEnumerator BusquedaPeriodicaCoroutine()
     {
+        int erroresSeguidos = 0;
+
+        // Pausa inicial: justo antes se acaban de hacer las llamadas de
+        // limpieza, y pegar otra busqueda de inmediato suma al limite de la API.
+        yield return new WaitForSecondsRealtime(2f);
+
         while (true)
         {
+            // Si la UI del menu ya no existe (por ejemplo, ya estamos en la
+            // partida), no hay nada que actualizar: se corta el sondeo.
+            if (listaSalasContent == null)
+            {
+                busquedaPeriodicaCoroutine = null;
+                yield break;
+            }
+
             bool solicitudEnCurso = true;
             bool tuvoError = false;
 
@@ -445,34 +529,41 @@ public class LobbyManager : MonoBehaviour
                 {
                     solicitudEnCurso = false;
                     tuvoError = true;
-                    OnLobbyErrorUnirse(error);
+                    Debug.LogWarning($"[Lobby] Error al buscar salas: {error.GenerateErrorReport()}");
                 }
             );
 
             // Esperamos a que la solicitud actual termine antes de decidir
-            // cuanto esperar - asi nunca se acumulan pedidos en paralelo si
-            // la respuesta tarda mas que el intervalo configurado.
-            yield return new WaitUntil(() => !solicitudEnCurso);
+            // cuanto esperar - asi nunca se acumulan pedidos en paralelo. Si
+            // no responde en 15 s se da por fallida para no quedar colgado.
+            float inicio = Time.unscaledTime;
+            yield return new WaitUntil(() => !solicitudEnCurso || Time.unscaledTime - inicio > 15f);
+            if (solicitudEnCurso) tuvoError = true;
 
-            if (tuvoError)
+            float espera;
+            if (!tuvoError)
             {
-                // Si fallo (por ejemplo, por limite de tasa de la API), en
-                // vez de insistir al mismo ritmo esperamos bastante mas -
-                // asi no seguimos golpeando la API mientras esta rechazando
-                // pedidos.
-                float esperaConBackoff = intervaloBusquedaSalas * 4f;
-                Debug.LogWarning($"[Lobby] El sondeo de salas tuvo un error - se espera {esperaConBackoff}s antes de reintentar (en vez de los {intervaloBusquedaSalas}s normales).");
-                yield return new WaitForSeconds(esperaConBackoff);
+                erroresSeguidos = 0;
+                espera = intervaloBusquedaSalas;
             }
             else
             {
-                yield return new WaitForSeconds(intervaloBusquedaSalas);
+                // Backoff exponencial: 2x, 4x, 8x... el intervalo, con tope.
+                erroresSeguidos++;
+                espera = Mathf.Min(intervaloBusquedaSalas * Mathf.Pow(2f, erroresSeguidos), esperaMaximaConBackoff);
+                SetEstadoUnirse($"No se pudo actualizar la lista. Reintentando en {Mathf.CeilToInt(espera)} s...");
+                Debug.LogWarning($"[Lobby] Sondeo con error ({erroresSeguidos} seguido(s)): se espera {espera}s antes de reintentar.");
             }
+
+            yield return new WaitForSecondsRealtime(espera);
         }
     }
 
     private void OnFindLobbiesSuccess(FindLobbiesResult result)
     {
+        // La UI pudo destruirse mientras la respuesta venia en camino.
+        if (listaSalasContent == null) return;
+
         Debug.Log($"[Lobby] FindLobbies devolvio {result.Lobbies.Count} sala(s).");
 
         SetEstadoUnirse($"{result.Lobbies.Count} sala(s) encontradas.");
@@ -513,7 +604,7 @@ public class LobbyManager : MonoBehaviour
         // Tapar la pantalla PRIMERO, antes de tocar nada de PlayFab
         yield return LoadingScreenManager.Instance.ShowLoading();
 
-        // Recién ahí, ya tapado, tu código de siempre sin cambios
+        // Recién ahí, ya tapado, el flujo de siempre
         DetenerBusquedaPeriodica();
         DeshabilitarBotonesDeSalas();
 
@@ -562,7 +653,7 @@ public class LobbyManager : MonoBehaviour
         }
         catch (System.Exception e)
         {
-            Debug.LogError($"[Lobby] Error conectando via Relay: {e.Message}");
+            Debug.LogError($"[Lobby] Error conectando via Relay: {e}");
             SetEstadoUnirse("Error de conexion. Intenta de nuevo.");
             RehabilitarBotonesDeSalas();
             OcultarProgresoUnirse();
@@ -573,6 +664,8 @@ public class LobbyManager : MonoBehaviour
 
     private void DeshabilitarBotonesDeSalas()
     {
+        if (listaSalasContent == null) return;
+
         foreach (Transform fila in listaSalasContent)
         {
             var boton = fila.GetComponentInChildren<Button>();
@@ -582,6 +675,8 @@ public class LobbyManager : MonoBehaviour
 
     private void RehabilitarBotonesDeSalas()
     {
+        if (listaSalasContent == null) return;
+
         foreach (Transform fila in listaSalasContent)
         {
             var boton = fila.GetComponentInChildren<Button>();
@@ -622,9 +717,10 @@ public class LobbyManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Errores del camino de Unirse (BuscarSalas, JoinLobby, GetLobby).
-    /// El error de CrearSala se maneja directo en su propio lambda porque
-    /// ademas necesita disparar el callback onError hacia StartupFlowUI.
+    /// Errores del camino de Unirse (JoinLobby, GetLobby). Rehabilita los
+    /// botones y reanuda el sondeo UNA vez (el sondeo periodico maneja sus
+    /// propios errores con backoff, sin pasar por aqui).
+    /// El error de CrearSala se maneja en FalloCrearSala.
     /// </summary>
     private void OnLobbyErrorUnirse(PlayFabError error)
     {
@@ -633,6 +729,7 @@ public class LobbyManager : MonoBehaviour
         RehabilitarBotonesDeSalas();
         OcultarProgresoUnirse();
         IniciarBusquedaPeriodica();
+        LoadingScreenManager.Instance.HideLoadingOnError();
     }
 
     // ---------- Estado y progreso: CREAR SALA ----------
@@ -679,12 +776,14 @@ public class LobbyManager : MonoBehaviour
 
     private System.Collections.IEnumerator AnimarSlider(Slider slider, float objetivo)
     {
-        while (!Mathf.Approximately(slider.value, objetivo))
+        while (slider != null && !Mathf.Approximately(slider.value, objetivo))
         {
             slider.value = Mathf.MoveTowards(slider.value, objetivo, velocidadAnimacionSlider * Time.deltaTime);
             ActualizarColorRelleno(slider, slider.value);
             yield return null;
         }
+
+        if (slider == null) yield break;
 
         slider.value = objetivo;
         ActualizarColorRelleno(slider, objetivo);
