@@ -167,7 +167,32 @@ public class BotBrain
     /// <summary>Qué carta descartar (o dar en un intercambio). Devuelve -1 si la mano está vacía.</summary>
     public int ElegirDescarte(List<int> mano, VictoryRuleType regla, CardCategory? infiltrada)
     {
-        return BossStrategy.ElegirCartaADescartar(mano, regla, infiltrada);
+        int descarteOriginal = BossStrategy.ElegirCartaADescartar(mano, regla, infiltrada);
+
+        CardData cartaOriginal = CardDatabase.Instance.ObtenerPorId(descarteOriginal);
+
+        if (cartaOriginal == null) return descarteOriginal;
+
+        if (!CategoriaFuePedidaRecientemente(cartaOriginal.category, Time.time))
+        {
+            return descarteOriginal;
+        }
+
+        foreach (int id in mano)
+        {
+            if (id == descarteOriginal) continue;
+
+            CardData alternativa = CardDatabase.Instance.ObtenerPorId(id);
+
+            if (alternativa != null && !CategoriaFuePedidaRecientemente(alternativa.category, Time.time))
+            {
+                Debug.Log($"[Bots][Decisión] {Nombre} evita descartar {cartaOriginal.category} porque otro jugador la pidió.");
+
+                return id;
+            }
+        }
+
+        return descarteOriginal;
     }
 
     // ------------------------------------------------------------------
@@ -296,17 +321,11 @@ public class BotBrain
 
         if (mano == null || mano.Count == 0) return false;
 
-        int sobrante = BossStrategy.ElegirCartaADescartar(mano, regla, infiltrada);
-        CardData carta = CardDatabase.Instance.ObtenerPorId(sobrante);
-
-        if (carta == null) return false;
 
         foreach (Registro pedido in pedidos)
         {
-            if (pedido.atendido || pedido.categoria != carta.category) continue;
-
-            // Si no es buen momento, el pedido sigue pendiente (hasta que expire).
-            if (!PuedeHacerTrampa(sospechaNorm, bossMirandoAlFrente, ahora)) continue;
+            if (pedido.atendido) continue;
+            if (!TieneCategoria(mano, pedido.categoria)) continue;
 
             pedido.atendido = true; // una sola tirada por pedido
 
@@ -390,6 +409,35 @@ public class BotBrain
     // ------------------------------------------------------------------
     // Utilidades de agrupación (privadas)
     // ------------------------------------------------------------------
+    private static bool TieneCategoria(List<int> mano, CardCategory categoria)
+    {
+        foreach (int id in mano)
+        {
+            CardData carta = CardDatabase.Instance.ObtenerPorId(id);
+
+            if (carta != null && carta.category == categoria)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool CategoriaFuePedidaRecientemente(CardCategory categoria, float ahora)
+    {
+        Purgar(ahora);
+
+        foreach (Registro pedido in pedidos)
+        {
+            if (pedido.categoria == categoria)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /// <summary>Categoría de un cardId que aparece EXACTAMENTE 'cantidadExacta' veces, o null.</summary>
     private static CardCategory? CategoriaDeCartaRepetida(List<int> cartas, int cantidadExacta)

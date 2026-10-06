@@ -139,9 +139,12 @@ public class BotController : MonoBehaviour
     private void AlDeclararTrampa(int slot, CardCategory categoria, bool tieneCategoria)
     {
         float ahora = Time.time;
+        //Solo para saber si el bot me escuchi
+        Debug.Log($"[Bots][Memoria] Se recibió declaración del slot {slot}: {(tieneCategoria ? "TIENE" : "NECESITA")} {categoria}.");
 
         foreach (BotBrain cerebro in cerebros)
         {
+            Debug.Log($"[Bots][Memoria] {cerebro.Nombre} registró la información sobre {categoria}.");
             if (tieneCategoria)
             {
                 cerebro.RegistrarMuestra(slot, categoria, ahora);
@@ -231,7 +234,7 @@ public class BotController : MonoBehaviour
             {
                 Debug.Log($"[Bots][Intercambio] {cerebro.Nombre} propone intercambio al humano del slot {slotObjetivo}.");
 
-                suspicionManager.IniciarIntercambioRpc();
+                
                 cerebro.RegistrarTrampaHecha(Time.time);
 
                 tradeManager.IniciarIntercambioBotConHumano(cerebro.MiSlot, slotObjetivo, cardIdOfrecido);
@@ -258,14 +261,16 @@ public class BotController : MonoBehaviour
             yield break;
         }
 
+
+   //BORRAR AL PROBAR
+        CardData cartaDescartar = CardDatabase.Instance.ObtenerPorId(cardIdADescartar);
+        Debug.Log($"[Bots][Decisión] {cerebro.Nombre} va a descartar {(cartaDescartar != null ? cartaDescartar.cardName : "?")} | Categoría: {(cartaDescartar != null ? cartaDescartar.category.ToString() : "?")} | Mano: {DescribirManoBot(botId)}");
+
         deckManager.DescartarCartaDeBot(botId, slot, cardIdADescartar);
+        //BORRAR AL PROBAR
+        Debug.Log($"[Bots][Mano] {cerebro.Nombre} después de descartar: {DescribirManoBot(botId)}");
     }
 
-    /// <summary>
-    /// Intercambio bot -> bot, resuelto directo en el servidor. La sospecha
-    /// sube mientras "deliberan", igual que en un intercambio de humanos
-    /// (IniciarIntercambioRpc empieza a sumar, Aceptar/Cancelar la frena).
-    /// </summary>
 
     private IEnumerator IntercambioEntreBots(BotBrain iniciador, int slotObjetivo, int cardIdOfrecido, int gen)
     {
@@ -275,7 +280,7 @@ public class BotController : MonoBehaviour
 
         Debug.Log($"[Bots] {iniciador.Nombre} propone un intercambio a {objetivo.Nombre}.");
 
-        suspicionManager.IniciarIntercambioRpc();
+       
         iniciador.RegistrarTrampaHecha(Time.time);
 
         yield return Esperar(deliberacionIntercambio);

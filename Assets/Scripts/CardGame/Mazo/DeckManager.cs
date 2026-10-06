@@ -419,7 +419,7 @@ public partial class DeckManager : NetworkBehaviour // hereda de networkBehavior
             ReproducirSonidoBarajadoClientRpc();
         }
 
-        Debug.Log("[Servidor] El mazo fue mezclado.");
+        //Debug.Log("[Servidor] El mazo fue mezclado.");
     }
     [ClientRpc]
     private void ReproducirSonidoBarajadoClientRpc()
@@ -504,7 +504,7 @@ public partial class DeckManager : NetworkBehaviour // hereda de networkBehavior
 
         ActualizarContadoresDeMazo();
 
-        Debug.Log("[Servidor] Carta robada: " + drawnCard.cardName + " | Cartas restantes: " + drawPile.Count);
+        //Debug.Log("[Servidor] Carta robada: " + drawnCard.cardName + " | Cartas restantes: " + drawPile.Count);
 
         return drawnCard;
     }
@@ -756,7 +756,7 @@ public partial class DeckManager : NetworkBehaviour // hereda de networkBehavior
             turnManager.NotificarRoboRealizado();
         }
 
-        Debug.Log($"[Servidor] Cliente {clienteSolicitante} robó correctamente. Ahora tiene {cartasActuales + 1} carta(s).");
+       // Debug.Log($"[Servidor] Cliente {clienteSolicitante} robó correctamente. Ahora tiene {cartasActuales + 1} carta(s).");
     }
 
     /// <summary>

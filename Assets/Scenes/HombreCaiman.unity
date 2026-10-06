@@ -8088,14 +8088,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 482585990305150171, guid: 2e6b0f8da5887ea4785283b8e8874c34, type: 3}
-      propertyPath: perfilBot1.audacia
-      value: 0.633
-      objectReference: {fileID: 0}
-    - target: {fileID: 482585990305150171, guid: 2e6b0f8da5887ea4785283b8e8874c34, type: 3}
-      propertyPath: perfilBot1.sospechaTope
-      value: 0.392
-      objectReference: {fileID: 0}
     - target: {fileID: 6730492943909570508, guid: 2e6b0f8da5887ea4785283b8e8874c34, type: 3}
       propertyPath: m_Name
       value: BotController
@@ -9367,6 +9359,7 @@ MonoBehaviour:
   turnManager: {fileID: 979683347}
   gameManager: {fileID: 340926873}
   handManager: {fileID: 1437311224}
+  suspicionManager: {fileID: 0}
   tradeUI: {fileID: 1124723466}
 --- !u!114 &1124723466
 MonoBehaviour:

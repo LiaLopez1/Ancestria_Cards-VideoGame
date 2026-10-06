@@ -46,8 +46,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BotController
   perfilBot1:
     nombre: Bot Sandra
-    audacia: 0.3
-    sospechaTope: 0.6
+    audacia: 0.633
+    sospechaTope: 0.392
     cooldownTrampa: {x: 8, y: 18}
     probMostrar: 0.6
     probAceptarIntercambio: 0.6
@@ -66,4 +66,4 @@ MonoBehaviour:
   esperaAntesDeDescartar: {x: 1.2, y: 2.5}
   intervaloPensarTrampas: {x: 1.5, y: 3}
   deliberacionIntercambio: {x: 1.5, y: 3}
-  intercambiosConHumano: 0
+  intercambiosConHumano: 1

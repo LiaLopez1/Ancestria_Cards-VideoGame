@@ -282,16 +282,19 @@ public class TradeManager : NetworkBehaviour
             return;
         }
 
-        if (!acepta)
+    if (!acepta)
+    {
+        if (!BotIds.EsBot(clienteIniciador))
         {
-            Debug.Log($"[Servidor] Cliente {remitente} rechazo el intercambio.");
             AvisarRechazoClientRpc(EnviarSoloA(clienteIniciador));
-            CancelarIntercambio();
-            return;
         }
 
-        PedirSeleccionObjetivoClientRpc(EnviarSoloA(clienteObjetivo));
+        CancelarIntercambio();
+        return;
     }
+
+    PedirSeleccionObjetivoClientRpc(EnviarSoloA(clienteObjetivo));
+}
 
     [ClientRpc]
     private void PedirSeleccionObjetivoClientRpc(ClientRpcParams rpcParams = default)
@@ -315,6 +318,7 @@ public class TradeManager : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
+    
     private void ConfirmarCartaObjetivoServerRpc(int cardId, ServerRpcParams rpcParams = default)
     {
         ulong remitente = rpcParams.Receive.SenderClientId;
@@ -337,21 +341,16 @@ public class TradeManager : NetworkBehaviour
 
         if (!exito)
         {
-            Debug.LogError("[Servidor] El intercambio fallo al ejecutarse (alguna de las dos cartas ya no estaba disponible).");
-            suspicionManager?.AceptarIntercambioRpc();
             CancelarIntercambio();
             return;
         }
 
-        // A cada uno le llega la carta que le dio el OTRO.
         if (!BotIds.EsBot(clienteIniciador))
         {
             EjecutarAnimacionDeIntercambioClientRpc(cardIdObjetivo, EnviarSoloA(clienteIniciador));
         }
 
         EjecutarAnimacionDeIntercambioClientRpc(cardIdIniciador, EnviarSoloA(clienteObjetivo));
-
-        Debug.Log($"[Servidor] Intercambio finalizado entre {clienteIniciador} y {clienteObjetivo}.");
 
         CancelarIntercambio();
     }
@@ -379,24 +378,18 @@ public class TradeManager : NetworkBehaviour
     {
         if (!BotIds.TryObtenerSlot(clienteObjetivo, out int slotBot))
         {
-            Debug.LogError("[TradeManager] No se pudo obtener el slot del bot.");
-            suspicionManager?.CancelarIntercambioRpc();
             CancelarIntercambio();
             return;
         }
 
         if (!NetworkBootstrap.Instance.TryObtenerSlot(clienteIniciador, out int slotHumano))
         {
-            Debug.LogError("[TradeManager] No se pudo obtener el slot del humano.");
-            suspicionManager?.CancelarIntercambioRpc();
             CancelarIntercambio();
             return;
         }
 
         if (botController == null)
         {
-            Debug.LogError("[TradeManager] No se encontró BotController.");
-            suspicionManager?.CancelarIntercambioRpc();
             CancelarIntercambio();
             return;
         }
@@ -405,12 +398,7 @@ public class TradeManager : NetworkBehaviour
 
         if (!acepta)
         {
-            Debug.Log($"[TradeManager][Humano-Bot] El bot del slot {slotBot} rechazó el intercambio del humano del slot {slotHumano}.");
-
             AvisarRechazoClientRpc(EnviarSoloA(clienteIniciador));
-
-            suspicionManager?.CancelarIntercambioRpc();
-
             CancelarIntercambio();
             return;
         }
@@ -419,37 +407,27 @@ public class TradeManager : NetworkBehaviour
 
         if (cardIdObjetivo < 0)
         {
-            Debug.LogError($"[TradeManager] El bot del slot {slotBot} no encontró una carta para intercambiar.");
-
-            suspicionManager?.CancelarIntercambioRpc();
             CancelarIntercambio();
             return;
         }
-
-        Debug.Log($"[TradeManager][Humano-Bot] Humano ofrece cardId={cardIdIniciador}. Bot slot {slotBot} ofrece cardId={cardIdObjetivo}.");
 
         bool exito = deckManager.EjecutarIntercambio(clienteIniciador, cardIdIniciador, clienteObjetivo, cardIdObjetivo);
 
         if (!exito)
         {
-            Debug.LogError("[TradeManager][Humano-Bot] El intercambio falló.");
-
-            suspicionManager?.CancelarIntercambioRpc();
             CancelarIntercambio();
             return;
         }
 
-        Debug.Log($"[TradeManager][Humano-Bot][OK] Intercambio completado entre humano slot {slotHumano} y bot slot {slotBot}.");
-
         EjecutarAnimacionDeIntercambioClientRpc(cardIdObjetivo, EnviarSoloA(clienteIniciador));
-
-        suspicionManager?.AceptarIntercambioRpc();
 
         CancelarIntercambio();
     }
 
     private void CancelarIntercambio()
     {
+        suspicionManager?.DetenerIntercambioDesdeServidor();
+        
         intercambioEnProgreso = false;
         clienteIniciador = 0;
         clienteObjetivo = 0;
@@ -538,6 +516,7 @@ public class TradeManager : NetworkBehaviour
         }
 
         intercambioEnProgreso = true;
+        suspicionManager?.IniciarIntercambioRpc();
         clienteIniciador = botId;
         clienteObjetivo = clienteHumano;
         cardIdIniciador = cardIdBot;
