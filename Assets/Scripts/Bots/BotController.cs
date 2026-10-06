@@ -47,6 +47,9 @@ public class BotController : MonoBehaviour
     private InfiltratedCardManager infiltratedCardManager;
     private GameManager gameManager;
 
+    private TradeManager tradeManager;
+
+
     private BotBrain[] cerebros;
     private Coroutine corrutinaPensar;
     private Coroutine corrutinaTurno;
@@ -80,8 +83,11 @@ public class BotController : MonoBehaviour
         infiltratedCardManager = FindFirstObjectByType<InfiltratedCardManager>();
         gameManager = FindFirstObjectByType<GameManager>();
 
+        tradeManager = FindFirstObjectByType<TradeManager>();
+
         if (deckManager == null || turnManager == null || suspicionManager == null
-            || trapManager == null || gameManager == null)
+            || trapManager == null || gameManager == null || tradeManager == null)
+
         {
             Debug.LogError("[Bots] Falta algún manager en la escena (DeckManager, TurnManager, SuspicionManager, TrapManager o GameManager). Los bots no van a jugar.");
             yield break;
@@ -219,9 +225,25 @@ public class BotController : MonoBehaviour
 
                 if (!Vigente(gen)) yield break;
             }
+
+
             else
             {
-                Debug.Log($"[Bots] {cerebro.Nombre} quería intercambiar con el slot {slotObjetivo}, pero los intercambios con humano aún no están habilitados.");
+                Debug.Log($"[Bots][Intercambio] {cerebro.Nombre} propone intercambio al humano del slot {slotObjetivo}.");
+
+                suspicionManager.IniciarIntercambioRpc();
+                cerebro.RegistrarTrampaHecha(Time.time);
+
+                tradeManager.IniciarIntercambioBotConHumano(cerebro.MiSlot, slotObjetivo, cardIdOfrecido);
+
+                Debug.Log($"[Bots][Intercambio] {cerebro.Nombre} está esperando la respuesta del humano.");
+
+                yield return new WaitUntil(() => !tradeManager.IntercambioEnProgreso || !Vigente(gen));
+
+                if (!Vigente(gen)) yield break;
+
+                Debug.Log($"[Bots][Intercambio] El intercambio de {cerebro.Nombre} terminó. Continúa su turno.");
+
             }
         }
 
@@ -244,6 +266,11 @@ public class BotController : MonoBehaviour
     /// sube mientras "deliberan", igual que en un intercambio de humanos
     /// (IniciarIntercambioRpc empieza a sumar, Aceptar/Cancelar la frena).
     /// </summary>
+<<<<<<< Updated upstream
+=======
+    /// 
+    
+>>>>>>> Stashed changes
     private IEnumerator IntercambioEntreBots(BotBrain iniciador, int slotObjetivo, int cardIdOfrecido, int gen)
     {
         BotBrain objetivo = cerebros[slotObjetivo - BotIds.PrimerSlot];
@@ -271,12 +298,30 @@ public class BotController : MonoBehaviour
 
         suspicionManager.AceptarIntercambioRpc();
 
+<<<<<<< Updated upstream
         bool exito = deckManager.EjecutarIntercambio(idIniciador, cardIdOfrecido, idObjetivo, cardIdObjetivo);
 
         Debug.Log(exito
             ? $"[Bots] Intercambio hecho entre {iniciador.Nombre} y {objetivo.Nombre}."
             : "[Bots] El intercambio falló (alguna carta ya no estaba disponible).");
     }
+=======
+        Debug.Log(
+            $"[Bots][ANTES] " +
+            $"{iniciador.Nombre}: {string.Join(", ", deckManager.ObtenerManoDeBot(idIniciador))} | " +
+            $"{objetivo.Nombre}: {string.Join(", ", deckManager.ObtenerManoDeBot(idObjetivo))}"
+        );
+
+        Debug.Log(
+            $"[Bots][DESPUÉS] " +
+            $"{iniciador.Nombre}: {string.Join(", ", deckManager.ObtenerManoDeBot(idIniciador))} | " +
+            $"{objetivo.Nombre}: {string.Join(", ", deckManager.ObtenerManoDeBot(idObjetivo))}"
+        );
+
+
+
+
+>>>>>>> Stashed changes
 
     // ------------------------------------------------------------------
     // Pensar: pedir / mostrar categorías fuera de su turno
@@ -334,6 +379,42 @@ public class BotController : MonoBehaviour
         }
     }
 
+<<<<<<< Updated upstream
+=======
+    public bool BotAceptaIntercambio(int slotBot, int slotIniciador)
+    {
+        if (!listo) return false;
+
+        int indice = slotBot - BotIds.PrimerSlot;
+
+        if (indice < 0 || indice >= cerebros.Length)
+        {
+            Debug.LogWarning($"[Bots] El slot {slotBot} no corresponde a un bot.");
+            return false;
+        }
+
+        bool acepta = cerebros[indice].AceptaIntercambio(slotIniciador, SospechaNormalizada(), Time.time);
+
+        Debug.Log($"[Bots][Intercambio Humano-Bot] {cerebros[indice].Nombre} {(acepta ? "ACEPTA" : "RECHAZA")} el intercambio del jugador del slot {slotIniciador}.");
+
+        return acepta;
+    }
+
+    public int ObtenerCartaParaIntercambio(int slotBot)
+    {
+        if (!listo) return -1;
+
+        int indice = slotBot - BotIds.PrimerSlot;
+
+        if (indice < 0 || indice >= cerebros.Length) return -1;
+
+        ulong botId = BotIds.IdDeSlot(slotBot);
+        List<int> mano = deckManager.ObtenerManoDeBot(botId);
+
+        return cerebros[indice].ElegirDescarte(mano, turnManager.ReglaActiva, CategoriaInfiltrada());
+    }
+
+>>>>>>> Stashed changes
     // ------------------------------------------------------------------
     // Utilidades
     // ------------------------------------------------------------------
@@ -388,4 +469,29 @@ public class BotController : MonoBehaviour
 
         return slots;
     }
+<<<<<<< Updated upstream
+=======
+
+    private string DescribirManoBot(ulong botId)
+    {
+        List<int> mano = deckManager.ObtenerManoDeBot(botId);
+        List<string> cartas = new List<string>();
+
+        foreach (int id in mano)
+        {
+            CardData carta = CardDatabase.Instance.ObtenerPorId(id);
+
+            if (carta != null)
+            {
+                cartas.Add($"{carta.cardName}({id})");
+            }
+            else
+            {
+                cartas.Add($"Desconocida({id})");
+            }
+        }
+
+        return "[" + string.Join(", ", cartas) + "]";
+    }
+>>>>>>> Stashed changes
 }
