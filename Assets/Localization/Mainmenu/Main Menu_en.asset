@@ -90,6 +90,14 @@ MonoBehaviour:
     m_Localized: Nickname must be between {0} and {1} characters.
     m_Metadata:
       m_Items: []
+  - m_Id: 21560351880945664
+    m_Localized: You lost connection. Returning to the main menu...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 21560428301164544
+    m_Localized: The host left the game. Returning to the main menu...
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

@@ -9,6 +9,7 @@ using Unity.Services.Core;
 using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
 using UnityEngine;
+using UnityEngine.Localization.Settings;
 using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 
@@ -61,8 +62,17 @@ public class NetworkBootstrap : MonoBehaviour
     public static string MensajePendiente { get; private set; }
 
     // Textos exactos que se muestran en el aviso al volver al menu.
-    private const string MensajePerdisteConexion = "Perdiste la conexión. Regresando al menú principal...";
-    private const string MensajeHostAbandono = "El anfitrión abandonó la partida. Regresando al menú principal...";
+    //private const string MensajePerdisteConexion = "Perdiste la conexión. Regresando al menú principal...";
+    //private const string MensajeHostAbandono = "El anfitrión abandonó la partida. Regresando al menú principal...";
+
+    private string Localizar(string key)
+    {
+        return LocalizationSettings.StringDatabase.GetLocalizedString(
+            "Main Menu",
+            key
+        );
+    }
+
 
     /// <summary>
     /// Marcar esto en true JUSTO ANTES de llamar a NetworkManager.Shutdown()
@@ -339,7 +349,7 @@ public class NetworkBootstrap : MonoBehaviour
                 Debug.LogWarning("[Red] Sin internet de forma sostenida. Volviendo al menu.");
                 vigilancia = null;
                 SalidaVoluntaria = true; // evita el mensaje falso de "el dueno se desconecto"
-                VolverAlMenuPorDesconexion(MensajePerdisteConexion);
+                VolverAlMenuPorDesconexion(Localizar("lost_connection"));
                 yield break;
             }
         }
@@ -376,7 +386,7 @@ public class NetworkBootstrap : MonoBehaviour
 
                 Debug.Log("[Netcode] El host perdio su propia conexion. Volviendo al menu.");
                 DetenerVigilancia();
-                VolverAlMenuPorDesconexion(MensajePerdisteConexion);
+                VolverAlMenuPorDesconexion(Localizar("lost_connection"));
                 return;
             }
 
@@ -423,12 +433,12 @@ public class NetworkBootstrap : MonoBehaviour
         if (hayInternet)
         {
             Debug.Log("[Netcode] Desconectado pero con internet: el host abandono la partida.");
-            VolverAlMenuPorDesconexion(MensajeHostAbandono);
+            VolverAlMenuPorDesconexion(Localizar("host_left"));
         }
         else
         {
             Debug.Log("[Netcode] Desconectado y sin internet: el invitado perdio su conexion.");
-            VolverAlMenuPorDesconexion(MensajePerdisteConexion);
+            VolverAlMenuPorDesconexion(Localizar("lost_connection"));
         }
     }
 

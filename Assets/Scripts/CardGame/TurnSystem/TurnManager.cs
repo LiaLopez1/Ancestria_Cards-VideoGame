@@ -3,6 +3,7 @@ using TMPro;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Localization.Settings;
 
 public enum TurnState
 {
@@ -122,6 +123,15 @@ public class TurnManager : NetworkBehaviour
     /// vuelve a prender despues. El costo es minimo (dos comparaciones y,
     /// como mucho, dos SetActive por frame).
     /// </summary>
+    /// 
+    private string Localizar(string key, params object[] args)
+    {
+        return LocalizationSettings.StringDatabase.GetLocalizedString(
+            "GameCards1",
+            key,
+            args
+        );
+    }
     private void Update()
     {
         if (!IsSpawned) return;
@@ -476,7 +486,7 @@ public override void OnNetworkDespawn()
     {
         if (turnMessage != null)
         {
-            turnMessage.text = "Esperando jugadores...";
+            turnMessage.text = Localizar("waiting_players");
         }
     }
 
@@ -493,11 +503,14 @@ public override void OnNetworkDespawn()
         }
         else if (estadoActual.Value == TurnState.Dealing)
         {
-            mensaje = "Repartiendo cartas...";
+            // mensaje = "Repartiendo cartas...";
+            mensaje = Localizar("dealing_cards");
+
         }
         else
         {
-            mensaje = $"Regla: {VictoryRules.ObtenerNombre(ReglaActiva)}";
+            //mensaje = $"Regla: {VictoryRules.ObtenerNombre(ReglaActiva)}";
+            mensaje = Localizar("active_rule",VictoryRules.ObtenerNombre(ReglaActiva));
             descripcion = VictoryRules.ObtenerDescripcion(ReglaActiva);
         }
 

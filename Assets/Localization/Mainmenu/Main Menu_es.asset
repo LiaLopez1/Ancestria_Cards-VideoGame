@@ -90,6 +90,14 @@ MonoBehaviour:
     m_Localized: El nick debe tener entre {0} y {1} caracteres.
     m_Metadata:
       m_Items: []
+  - m_Id: 21560351880945664
+    m_Localized: "Perdiste la conexi\xF3n. Regresando al men\xFA principal..."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 21560428301164544
+    m_Localized: "El anfitri\xF3n abandon\xF3 la partida. Regresando al men\xFA principal..."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

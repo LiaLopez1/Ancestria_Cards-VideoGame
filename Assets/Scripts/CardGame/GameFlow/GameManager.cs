@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.Localization.Settings;
 using UnityEngine.UI;
 
 /// <summary>
@@ -121,6 +122,16 @@ public class GameManager : NetworkBehaviour
     /// nada mas del juego en si.
     /// </summary>
     public event Action<int, int> OnResultadoRondaRegistrado;
+
+// localization 
+    private string Localizar(string key, params object[] args)
+    {
+        return LocalizationSettings.StringDatabase.GetLocalizedString(
+            "GameCards1",
+            key,
+            args
+        );
+    }
 
 
     public override void OnNetworkSpawn()
@@ -469,7 +480,7 @@ public class GameManager : NetworkBehaviour
         // panel SIN este boton.
         if (botonSiguienteRonda != null) botonSiguienteRonda.SetActive(esRondaGanada && IsServer);
 
-        Debug.Log($"[GameManager] Resultado actualizado a: {nuevoResultado} (ronda {rondaActual.Value}/{totalRondas}, marcador jugadores {rondasGanadasJugadores.Value} - boss {rondasGanadasBoss.Value})");
+        //Debug.Log($"[GameManager] Resultado actualizado a: {nuevoResultado} (ronda {rondaActual.Value}/{totalRondas}, marcador jugadores {rondasGanadasJugadores.Value} - boss {rondasGanadasBoss.Value})");
 
         if (esRondaGanada && textoRondaGanada != null)
         {
@@ -477,13 +488,15 @@ public class GameManager : NetworkBehaviour
                 ? ObtenerNombreDelBoss()
                 : ObtenerNombrePorSlot(slotGanador.Value);
 
-            textoRondaGanada.text = $"¡{nombre} ganó la ronda {rondaActual.Value}!";
+            //textoRondaGanada.text = $"¡{nombre} ganó la ronda {rondaActual.Value}!";
+            textoRondaGanada.text = Localizar("round_winner",nombre,rondaActual.Value);
         }
 
         if (esVictoria && textoNombreGanador != null)
         {
             string nombre = ObtenerNombrePorSlot(slotGanador.Value);
-            textoNombreGanador.text = $"¡{nombre} ganó!";
+            //textoNombreGanador.text = $"¡{nombre} ganó!";
+            textoNombreGanador.text = Localizar("game_winner",nombre);
         }
     }
 
@@ -491,7 +504,8 @@ public class GameManager : NetworkBehaviour
     {
         if (textoContadorRondas != null)
         {
-            textoContadorRondas.text = $"Ronda {rondaActual.Value}/{totalRondas}";
+            //textoContadorRondas.text = $"Ronda {rondaActual.Value}/{totalRondas}";
+            textoContadorRondas.text = Localizar("round_counter",rondaActual.Value,totalRondas);
         }
     }
 
@@ -499,14 +513,14 @@ public class GameManager : NetworkBehaviour
     {
         return PlayerNamePanelsUI.Instance != null
             ? PlayerNamePanelsUI.Instance.ObtenerNombrePorSlot(slot)
-            : $"Jugador {slot}";
+            : Localizar("default_player_name", slot);
     }
 
     private string ObtenerNombreDelBoss()
     {
         return PlayerNamePanelsUI.Instance != null
             ? PlayerNamePanelsUI.Instance.ObtenerNombreDelBoss()
-            : "El Boss";
+            : Localizar("boss_name");
     }
 
     private void AvisarSiFalta(GameObject panel, string nombreCampo)

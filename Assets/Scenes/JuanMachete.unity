@@ -369,6 +369,7 @@ GameObject:
   - component: {fileID: 41239710}
   - component: {fileID: 41239712}
   - component: {fileID: 41239711}
+  - component: {fileID: 41239713}
   m_Layer: 0
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -495,6 +496,46 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 41239709}
   m_CullTransparentMesh: 1
+--- !u!114 &41239713
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 41239709}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56eb0353ae6e5124bb35b17aff880f16, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Components.LocalizeStringEvent
+  m_StringReference:
+    m_TableReference:
+      m_TableCollectionName: GUID:060bb23ecfd15554caa8e8b314d62105
+    m_TableEntryReference:
+      m_KeyId: 455571181568
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  m_FormatArguments: []
+  m_UpdateString:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 41239711}
+        m_TargetAssemblyTypeName: TMPro.TMP_Text, Unity.TextMeshPro
+        m_MethodName: set_text
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: 
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 1
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &45396653
 GameObject:
   m_ObjectHideFlags: 0
@@ -1798,6 +1839,7 @@ GameObject:
   - component: {fileID: 172654907}
   - component: {fileID: 172654909}
   - component: {fileID: 172654908}
+  - component: {fileID: 172654910}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -1924,6 +1966,46 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 172654906}
   m_CullTransparentMesh: 1
+--- !u!114 &172654910
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 172654906}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56eb0353ae6e5124bb35b17aff880f16, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Components.LocalizeStringEvent
+  m_StringReference:
+    m_TableReference:
+      m_TableCollectionName: GUID:060bb23ecfd15554caa8e8b314d62105
+    m_TableEntryReference:
+      m_KeyId: 17988250544676864
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  m_FormatArguments: []
+  m_UpdateString:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 172654908}
+        m_TargetAssemblyTypeName: TMPro.TMP_Text, Unity.TextMeshPro
+        m_MethodName: set_text
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: 
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 1
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &176515764
 GameObject:
   m_ObjectHideFlags: 0
@@ -18694,6 +18776,63 @@ MonoBehaviour:
   mainMixer: {fileID: 24100000, guid: cf37b6833b6a8c640ad4fd4893af9a6b, type: 2}
   musicSlider: {fileID: 1494936956}
   sfxSlider: {fileID: 2006530663}
+--- !u!1001 &2076625958
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 6730492943909570508, guid: 2e6b0f8da5887ea4785283b8e8874c34, type: 3}
+      propertyPath: m_Name
+      value: BotController
+      objectReference: {fileID: 0}
+    - target: {fileID: 8273653268633745628, guid: 2e6b0f8da5887ea4785283b8e8874c34, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 828.9878
+      objectReference: {fileID: 0}
+    - target: {fileID: 8273653268633745628, guid: 2e6b0f8da5887ea4785283b8e8874c34, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 618.41254
+      objectReference: {fileID: 0}
+    - target: {fileID: 8273653268633745628, guid: 2e6b0f8da5887ea4785283b8e8874c34, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8273653268633745628, guid: 2e6b0f8da5887ea4785283b8e8874c34, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8273653268633745628, guid: 2e6b0f8da5887ea4785283b8e8874c34, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8273653268633745628, guid: 2e6b0f8da5887ea4785283b8e8874c34, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8273653268633745628, guid: 2e6b0f8da5887ea4785283b8e8874c34, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8273653268633745628, guid: 2e6b0f8da5887ea4785283b8e8874c34, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8273653268633745628, guid: 2e6b0f8da5887ea4785283b8e8874c34, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8273653268633745628, guid: 2e6b0f8da5887ea4785283b8e8874c34, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 2e6b0f8da5887ea4785283b8e8874c34, type: 3}
 --- !u!1 &2077240752
 GameObject:
   m_ObjectHideFlags: 0
@@ -19523,3 +19662,4 @@ SceneRoots:
   - {fileID: 282538747}
   - {fileID: 1763369753}
   - {fileID: 2019193017}
+  - {fileID: 2076625958}

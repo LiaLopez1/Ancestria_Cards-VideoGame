@@ -46,6 +46,76 @@ MonoBehaviour:
     m_Localized: Draw
     m_Metadata:
       m_Items: []
+  - m_Id: 17988250544676864
+    m_Localized: cheating
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17990153366183936
+    m_Localized: 4 of a Kind
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17990158663589888
+    m_Localized: Full Category
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17990160471334912
+    m_Localized: Infiltrated Card
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17990161918369792
+    m_Localized: Infiltrated Card II
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17992529040941056
+    m_Localized: Get 4 exact copies of the same card.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17992530999681024
+    m_Localized: Get the 4 different cards from the same category.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17992532757094400
+    m_Localized: Get 3 different cards from the same category, plus any card from
+      the category revealed by the Boss.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17992534430621696
+    m_Localized: Get 3 exact copies of the same card, plus any card from the category
+      revealed by the Boss.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17997264917667840
+    m_Localized: Waiting for players...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17997266587000832
+    m_Localized: Dealing cards...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17997268336025600
+    m_Localized: 'Rule: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18001854299938816
+    m_Localized: '{0} won round {1}!'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18001856887824384
+    m_Localized: '{0} won!'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18001858360025088
+    m_Localized: Round {0}/{1}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18003410118287360
+    m_Localized: Player {0}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18003412701978624
+    m_Localized: The Boss
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

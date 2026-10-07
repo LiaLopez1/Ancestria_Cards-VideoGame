@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine.Localization.Settings;
 
 /// <summary>
 /// Todas las reglas de victoria posibles. Para agregar una nueva:
@@ -26,6 +27,14 @@ public enum VictoryRuleType
 
 public static class VictoryRules
 {
+
+    private static string Localizar(string key)
+    {
+        return LocalizationSettings.StringDatabase.GetLocalizedString(
+            "GameCards1",
+            key
+        );
+    }
     /// <summary>
     /// Las reglas que de verdad estan activas para sortear en una partida.
     /// Es un array a proposito: agregar una regla nueva es agregarla aqui,
@@ -49,13 +58,14 @@ public static class VictoryRules
         switch (regla)
         {
             case VictoryRuleType.CuatroIguales:
-                return "4 iguales";
+                //return "4 iguales";
+                return Localizar("rule_four_equal_name");
             case VictoryRuleType.CategoriaCompleta:
-                return "Categoría completa";
+                return Localizar("rule_full_category_name");
             case VictoryRuleType.CartaInfiltrada:
-                return "Carta infiltrada";
+                return Localizar("rule_infiltrated_card_name");
             case VictoryRuleType.CartaInfiltrada2:
-                return "Carta infiltrada II";
+                return Localizar("rule_infiltrated_card_2_name");
             default:
                 return regla.ToString();
         }
@@ -67,13 +77,13 @@ public static class VictoryRules
         switch (regla)
         {
             case VictoryRuleType.CuatroIguales:
-                return "Consigue 4 copias exactas de la misma carta.";
+                return Localizar("rule_four_equal_description");
             case VictoryRuleType.CategoriaCompleta:
-                return "Consigue las 4 cartas distintas de una misma categoría.";
+                return Localizar("rule_full_category_description");
             case VictoryRuleType.CartaInfiltrada:
-                return "Consigue 3 cartas distintas de una misma categoría, más cualquier carta de la categoría que reveló el Boss.";
+                return Localizar("rule_infiltrated_card_description");
             case VictoryRuleType.CartaInfiltrada2:
-                return "Consigue 3 copias exactas de la misma carta, más cualquier carta de la categoría que reveló el Boss.";
+                return Localizar("rule_infiltrated_card_2_description");
             default:
                 return string.Empty;
         }

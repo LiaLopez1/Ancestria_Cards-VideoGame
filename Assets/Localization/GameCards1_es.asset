@@ -46,6 +46,76 @@ MonoBehaviour:
     m_Localized: Robar
     m_Metadata:
       m_Items: []
+  - m_Id: 17988250544676864
+    m_Localized: ' Trampas'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17990153366183936
+    m_Localized: 4 iguales
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17990158663589888
+    m_Localized: "Categor\xEDa completa"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17990160471334912
+    m_Localized: Carta infiltrada
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17990161918369792
+    m_Localized: Carta infiltrada II
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17992529040941056
+    m_Localized: Consigue 4 copias exactas de la misma carta.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17992530999681024
+    m_Localized: "Consigue las 4 cartas distintas de una misma categor\xEDa"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17992532757094400
+    m_Localized: "Consigue 3 cartas distintas de una misma categor\xEDa, m\xE1s cualquier
+      carta de la categor\xEDa que revel\xF3 el Boss."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17992534430621696
+    m_Localized: "Consigue 3 copias exactas de la misma carta, m\xE1s cualquier carta
+      de la categor\xEDa que revel\xF3 el Boss."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17997264917667840
+    m_Localized: Esperando jugadores...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17997266587000832
+    m_Localized: Repartiendo cartas...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17997268336025600
+    m_Localized: 'Regla: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18001854299938816
+    m_Localized: "\xA1{0} gan\xF3 la ronda {1}!"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18001856887824384
+    m_Localized: "\xA1{0} gan\xF3!"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18001858360025088
+    m_Localized: Ronda {0}/{1}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18003410118287360
+    m_Localized: Jugador {0}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18003412701978624
+    m_Localized: El Boss
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

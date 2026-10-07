@@ -43,6 +43,74 @@ MonoBehaviour:
     m_Key: lbl_draw
     m_Metadata:
       m_Items: []
+  - m_Id: 17988250544676864
+    m_Key: 'cheating '
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17990153366183936
+    m_Key: rule_four_equal_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17990158663589888
+    m_Key: rule_full_category_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17990160471334912
+    m_Key: rule_infiltrated_card_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17990161918369792
+    m_Key: rule_infiltrated_card_2_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17992529040941056
+    m_Key: rule_four_equal_description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17992530999681024
+    m_Key: rule_full_category_description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17992532757094400
+    m_Key: rule_infiltrated_card_description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17992534430621696
+    m_Key: rule_infiltrated_card_2_description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17997264917667840
+    m_Key: waiting_players
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17997266587000832
+    m_Key: dealing_cards
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17997268336025600
+    m_Key: active_rule
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18001854299938816
+    m_Key: round_winner
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18001856887824384
+    m_Key: game_winner
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18001858360025088
+    m_Key: round_counter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18003410118287360
+    m_Key: default_player_name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18003412701978624
+    m_Key: boss_name
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
