@@ -8,12 +8,19 @@ public class AudioManager : MonoBehaviour
 {
     public static AudioManager Instance { get; private set; }
 
+    [SerializeField] private AudioMixer mainMixer;
     [SerializeField] private AudioMixerGroup musicGroup;
     [SerializeField] private AudioMixerGroup sfxGroup;
 
     [Header("Música (crossfade con 2 fuentes, se crean solas)")]
     [Tooltip("Duración por defecto del crossfade al cambiar de música. 0 = corte instantáneo.")]
     [SerializeField] private float defaultFadeDuration = 1f;
+
+    private const string MusicParameter = "MusicVolume";
+    private const string SFXParameter = "SFXVolume";
+
+    private const string MusicPreference = "MusicVolumeValue";
+    private const string SFXPreference = "SFXVolumeValue";
 
     private AudioSource musicSourceA;
     private AudioSource musicSourceB;
@@ -40,16 +47,18 @@ public class AudioManager : MonoBehaviour
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+        LoadAudioSettings();
         InitPool();
         InitMusicSources();
 
         SceneManager.sceneLoaded += OnSceneLoaded;
     }
-
-    private void Start()
+    private IEnumerator Start()
     {
-        // La escena inicial ya terminó de cargar antes de que Awake() se suscribiera
-        // al evento sceneLoaded, así que la disparamos manualmente una vez al arrancar.
+        yield return null;
+
+        LoadAudioSettings();
+
         HandleSceneMusic(SceneManager.GetActiveScene().name);
     }
 
@@ -199,6 +208,27 @@ public class AudioManager : MonoBehaviour
         {
             crossfadeRoutine = StartCoroutine(FadeOutAndStop(activeMusicSource, duration));
         }
+    }
+
+    private void LoadAudioSettings()
+    {
+        float musicVolume = PlayerPrefs.GetFloat(MusicPreference, 1f);
+        float sfxVolume = PlayerPrefs.GetFloat(SFXPreference, 1f);
+
+        SetMixerVolume(MusicParameter, musicVolume);
+        SetMixerVolume(SFXParameter, sfxVolume);
+
+        Debug.Log($"[AudioManager] Volumen cargado - Música: {musicVolume}, SFX: {sfxVolume}");
+    }
+
+    private void SetMixerVolume(string parameter, float value)
+    {
+        float volumeInDecibels =
+            value <= 0.0001f
+                ? -80f
+                : Mathf.Log10(value) * 20f;
+
+        mainMixer.SetFloat(parameter, volumeInDecibels);
     }
 
     private IEnumerator FadeOutAndStop(AudioSource source, float duration)
