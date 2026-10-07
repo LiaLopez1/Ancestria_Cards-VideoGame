@@ -71,6 +71,22 @@ MonoBehaviour:
     m_Key: btn_offline
     m_Metadata:
       m_Items: []
+  - m_Id: 21250642577760256
+    m_Key: connecting
+    m_Metadata:
+      m_Items: []
+  - m_Id: 21250781249839104
+    m_Key: no_connection
+    m_Metadata:
+      m_Items: []
+  - m_Id: 21250860689956864
+    m_Key: connection_failed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 21254542747803648
+    m_Key: nickname_length_error
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

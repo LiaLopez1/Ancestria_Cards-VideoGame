@@ -2,6 +2,7 @@ using System.Collections;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.Localization.Settings;
 using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -96,7 +97,14 @@ public class StartupFlowUI : MonoBehaviour
 
     private const int MinNickLength = 3;
     private const int MaxNickLength = 16;
-    private const string TextoSinConexion = "No hay conexión para jugar en línea.";
+
+    private string GetTextoSinConexion() //cambiamos el const a este.
+    {
+        return LocalizationSettings.StringDatabase.GetLocalizedString(
+            "Main Menu",
+            "no_connection"
+        );
+    }
 
     // Recuerda que boton se presiono originalmente (Crear sala o Unirse),
     // para saber que hacer una vez el nick quede confirmado.
@@ -252,7 +260,7 @@ public class StartupFlowUI : MonoBehaviour
         if (panelInicio.activeSelf)
         {
             ActualizarBotonesInicio();
-            SetEstadoInicio(TextoSinConexion);
+            SetEstadoInicio(GetTextoSinConexion() );
         }
         else
         {
@@ -292,7 +300,7 @@ public class StartupFlowUI : MonoBehaviour
 
         if (sinConexionDetectada)
         {
-            SetEstadoInicio(TextoSinConexion);
+            SetEstadoInicio(GetTextoSinConexion() );
             return;
         }
 
@@ -322,7 +330,7 @@ public class StartupFlowUI : MonoBehaviour
 
         if (sinConexionDetectada)
         {
-            SetEstadoInicio(TextoSinConexion);
+            SetEstadoInicio(GetTextoSinConexion() );
             return;
         }
 
@@ -366,7 +374,10 @@ public class StartupFlowUI : MonoBehaviour
         crearSalaButton.interactable = false;
         unirseButton.interactable = false;
         if (reintentarButton != null) reintentarButton.gameObject.SetActive(false);
-        SetEstadoInicio("Conectando...");
+        SetEstadoInicio(LocalizationSettings.StringDatabase.GetLocalizedString(
+            "Main Menu",
+            "connecting" )
+        );
 
         loginEnCurso = true;
         inicioLogin = Time.unscaledTime;
@@ -425,7 +436,7 @@ public class StartupFlowUI : MonoBehaviour
     /// </summary>
     private string TextoEstadoConexion()
     {
-        return sinConexionDetectada ? TextoSinConexion : string.Empty;
+        return sinConexionDetectada ? GetTextoSinConexion() : string.Empty;
     }
 
     private void HandleLoginFailed(string error)
@@ -440,15 +451,20 @@ public class StartupFlowUI : MonoBehaviour
             // Sin conexion: no tiene sentido dejar los botones online activos.
             crearSalaButton.interactable = false;
             unirseButton.interactable = false;
-            SetEstadoInicio(TextoSinConexion);
+            SetEstadoInicio(GetTextoSinConexion());
         }
         else
         {
-            // Otro tipo de error (no es de red): se mantiene el comportamiento
-            // de siempre, el jugador puede volver a intentar con los botones.
+
             crearSalaButton.interactable = true;
             unirseButton.interactable = true;
-            SetEstadoInicio("No se pudo conectar. Intenta de nuevo.");
+            SetEstadoInicio(
+            LocalizationSettings.StringDatabase.GetLocalizedString(
+                "Main Menu",
+                "connection_failed"
+            )
+        );
+
         }
 
         ActualizarBotonesExtra();
@@ -460,14 +476,24 @@ public class StartupFlowUI : MonoBehaviour
 
         if (nick.Length < MinNickLength || nick.Length > MaxNickLength)
         {
-            ShowNicknameError($"El nick debe tener entre {MinNickLength} y {MaxNickLength} caracteres.");
+            string mensajeError =
+                LocalizationSettings.StringDatabase.GetLocalizedString(
+                    "Main Menu",
+                    "nickname_length_error",
+                    new object[]
+                    {
+                        MinNickLength,
+                        MaxNickLength
+                    }
+                );
+
+            ShowNicknameError(mensajeError);
             return;
         }
 
         confirmNicknameButton.interactable = false;
         authManager.SetDisplayName(nick);
     }
-
     private void HandleDisplayNameUpdated()
     {
         if (intentaSerHost)
