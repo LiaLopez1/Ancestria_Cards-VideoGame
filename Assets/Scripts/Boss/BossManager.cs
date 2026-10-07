@@ -68,7 +68,7 @@ public class BossManager : NetworkBehaviour
 
     [Header("Alerta de tensión (boss a punto de ganar)")]
     [Tooltip("Componente que anima el texto y reproduce el sonido (ver AlertaDeTension.cs). Se dispara en TODOS los clientes cuando, tras descartar, el boss queda a UNA sola carta de cumplir la regla activa.")]
-    [SerializeField] private GameObject alertaTension;
+    [SerializeField] private AlertaDeTension alertaTension;
     [Tooltip("PROVISORIO / DEBUG - si está activo, la alerta se dispara SIEMPRE al final de cada turno del boss, sin importar si de verdad está cerca de ganar. Sirve para probar el texto/animación/sonido sin tener que armar una partida hasta que el boss casi gane. Apagar antes de la entrega final.")]
     [SerializeField] private bool debugForzarAlertaSiempre = false;
 
@@ -485,21 +485,9 @@ public class BossManager : NetworkBehaviour
     [ClientRpc]
     private void MostrarAlertaDeTensionClientRpc()
     {
-        if (alertaTension == null)
+        if (alertaTension != null)
         {
-            return;
-        }
-
-        // Busca el componente en el objeto o en sus hijos
-        AlertaDeTension alerta = alertaTension.GetComponentInChildren<AlertaDeTension>(true);
-
-        if (alerta != null)
-        {
-            alerta.Mostrar();
-        }
-        else
-        {
-            Debug.LogWarning("[Boss] El objeto asignado en 'Alerta Tension' no tiene el componente AlertaDeTension.");
+            alertaTension.Mostrar();
         }
     }
 }
