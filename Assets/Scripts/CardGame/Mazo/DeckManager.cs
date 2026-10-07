@@ -131,6 +131,12 @@ public partial class DeckManager : NetworkBehaviour // hereda de networkBehavior
             BuildLogicalDeck();
             ShuffleDeck(false);
             ActualizarContadoresDeMazo();
+
+            // Si un invitado se va, sus cartas no deben perderse del juego.
+            if (NetworkBootstrap.Instance != null)
+            {
+                NetworkBootstrap.Instance.OnJugadorDesconectado += ManejarJugadorDesconectado;
+            }
         }
 
         if (gameManager != null)
@@ -157,6 +163,51 @@ public partial class DeckManager : NetworkBehaviour // hereda de networkBehavior
         if (gameManager != null)
         {
             gameManager.OnResultadoCambio -= ManejarFinDePartida;
+        }
+
+        if (NetworkBootstrap.Instance != null)
+        {
+            NetworkBootstrap.Instance.OnJugadorDesconectado -= ManejarJugadorDesconectado;
+        }
+    }
+
+    /// <summary>
+    /// SOLO servidor. Un invitado se desconecto: se cancela su reparto (si
+    /// estaba en curso) y las cartas de su mano vuelven a la pila de descarte,
+    /// para que se reciclen en el mazo cuando haga falta. Su entrada en
+    /// manoPorCliente se borra, asi no quedan cartas "fantasma" ni se valida
+    /// nada contra una mano que ya no existe.
+    /// </summary>
+    private void ManejarJugadorDesconectado(ulong clientId, int slot)
+    {
+        if (!IsServer)
+        {
+            return;
+        }
+
+        if (corrutinasDeReparto.TryGetValue(clientId, out Coroutine corrutina) && corrutina != null)
+        {
+            StopCoroutine(corrutina);
+        }
+
+        corrutinasDeReparto.Remove(clientId);
+
+        if (manoPorCliente.TryGetValue(clientId, out List<int> mano))
+        {
+            foreach (int cardId in mano)
+            {
+                CardData carta = CardDatabase.Instance.ObtenerPorId(cardId);
+
+                if (carta != null)
+                {
+                    discardPile.Add(carta);
+                }
+            }
+
+            Debug.Log($"[Servidor] El cliente {clientId} (slot {slot}) se fue: {mano.Count} carta(s) de su mano vuelven al descarte.");
+
+            manoPorCliente.Remove(clientId);
+            ActualizarContadoresDeMazo();
         }
     }
 

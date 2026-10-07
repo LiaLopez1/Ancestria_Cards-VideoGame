@@ -9359,7 +9359,7 @@ MonoBehaviour:
   turnManager: {fileID: 979683347}
   gameManager: {fileID: 340926873}
   handManager: {fileID: 1437311224}
-  suspicionManager: {fileID: 0}
+  suspicionManager: {fileID: 391290177}
   tradeUI: {fileID: 1124723466}
 --- !u!114 &1124723466
 MonoBehaviour:
@@ -9384,6 +9384,7 @@ MonoBehaviour:
   panelIniciador: {fileID: 1509101906}
   mensajeIniciadorText: {fileID: 1398433370}
   duracionAvisoRechazo: 3
+  botonCancelarIniciador: {fileID: 0}
   panelPropuesta: {fileID: 888870680}
   mensajePropuestaText: {fileID: 849314136}
   botonAceptar: {fileID: 149115039}
@@ -9391,6 +9392,7 @@ MonoBehaviour:
   panelObjetivo: {fileID: 1694234254}
   mensajeObjetivoText: {fileID: 709420467}
   botonConfirmar: {fileID: 252593789}
+  botonCancelarObjetivo: {fileID: 0}
 --- !u!1 &1174355120
 GameObject:
   m_ObjectHideFlags: 0

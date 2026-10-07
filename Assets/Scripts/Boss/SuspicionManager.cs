@@ -148,16 +148,34 @@ public class SuspicionManager : NetworkBehaviour
 
     // ---------- Intercambiar / Aceptar: proceso con duración ----------
 
+    /// <summary>
+    /// YA NO INICIA NADA. Se deja solo para que el OnClick del boton
+    /// "Intercambio" (si aun esta conectado en el Inspector) no se rompa:
+    /// apretar el boton NO es el inicio del intercambio, porque puede que
+    /// despues no haya con quien intercambiar. El inicio real lo decide
+    /// TradeManager en el servidor (IniciarIntercambioDesdeServidor), cuando
+    /// el jugador ya eligio con quien intercambiar.
+    /// </summary>
     [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
     public void IniciarIntercambioRpc()
     {
-        // TODO (más adelante): validar que quien llama esto tenga el turno
-        // actual (turnManager.EsTurnoDelSlot(...)) - por ahora, sin validar,
-        // para poder probar la funcionalidad primero (según lo acordado).
+        // Intencionalmente vacio.
+    }
 
+    /// <summary>
+    /// SOLO servidor (lo llama TradeManager). Empieza a subir la sospecha
+    /// porque un intercambio REAL arranco (ya hay companero elegido). Termina
+    /// con DetenerIntercambioDesdeServidor() cuando las cartas se
+    /// intercambian, se rechaza o se cancela.
+    /// </summary>
+    public void IniciarIntercambioDesdeServidor()
+    {
+        if (!IsServer) return;
+
+        // Ya iniciado (por ejemplo al abrir la lista y luego elegir
+        // companero): no se reinicia ni se duplica la corrutina.
         if (intercambioEnCurso.Value)
         {
-            Debug.LogWarning("[SuspicionManager] Ya hay un intercambio en curso.");
             return;
         }
 

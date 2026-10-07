@@ -65,6 +65,18 @@ public class TradeManager : NetworkBehaviour
     {
         botController = FindFirstObjectByType<BotController>();
 
+        // Si la referencia no se asigno en el Inspector, "suspicionManager?."
+        // no hacia NADA en silencio (ni iniciar ni detener la sospecha).
+        if (suspicionManager == null)
+        {
+            suspicionManager = FindFirstObjectByType<SuspicionManager>();
+        }
+
+        if (suspicionManager == null)
+        {
+            Debug.LogError("[TradeManager] No hay SuspicionManager asignado ni en la escena: la sospecha del intercambio NO funcionara.");
+        }
+
         if (gameManager != null)
         {
             gameManager.OnResultadoCambio += ManejarFinDePartida;
@@ -114,6 +126,7 @@ public class TradeManager : NetworkBehaviour
 
         if (!ValidarPuedeIniciar(solicitante))
         {
+            DetenerSospechaSiNoHayIntercambio();
             return;
         }
 
@@ -145,7 +158,84 @@ public class TradeManager : NetworkBehaviour
             }
         }
 
+        // Nadie con quien intercambiar (por ejemplo, jugando solo): no hay
+        // intercambio posible, asi que la sospecha no debe quedar corriendo.
+        if (slots.Count == 0)
+        {
+            Debug.Log("[Servidor] No hay con quien intercambiar: se cancela la solicitud.");
+            DetenerSospechaSiNoHayIntercambio();
+            CerrarPanelesClientRpc(EnviarSoloA(solicitante));
+            return;
+        }
+
+        // Hay con quien intentar el intercambio (humano o bot): desde aqui
+        // empieza a subir la sospecha. Termina cuando se intercambian las
+        // cartas, el otro (o el bot) rechaza, o el jugador cancela.
+        if (!intercambioEnProgreso)
+        {
+            Debug.Log("[TradeManager] Lista de intercambio abierta: se inicia la sospecha.");
+            suspicionManager?.IniciarIntercambioDesdeServidor();
+        }
+
         MostrarListaDeJugadoresClientRpc(slots.ToArray(), nombres.ToArray(), EnviarSoloA(solicitante));
+    }
+
+    [ClientRpc]
+    private void CerrarPanelesClientRpc(ClientRpcParams rpcParams = default)
+    {
+        tradeUI?.CerrarTodo();
+    }
+
+    // ---------------------------------------------------------------
+    // Cancelar a mitad de camino (el jugador cierra el panel sin terminar)
+    // ---------------------------------------------------------------
+
+    /// <summary>
+    /// Llamar desde la UI cuando el iniciador CIERRA o CANCELA cualquier panel
+    /// del intercambio (lista de jugadores, seleccion de carta, etc.) sin
+    /// completarlo. Sin esto, la sospecha seguia subiendo para siempre.
+    /// </summary>
+    public void CancelarSolicitudDeIntercambio()
+    {
+        CancelarSolicitudServerRpc();
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void CancelarSolicitudServerRpc(ServerRpcParams rpcParams = default)
+    {
+        ulong remitente = rpcParams.Receive.SenderClientId;
+
+        if (intercambioEnProgreso)
+        {
+            // Solo quien lo inicio (o el que recibe la propuesta) puede cancelarlo.
+            if (remitente != clienteIniciador && remitente != clienteObjetivo)
+            {
+                return;
+            }
+
+            ulong otro = remitente == clienteIniciador ? clienteObjetivo : clienteIniciador;
+
+            if (!BotIds.EsBot(otro) && otro != remitente)
+            {
+                CerrarPanelesClientRpc(EnviarSoloA(otro));
+            }
+        }
+        else if (!ValidarPuedeIniciar(remitente))
+        {
+            // Nada en curso y ademas no es su turno: no se toca la sospecha.
+            return;
+        }
+
+        Debug.Log($"[Servidor] Cliente {remitente} cancelo el intercambio antes de completarlo.");
+        CancelarIntercambio();
+    }
+
+    private void DetenerSospechaSiNoHayIntercambio()
+    {
+        if (!intercambioEnProgreso)
+        {
+            suspicionManager?.DetenerIntercambioDesdeServidor();
+        }
     }
 
     [ClientRpc]
@@ -197,11 +287,14 @@ public class TradeManager : NetworkBehaviour
             if (!TryObtenerClientePorSlot(slotObjetivo, out clienteDestino) || clienteDestino == solicitante)
             {
                 Debug.LogWarning($"[Servidor] Slot objetivo invalido para intercambio: {slotObjetivo}.");
+                DetenerSospechaSiNoHayIntercambio();
+                CerrarPanelesClientRpc(EnviarSoloA(solicitante));
                 return;
             }
         }
 
         intercambioEnProgreso = true;
+        suspicionManager?.IniciarIntercambioDesdeServidor(); // aqui empieza de verdad
         clienteIniciador = solicitante;
         clienteObjetivo = clienteDestino;
         cardIdIniciador = -1;
@@ -241,6 +334,8 @@ public class TradeManager : NetworkBehaviour
         if (!deckManager.ClienteTieneCarta(remitente, cardId))
         {
             Debug.LogWarning($"[Servidor] Cliente {remitente} intento ofrecer una carta que no tiene (cardId={cardId}).");
+            CancelarIntercambio();
+            CerrarPanelesClientRpc(EnviarSoloA(remitente));
             return;
         }
 
@@ -516,7 +611,7 @@ public class TradeManager : NetworkBehaviour
         }
 
         intercambioEnProgreso = true;
-        suspicionManager?.IniciarIntercambioRpc();
+        suspicionManager?.IniciarIntercambioDesdeServidor();
         clienteIniciador = botId;
         clienteObjetivo = clienteHumano;
         cardIdIniciador = cardIdBot;

@@ -60,6 +60,10 @@ public class NetworkBootstrap : MonoBehaviour
     // instancia de StartupFlowUI se recrea de cero al recargar la escena.
     public static string MensajePendiente { get; private set; }
 
+    // Textos exactos que se muestran en el aviso al volver al menu.
+    private const string MensajePerdisteConexion = "Perdiste la conexión. Regresando al menú principal...";
+    private const string MensajeHostAbandono = "El anfitrión abandonó la partida. Regresando al menú principal...";
+
     /// <summary>
     /// Marcar esto en true JUSTO ANTES de llamar a NetworkManager.Shutdown()
     /// por decision propia (por ejemplo, el boton "Volver al menu" dentro
@@ -84,6 +88,13 @@ public class NetworkBootstrap : MonoBehaviour
     private readonly SortedSet<int> slotsLibres = new SortedSet<int>();
 
     private Coroutine vigilancia;
+
+    /// <summary>
+    /// SOLO servidor. Se dispara DESPUES de liberar el slot de un cliente que
+    /// se desconecto: (clientId, slot que ocupaba). TurnManager y DeckManager
+    /// lo usan para saltar su turno y recuperar sus cartas.
+    /// </summary>
+    public event System.Action<ulong, int> OnJugadorDesconectado;
 
     // true si en ESTA sesion yo soy el host (online u offline). Se usa en vez
     // de networkManager.IsServer porque durante un Shutdown ese valor puede
@@ -143,6 +154,14 @@ public class NetworkBootstrap : MonoBehaviour
     }
 
     /// <summary>
+    /// ¿Hay un jugador humano conectado ocupando este slot ahora mismo?
+    /// </summary>
+    public bool SlotOcupado(int slot)
+    {
+        return slotsAsignados.ContainsValue(slot);
+    }
+
+    /// <summary>
     /// Libera el slot de un jugador que se desconecto, para que el proximo
     /// que se una pueda ocuparlo (en vez de que los slots solo avancen).
     /// </summary>
@@ -153,6 +172,7 @@ public class NetworkBootstrap : MonoBehaviour
             slotsAsignados.Remove(clientId);
             slotsLibres.Add(slot);
             Debug.Log($"[Netcode] Slot {slot} liberado (cliente {clientId} se desconecto).");
+            OnJugadorDesconectado?.Invoke(clientId, slot);
         }
     }
 
@@ -319,7 +339,7 @@ public class NetworkBootstrap : MonoBehaviour
                 Debug.LogWarning("[Red] Sin internet de forma sostenida. Volviendo al menu.");
                 vigilancia = null;
                 SalidaVoluntaria = true; // evita el mensaje falso de "el dueno se desconecto"
-                VolverAlMenuPorDesconexion("Perdiste la conexión.");
+                VolverAlMenuPorDesconexion(MensajePerdisteConexion);
                 yield break;
             }
         }
@@ -356,7 +376,7 @@ public class NetworkBootstrap : MonoBehaviour
 
                 Debug.Log("[Netcode] El host perdio su propia conexion. Volviendo al menu.");
                 DetenerVigilancia();
-                VolverAlMenuPorDesconexion("Perdiste la conexión.");
+                VolverAlMenuPorDesconexion(MensajePerdisteConexion);
                 return;
             }
 
@@ -403,12 +423,12 @@ public class NetworkBootstrap : MonoBehaviour
         if (hayInternet)
         {
             Debug.Log("[Netcode] Desconectado pero con internet: el host abandono la partida.");
-            VolverAlMenuPorDesconexion("El host ha abandonado la partida.");
+            VolverAlMenuPorDesconexion(MensajeHostAbandono);
         }
         else
         {
             Debug.Log("[Netcode] Desconectado y sin internet: el invitado perdio su conexion.");
-            VolverAlMenuPorDesconexion("Perdiste la conexión.");
+            VolverAlMenuPorDesconexion(MensajePerdisteConexion);
         }
     }
 
