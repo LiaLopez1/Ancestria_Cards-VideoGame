@@ -43,6 +43,8 @@ public class TradeUIManager : MonoBehaviour
     [SerializeField] private GameObject panelIniciador;
     [SerializeField] private TMP_Text mensajeIniciadorText;
     [SerializeField] private float duracionAvisoRechazo = 2.5f;
+    [Tooltip("OPCIONAL. Boton para cancelar el intercambio mientras se elige la carta (Panel A). Detiene la sospecha.")]
+    [SerializeField] private Button botonCancelarIniciador;
 
     // ---------------- Panel B: propuesta (aceptar/rechazar) ----------------
     [Header("Panel B: propuesta de intercambio")]
@@ -56,6 +58,8 @@ public class TradeUIManager : MonoBehaviour
     [SerializeField] private GameObject panelObjetivo;
     [SerializeField] private TMP_Text mensajeObjetivoText;
     [SerializeField] private Button botonConfirmar;
+    [Tooltip("OPCIONAL. Boton para cancelar mientras se elige la carta (Panel C).")]
+    [SerializeField] private Button botonCancelarObjetivo;
 
     // Se reutiliza para el Panel A y el Panel C (nunca los dos a la vez,
     // porque en este cliente solo uno de los dos roles puede estar activo).
@@ -82,6 +86,9 @@ public class TradeUIManager : MonoBehaviour
 
         if (botonAceptar != null) botonAceptar.onClick.AddListener(() => ResponderPropuesta(true));
         if (botonRechazar != null) botonRechazar.onClick.AddListener(() => ResponderPropuesta(false));
+
+        if (botonCancelarIniciador != null) botonCancelarIniciador.onClick.AddListener(CancelarIntercambioDesdeUI);
+        if (botonCancelarObjetivo != null) botonCancelarObjetivo.onClick.AddListener(CancelarIntercambioDesdeUI);
 
         if (botonConfirmar != null)
         {
@@ -123,8 +130,38 @@ public class TradeUIManager : MonoBehaviour
         CerrarTodo();
     }
 
+    /// <summary>
+    /// El jugador cancela a mitad del intercambio (Panel A o C). Avisa al
+    /// servidor para que cierre el intercambio y frene la sospecha, y cierra
+    /// los paneles locales. Tambien se puede conectar a cualquier otro boton.
+    /// </summary>
+    public void CancelarIntercambioDesdeUI()
+    {
+        if (tradeManager != null)
+        {
+            tradeManager.CancelarSolicitudDeIntercambio();
+        }
+
+        CerrarPanelSeleccionJugador();
+        CerrarTodo();
+    }
+
+    // Para detectar que el panel de seleccionar jugador se cerro SIN elegir
+    // a nadie (lo cierre quien lo cierre, incluido TrapsPanelUI).
+    private bool panelSeleccionEstabaAbierto;
+
     private void Update()
     {
+        bool panelAbierto = PanelSeleccionJugadorAbierto;
+
+        if (panelSeleccionEstabaAbierto && !panelAbierto && !intercambioEnProgreso && tradeManager != null)
+        {
+            // Se cerro sin comprometerse con nadie: frena la sospecha.
+            tradeManager.CancelarSolicitudDeIntercambio();
+        }
+
+        panelSeleccionEstabaAbierto = panelAbierto;
+
         // El boton "Intercambio" solo debe poder apretarse en la misma
         // ventana en la que se puede descartar (ya robaste, todavia no
         // descartaste) - se revisa cada frame porque CanDiscard() depende

@@ -109,6 +109,9 @@ public class TurnManager : NetworkBehaviour
 
     private int cantidadJugadores = 1;
 
+    // Debe coincidir con la cantidad de slots de NetworkBootstrap (host + 2 invitados).
+    private const int MaxSlotsHumanos = 3;
+
     /// <summary>
     /// Red de seguridad: aparte de actualizarse en cada cambio de
     /// turno/estado/resultado, se re-chequea todos los frames. Esto cubre
@@ -207,6 +210,21 @@ public class TurnManager : NetworkBehaviour
     ActualizarMensaje();
     ActualizarHighlighter();
     ActualizarIndicadoresDeAccion();
+
+    // Solo el servidor decide los turnos: si un invitado se desconecta,
+    // hay que saltar su turno para que la partida no se quede esperando.
+    if (IsServer && NetworkBootstrap.Instance != null)
+    {
+        NetworkBootstrap.Instance.OnJugadorDesconectado += ManejarJugadorSeFue;
+    }
+}
+
+public override void OnNetworkDespawn()
+{
+    if (NetworkBootstrap.Instance != null)
+    {
+        NetworkBootstrap.Instance.OnJugadorDesconectado -= ManejarJugadorSeFue;
+    }
 }
 
     /// <summary>
@@ -219,6 +237,21 @@ public class TurnManager : NetworkBehaviour
         if (!IsServer) return;
 
         cantidadJugadores = Mathf.Max(1, totalJugadoresConectados);
+
+        // Si alguien se fue en una ronda anterior, los slots ocupados pueden
+        // tener huecos (por ejemplo, 0 y 2). El boss debe ir DESPUES del
+        // ultimo slot ocupado; si no, su slot chocaria con el de un jugador real.
+        if (!NetworkBootstrap.ModoLocalConBots && NetworkBootstrap.Instance != null)
+        {
+            int ultimoSlotOcupado = -1;
+
+            for (int s = 0; s < MaxSlotsHumanos; s++)
+            {
+                if (NetworkBootstrap.Instance.SlotOcupado(s)) ultimoSlotOcupado = s;
+            }
+
+            if (ultimoSlotOcupado >= 0) cantidadJugadores = ultimoSlotOcupado + 1;
+        }
         turnoActual.Value = 0;
         gameManager?.ReiniciarResultado();
         slotBoss.Value = cantidadJugadores; // el boss va justo despues del ultimo humano
@@ -372,10 +405,27 @@ public class TurnManager : NetworkBehaviour
     {
         if (!IsServer) return;
 
-        // +1 para incluir al boss en la rotacion: si hay N jugadores humanos
-        // (slots 0..N-1), el boss ocupa el slot N, y el ciclo completo es
-        // sobre N+1 posiciones en total.
-        turnoActual.Value = (turnoActual.Value + 1) % (cantidadJugadores + 1);
+        AvanzarAlSiguienteTurno();
+    }
+
+    /// <summary>
+    /// SOLO servidor. Pasa el turno al siguiente slot QUE PARTICIPE, saltando
+    /// los slots de jugadores que ya se desconectaron. El ciclo es sobre N+1
+    /// posiciones: slots humanos 0..N-1 mas el boss en el slot N.
+    /// </summary>
+    private void AvanzarAlSiguienteTurno()
+    {
+        int posiciones = cantidadJugadores + 1;
+        int siguiente = turnoActual.Value;
+
+        // El boss siempre participa, asi que este bucle siempre termina.
+        for (int i = 0; i < posiciones; i++)
+        {
+            siguiente = (siguiente + 1) % posiciones;
+            if (SlotParticipa(siguiente)) break;
+        }
+
+        turnoActual.Value = siguiente;
         estadoActual.Value = TurnState.WaitingToDraw;
 
         if (EsTurnoDelBoss())
@@ -386,6 +436,34 @@ public class TurnManager : NetworkBehaviour
         {
             OnBotTurnStarted?.Invoke(turnoActual.Value);
         }
+    }
+
+    /// <summary>
+    /// SOLO servidor. ¿Este slot entra en la rotacion de turnos ahora mismo?
+    /// El boss y los bots siempre; un jugador humano solo si sigue conectado.
+    /// </summary>
+    private bool SlotParticipa(int slot)
+    {
+        if (slot == slotBoss.Value) return true;
+        if (NetworkBootstrap.ModoLocalConBots && BotIds.EsSlotDeBot(slot)) return true;
+
+        return NetworkBootstrap.Instance != null && NetworkBootstrap.Instance.SlotOcupado(slot);
+    }
+
+    /// <summary>
+    /// SOLO servidor. Un invitado se desconecto. Si justo era SU turno, se pasa
+    /// al siguiente de inmediato - sin esto, la partida se queda esperando una
+    /// jugada que nunca va a llegar. Si no era su turno, no hace falta nada:
+    /// SlotParticipa() ya lo salta cuando le toque.
+    /// </summary>
+    private void ManejarJugadorSeFue(ulong clientId, int slot)
+    {
+        if (!IsServer || PartidaTerminada) return;
+        if (estadoActual.Value == TurnState.Dealing) return;
+        if (turnoActual.Value != slot) return;
+
+        Debug.Log($"[Servidor] El jugador del slot {slot} se desconecto en su turno: se pasa al siguiente.");
+        AvanzarAlSiguienteTurno();
     }
 
     /// <summary>
