@@ -106,6 +106,9 @@ public class GameManager : NetworkBehaviour
 
     public bool PartidaTerminada => resultado.Value != ResultadoPartida.EnCurso;
 
+    /// <summary>Sincronizado a todos: tras una victoria, ¿quedan jefes por vencer?</summary>
+    public bool HayMasJefes => hayMasJefes.Value;
+
     public int RondaActual => rondaActual.Value;
     public int TotalRondas => totalRondas;
     public int RondasGanadasJugadores => rondasGanadasJugadores.Value;
@@ -411,6 +414,8 @@ public class GameManager : NetworkBehaviour
     /// </summary>
     public void OnSiguienteJefePressed()
     {
+        Debug.Log($"[GameManager] 'Siguiente jefe' presionado (IsServer={IsServer}).");
+
         if (!IsServer)
         {
             return;

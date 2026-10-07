@@ -57,6 +57,10 @@ public class BossProgressionManager : MonoBehaviour
         }
 
         indice = 0;
+
+        // DIAGNOSTICO: si este log sale mas de una vez por partida, alguien
+        // esta llamando IniciarNuevaRun() de nuevo (y por eso se repite el jefe).
+        Debug.Log($"[Jefes] Nueva run. Orden: {string.Join(" -> ", orden)} (validas: {orden.Count} de {escenasJefes.Length})\n{System.Environment.StackTrace}");
         return orden[0];
     }
     public bool HayMasJefes => indice + 1 < orden.Count;
@@ -68,6 +72,7 @@ public class BossProgressionManager : MonoBehaviour
         if (!HayMasJefes) return;
 
         indice++;
+        Debug.Log($"[Jefes] SIGUIENTE jefe: {orden[indice]} (indice {indice + 1}/{orden.Count})");
         nm.SceneManager.OnLoadEventCompleted += AlTerminarCarga;
         nm.SceneManager.LoadScene(orden[indice], LoadSceneMode.Single);
     }
@@ -90,6 +95,7 @@ public class BossProgressionManager : MonoBehaviour
         var nm = NetworkManager.Singleton;
         if (nm == null || !nm.IsServer) return;
 
+        Debug.Log($"[Jefes] REINICIA el mismo jefe: {orden[indice]} (indice {indice + 1}/{orden.Count})\n{System.Environment.StackTrace}");
         nm.SceneManager.OnLoadEventCompleted += AlTerminarCarga;
         nm.SceneManager.LoadScene(orden[indice], LoadSceneMode.Single);
     }

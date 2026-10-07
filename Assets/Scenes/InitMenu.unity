@@ -11042,6 +11042,10 @@ MonoBehaviour:
     music: {fileID: 11400000, guid: fc5c53f85eff00849aaac7865d73fbf4, type: 2}
   - sceneName: Mohan
     music: {fileID: 11400000, guid: fc5c53f85eff00849aaac7865d73fbf4, type: 2}
+  - sceneName: Patasola
+    music: {fileID: 11400000, guid: fc5c53f85eff00849aaac7865d73fbf4, type: 2}
+  - sceneName: JuanMachete
+    music: {fileID: 11400000, guid: fc5c53f85eff00849aaac7865d73fbf4, type: 2}
 --- !u!82 &1255553112
 AudioSource:
   m_ObjectHideFlags: 0

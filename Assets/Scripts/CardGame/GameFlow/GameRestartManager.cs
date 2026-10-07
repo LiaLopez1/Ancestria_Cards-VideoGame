@@ -40,6 +40,21 @@ public class GameRestartManager : NetworkBehaviour
     /// </summary>
     public void SolicitarVolverAJugar()
     {
+        // Tras una VICTORIA con jefes pendientes, "Volver a jugar" NO debe
+        // repetir el mismo jefe: equivale a "Siguiente jefe". Solo el host
+        // puede cambiar de escena; un invitado no hace nada y sigue esperando.
+        if (gameManager != null
+            && gameManager.Resultado == ResultadoPartida.VictoriaJugadores
+            && gameManager.HayMasJefes)
+        {
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
+            {
+                gameManager.OnSiguienteJefePressed();
+            }
+
+            return;
+        }
+
         if (gameManager != null)
         {
             gameManager.OcultarPanelesLocalmente();
