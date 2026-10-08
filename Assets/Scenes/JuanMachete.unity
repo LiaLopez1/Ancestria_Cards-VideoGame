@@ -3074,7 +3074,7 @@ MonoBehaviour:
   textoContadorRondas: {fileID: 0}
   textoNombreGanador: {fileID: 0}
   musicPruba: {fileID: 0}
-  permitirAtajoGanarRonda: 1
+  permitirAtajoGanarRonda: 0
 --- !u!114 &340926874
 MonoBehaviour:
   m_ObjectHideFlags: 0
