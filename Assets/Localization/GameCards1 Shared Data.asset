@@ -195,6 +195,54 @@ MonoBehaviour:
     m_Key: legend_one_card_away
     m_Metadata:
       m_Items: []
+  - m_Id: 18227073820172288
+    m_Key: creating_lobby
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227083114749952
+    m_Key: starting_offline_game
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227115025014784
+    m_Key: start_game_error
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227117247995904
+    m_Key: connection_error_retry
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227700201725952
+    m_Key: offline_no_lobbies
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227703523614720
+    m_Key: preparing_search
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227705771761664
+    m_Key: lobby_refresh_retry
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227708196069376
+    m_Key: lobbies_found
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227789993385984
+    m_Key: default_player
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227791817908224
+    m_Key: player_lobby
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227793445298176
+    m_Key: joining_lobby
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227858268266496
+    m_Key: lobby_connection_data_error
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

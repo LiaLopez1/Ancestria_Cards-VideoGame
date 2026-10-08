@@ -203,6 +203,54 @@ MonoBehaviour:
     m_Localized: The Legend is about to win. It only needs one more card.
     m_Metadata:
       m_Items: []
+  - m_Id: 18227073820172288
+    m_Localized: Creating lobby...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227083114749952
+    m_Localized: Starting offline game...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227115025014784
+    m_Localized: Could not start the game.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227117247995904
+    m_Localized: Connection error. Please try again.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227700201725952
+    m_Localized: 'No connection: no lobbies are available.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227703523614720
+    m_Localized: Preparing search...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227705771761664
+    m_Localized: Could not refresh the list. Retrying in {0} s...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227708196069376
+    m_Localized: 'Lobbies found: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227789993385984
+    m_Localized: Player
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227791817908224
+    m_Localized: '{0}''s Lobby'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227793445298176
+    m_Localized: Joining lobby...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227858268266496
+    m_Localized: 'Error: the lobby has no connection data.'
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

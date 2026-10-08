@@ -4,6 +4,7 @@ using PlayFab.MultiplayerModels;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.Localization.Settings;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -74,6 +75,16 @@ public class LobbyManager : MonoBehaviour
     /// siempre tenga referencias validas a la UI actual, sin importar cuantas
     /// veces se haya recargado la escena.
     /// </summary>
+    /// 
+    /// 
+    private string Localizar(string key, params object[] args)
+    {
+        return LocalizationSettings.StringDatabase.GetLocalizedString(
+            "GameCards1",
+            key,
+            args
+        );
+    }
     public void RegistrarReferenciasUI(
         RectTransform listaSalasContentUI,
         GameObject filaSalaPrefabUI,
@@ -135,7 +146,7 @@ public class LobbyManager : MonoBehaviour
 
     public void CrearSala(System.Action onError = null)
     {
-        SetEstadoCrearSala("Creando sala...", 0.1f);
+        SetEstadoCrearSala (Localizar("creating_lobby"), 0.1f);
         StartCoroutine(CrearSalaConLoading(onError));
     }
 
@@ -152,7 +163,8 @@ public class LobbyManager : MonoBehaviour
         }
 
         // 2. Ya tapado, arranca el flujo normal
-        SetEstadoCrearSala("Creando sala...", 0.1f);
+        
+        SetEstadoCrearSala( Localizar("creating_lobby"), 0.1f); //"Creando sala..."
         LimpiarMisSalasAnteriores(() => CrearSalaInterno(onError));
     }
 
@@ -178,7 +190,7 @@ public class LobbyManager : MonoBehaviour
     /// </summary>
     private void CrearSalaOffline(System.Action onError)
     {
-        SetEstadoCrearSala("Iniciando partida sin conexión...", 0.5f);
+        SetEstadoCrearSala(Localizar("starting_offline_game"));//("Iniciando partida sin conexión..."
 
         if (!networkBootstrap.IniciarHostOffline())
         {
@@ -194,7 +206,9 @@ public class LobbyManager : MonoBehaviour
             return;
         }
 
-        SetEstadoCrearSala("Iniciando partida sin conexión...", 1f);
+        //"Iniciando partida sin conexión...", 1f);
+        SetEstadoCrearSala(Localizar("starting_offline_game"),1f);
+        
 
         // Mismo metodo que el flujo online: el host carga la escena por Netcode.
         LoadingScreenManager.Instance.LoadNetworkScene(escenaInicial);
@@ -364,21 +378,26 @@ public class LobbyManager : MonoBehaviour
 
     private async void CrearSalaInterno(System.Action onError)
     {
-        SetEstadoCrearSala("Creando sala...", 0.4f);
+        SetEstadoCrearSala( Localizar("creating_lobby"),0.4f);
 
         string joinCode;
         try
         {
             joinCode = await networkBootstrap.IniciarHostYObtenerJoinCode();
         }
-        catch (System.Exception e)
+        catch (System.Exception)
         {
-            Debug.LogError($"[Lobby] Error preparando Relay: {e}");
-            FalloCrearSala("Error de conexion. Intenta de nuevo.", onError);
+            //Debug.LogError($"[Lobby] Error preparando Relay: {e}");
+
+            FalloCrearSala(
+            Localizar("no_bosses_configured"),
+            onError );//"Error de conexion. Intenta de nuevo."
             return;
         }
 
-        SetEstadoCrearSala("Creando sala...", 0.75f);
+        SetEstadoCrearSala(
+        Localizar("creating_lobby"),
+        0.75f);
 
         var miEntity = new EntityKey { Id = authManager.EntityId, Type = authManager.EntityType };
 
@@ -408,7 +427,11 @@ public class LobbyManager : MonoBehaviour
             error =>
             {
                 Debug.LogError($"[Lobby] Error creando sala: {error.GenerateErrorReport()}");
-                FalloCrearSala("Error: " + error.ErrorMessage, onError);
+
+                FalloCrearSala(
+                Localizar("lobby_error"),
+                onError
+                );
             });
     }
 
@@ -431,7 +454,10 @@ public class LobbyManager : MonoBehaviour
             return;
         }
 
-        SetEstadoCrearSala("Creando sala...", 1f);
+        SetEstadoCrearSala(
+        Localizar("creating_lobby"),
+        1f
+        );
 
         LoadingScreenManager.Instance.LoadNetworkScene(escenaInicial);
     }
@@ -440,11 +466,14 @@ public class LobbyManager : MonoBehaviour
     {
         if (authManager.ModoOffline)
         {
-            SetEstadoUnirse("Sin conexión: no hay salas disponibles.");
+            SetEstadoUnirse(
+            Localizar("offline_no_lobbies"));
             return;
         }
 
-        SetEstadoUnirse("Preparando búsqueda...");
+        SetEstadoUnirse(
+        Localizar("preparing_search")
+        );
 
         // La limpieza de salas viejas son 2 busquedas + varias llamadas mas
         // (GetLobby, RemoveMember, LeaveLobby). Con hacerla UNA vez por
@@ -551,7 +580,13 @@ public class LobbyManager : MonoBehaviour
                 // Backoff exponencial: 2x, 4x, 8x... el intervalo, con tope.
                 erroresSeguidos++;
                 espera = Mathf.Min(intervaloBusquedaSalas * Mathf.Pow(2f, erroresSeguidos), esperaMaximaConBackoff);
-                SetEstadoUnirse($"No se pudo actualizar la lista. Reintentando en {Mathf.CeilToInt(espera)} s...");
+                SetEstadoUnirse(
+                    Localizar(
+                        "lobby_refresh_retry",
+                        Mathf.CeilToInt(espera)
+                    )
+                );
+
                 Debug.LogWarning($"[Lobby] Sondeo con error ({erroresSeguidos} seguido(s)): se espera {espera}s antes de reintentar.");
             }
 
@@ -566,7 +601,14 @@ public class LobbyManager : MonoBehaviour
 
         Debug.Log($"[Lobby] FindLobbies devolvio {result.Lobbies.Count} sala(s).");
 
-        SetEstadoUnirse($"{result.Lobbies.Count} sala(s) encontradas.");
+        //SetEstadoUnirse($"{result.Lobbies.Count} sala(s) encontradas.");
+        SetEstadoUnirse(
+        Localizar(
+            "lobbies_found",
+            result.Lobbies.Count
+            )
+        );
+        
 
         // Limpiar la lista anterior antes de mostrar los resultados nuevos.
         foreach (Transform child in listaSalasContent)
@@ -578,7 +620,7 @@ public class LobbyManager : MonoBehaviour
         {
             string hostNick = (lobby.SearchData != null && lobby.SearchData.ContainsKey(SearchKeyHostNick))
                 ? lobby.SearchData[SearchKeyHostNick]
-                : "Jugador";
+                : Localizar("default_player");
 
             GameObject fila = Instantiate(filaSalaPrefab, listaSalasContent);
 
@@ -586,7 +628,8 @@ public class LobbyManager : MonoBehaviour
             string connString = lobby.ConnectionString;
 
             itemUI.Configurar(
-                nombreSala: $"Juego de {hostNick}",
+                nombreSala: Localizar("player_lobby",hostNick),
+
                 jugadoresLabel: $"{lobby.CurrentPlayers}/{lobby.MaxPlayers}",
                 alUnirse: () => OnUnirseASalaPressed(connString)
             );
@@ -595,7 +638,8 @@ public class LobbyManager : MonoBehaviour
 
     private void OnUnirseASalaPressed(string connectionString)
     {
-        SetEstadoUnirse("Uniendose a la sala...", 0.3f);
+        SetEstadoUnirse(Localizar("joining_lobby"),0.3f); // uniendose a la sala
+
         StartCoroutine(UnirseConLoading(connectionString));
     }
 
@@ -621,7 +665,7 @@ public class LobbyManager : MonoBehaviour
     {
         lobbyIdActual = result.LobbyId;
         Debug.Log($"[Lobby] Unido correctamente a la sala {lobbyIdActual}. Buscando datos de conexion...");
-        SetEstadoUnirse("Uniendose a la sala...", 0.6f);
+        SetEstadoUnirse(Localizar("joining_lobby"),0.6f);
 
         // JoinLobbyResult no trae el LobbyData, hay que pedirlo aparte.
         PlayFabMultiplayerAPI.GetLobby(new GetLobbyRequest { LobbyId = lobbyIdActual }, OnGetLobbyParaUnirse, OnLobbyErrorUnirse);
@@ -632,7 +676,7 @@ public class LobbyManager : MonoBehaviour
         if (result.Lobby.LobbyData == null || !result.Lobby.LobbyData.ContainsKey(LobbyDataKeyRelayJoinCode))
         {
             Debug.LogError("[Lobby] La sala no tiene join code de Relay guardado.");
-            SetEstadoUnirse("Error: la sala no tiene datos de conexion.");
+            SetEstadoUnirse( Localizar("lobby_connection_data_error"));// ("Error: la sala no tiene datos de conexion.")
             RehabilitarBotonesDeSalas();
             OcultarProgresoUnirse();
             IniciarBusquedaPeriodica();
@@ -646,7 +690,7 @@ public class LobbyManager : MonoBehaviour
         {
             await networkBootstrap.UnirseComoClienteConJoinCode(joinCode);
             Debug.Log("[Lobby] Conectado via Relay/Netcode como cliente.");
-            SetEstadoUnirse("Uniendose a la sala...", 1f);
+            SetEstadoUnirse(Localizar("joining_lobby"),1f);
             // No hace falta cargar la escena manualmente: Netcode sincroniza
             // al cliente automaticamente con la escena que el host ya cargo.
             LoadingScreenManager.Instance.WaitForSceneSync(gameSceneName);
@@ -654,7 +698,7 @@ public class LobbyManager : MonoBehaviour
         catch (System.Exception e)
         {
             Debug.LogError($"[Lobby] Error conectando via Relay: {e}");
-            SetEstadoUnirse("Error de conexion. Intenta de nuevo.");
+            SetEstadoUnirse(Localizar("connection_error_retry"));
             RehabilitarBotonesDeSalas();
             OcultarProgresoUnirse();
             IniciarBusquedaPeriodica();

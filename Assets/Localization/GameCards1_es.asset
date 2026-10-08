@@ -204,6 +204,54 @@ MonoBehaviour:
     m_Localized: "La Leyenda est\xE1 a punto de ganar, le hace falta una carta."
     m_Metadata:
       m_Items: []
+  - m_Id: 18227073820172288
+    m_Localized: Creando sala...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227083114749952
+    m_Localized: "Iniciando partida sin conexi\xF3n..."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227115025014784
+    m_Localized: Error al iniciar la partida.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227117247995904
+    m_Localized: "Error de conexi\xF3n. Intenta de nuevo."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227700201725952
+    m_Localized: "Sin conexi\xF3n: no hay salas disponibles."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227703523614720
+    m_Localized: "Preparando b\xFAsqueda..."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227705771761664
+    m_Localized: No se pudo actualizar la lista. Reintentando en {0} s...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227708196069376
+    m_Localized: 'Salas encontradas: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227789993385984
+    m_Localized: Jugador
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227791817908224
+    m_Localized: Juego de {0}
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227793445298176
+    m_Localized: "Uni\xE9ndose a la sala..."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18227858268266496
+    m_Localized: "Error: la sala no tiene datos de conexi\xF3n."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
