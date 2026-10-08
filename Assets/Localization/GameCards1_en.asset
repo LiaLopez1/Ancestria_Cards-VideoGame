@@ -116,6 +116,55 @@ MonoBehaviour:
     m_Localized: The Boss
     m_Metadata:
       m_Items: []
+  - m_Id: 18188643958562816
+    m_Localized: Select the card you want to trade.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18188648438079488
+    m_Localized: Confirming the trade...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18188647628578816
+    m_Localized: The other player declined the trade.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18188646928130048
+    m_Localized: Waiting for the other player...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18188645854388224
+    m_Localized: '{0} wants to trade a card with you. Do you accept?'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18188649344049152
+    m_Localized: The legend has prevailed...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18188650279378944
+    m_Localized: Back to Main Menu
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18188651181154304
+    m_Localized: Back to Lobby
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18188652150038528
+    m_Localized: You failed to break the curse. The Alligator Man returns to the
+      depths, waiting for those brave enough to challenge him again.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18192960631382016
+    m_Localized: Next Round
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18200721867972608
+    m_Localized: The pact has been broken...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18200774535847936
+    m_Localized: The trap was uncovered. The legend claimed their souls.
+    m_Metadata:
+      m_Items: []
   - m_Id: 18190528804327424
     m_Localized: The legend has been defeated!
     m_Metadata:

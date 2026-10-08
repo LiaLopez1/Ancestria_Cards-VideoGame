@@ -116,6 +116,55 @@ MonoBehaviour:
     m_Localized: El Boss
     m_Metadata:
       m_Items: []
+  - m_Id: 18188643958562816
+    m_Localized: Selecciona la carta que quieres intercambiar.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18188645854388224
+    m_Localized: "{0} quiere intercambiar una carta contigo. \xBFAceptas?"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18188646928130048
+    m_Localized: Esperando al otro jugador...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18188647628578816
+    m_Localized: "El otro jugador no acept\xF3 el intercambio."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18188648438079488
+    m_Localized: Confirmando el intercambio...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18188649344049152
+    m_Localized: La leyenda ha triunfado...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18188650279378944
+    m_Localized: Volver al inicio
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18188651181154304
+    m_Localized: Volver a la sala
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18188652150038528
+    m_Localized: "No lograron romper la maldici\xF3n. El Hombre Caim\xE1n regresa
+      a las profundidades, esperando a quienes se atrevan a desafiarlo nuevamente."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18192960631382016
+    m_Localized: Siguiente ronda
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18200721867972608
+    m_Localized: El pacto ha sido roto...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18200774535847936
+    m_Localized: "El enga\xF1o fue descubierto. La leyenda reclam\xF3 sus almas."
+    m_Metadata:
+      m_Items: []
   - m_Id: 18190528804327424
     m_Localized: "\xA1La leyenda ha sido derrotada!"
     m_Metadata:

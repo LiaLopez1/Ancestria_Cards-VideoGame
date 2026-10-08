@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Localization.Settings;
 using UnityEngine.UI;
 
 /// <summary>
@@ -77,6 +78,15 @@ public class TradeUIManager : MonoBehaviour
     /// <summary>¿El panel de seleccionar jugador esta abierto ahora mismo? Lo usa TrapsPanelUI para saber si debe cerrarlo tambien.</summary>
     public bool PanelSeleccionJugadorAbierto => panelSeleccionJugador != null && panelSeleccionJugador.activeSelf;
 
+
+    private string Localizar(string key, params object[] args)
+    {
+        return LocalizationSettings.StringDatabase.GetLocalizedString(
+            "GameCards1",
+            key,
+            args
+        );
+    }
     private void Awake()
     {
         if (panelSeleccionJugador != null) panelSeleccionJugador.SetActive(false);
@@ -269,7 +279,7 @@ public class TradeUIManager : MonoBehaviour
     {
         if (mensajeIniciadorText != null)
         {
-            mensajeIniciadorText.text = "Selecciona la carta que quieres intercambiar.";
+            mensajeIniciadorText.text = Localizar("trade_select_card");
         }
 
         if (panelIniciador != null)
@@ -296,7 +306,9 @@ public class TradeUIManager : MonoBehaviour
 
         if (mensajeIniciadorText != null)
         {
-            mensajeIniciadorText.text = "Esperando al otro jugador...";
+            //mensajeIniciadorText.text = "Esperando al otro jugador...";
+            mensajeIniciadorText.text = Localizar("trade_waiting_player");
+
         }
     }
 
@@ -308,7 +320,8 @@ public class TradeUIManager : MonoBehaviour
 
         if (mensajeIniciadorText != null)
         {
-            mensajeIniciadorText.text = "El otro jugador no aceptó el intercambio.";
+            //mensaje: El otro jugador no aceptó el intercambio.
+            mensajeIniciadorText.text = Localizar("trade_rejected");
         }
 
         if (panelIniciador != null)
@@ -347,7 +360,8 @@ public class TradeUIManager : MonoBehaviour
     {
         if (mensajePropuestaText != null)
         {
-            mensajePropuestaText.text = $"{nombreIniciador} quiere intercambiar una carta contigo. ¿Aceptas?";
+            /// quiere intercambiar una carta contigo. ¿Aceptas?";
+            mensajePropuestaText.text = Localizar( "trade_proposal", nombreIniciador);
         }
 
         if (panelPropuesta != null)
@@ -375,7 +389,8 @@ public class TradeUIManager : MonoBehaviour
     {
         if (mensajeObjetivoText != null)
         {
-            mensajeObjetivoText.text = "Selecciona la carta que quieres intercambiar.";
+            //"Selecciona la carta que quieres intercambiar."
+            mensajeObjetivoText.text = Localizar("trade_select_card");
         }
 
         if (botonConfirmar != null)
@@ -424,10 +439,11 @@ public class TradeUIManager : MonoBehaviour
 
         if (mensajeObjetivoText != null)
         {
-            mensajeObjetivoText.text = "Confirmando el intercambio...";
+            //"Confirmando el intercambio...";
+            mensajeObjetivoText.text = Localizar("trade_confirming");
         }
     }
-
+ 
     private void CerrarPanelObjetivo()
     {
         DesuscribirSeleccion();
