@@ -41,7 +41,7 @@ public class TrapNotificationUI : MonoBehaviour
     private string Localizar(string key, params object[] args)
     {
         return LocalizationSettings.StringDatabase.GetLocalizedString(
-            "Notifications",
+            "GameCards1",
             key,
             args
         );
