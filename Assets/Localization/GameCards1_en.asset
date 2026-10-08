@@ -199,6 +199,10 @@ MonoBehaviour:
     m_Localized: '{0} needs cards from {1}'
     m_Metadata:
       m_Items: []
+  - m_Id: 18220832251224064
+    m_Localized: The Legend is about to win. It only needs one more card.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
