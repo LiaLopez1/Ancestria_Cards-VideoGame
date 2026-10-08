@@ -116,6 +116,36 @@ MonoBehaviour:
     m_Localized: The Boss
     m_Metadata:
       m_Items: []
+  - m_Id: 18190528804327424
+    m_Localized: The legend has been defeated!
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18192449661341696
+    m_Localized: "Thanks to everyone\u2019s efforts, balance has been restored. For
+      now, the legend returns to the shadows... until someone awakens it once again."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18192872031948800
+    m_Localized: Back to Main Menu
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18193630643130368
+    m_Localized: Next Legend
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18196523777560576
+    m_Localized: The legends have been defeated!
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18197652557041664
+    m_Localized: The legend has prevailed...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18197911899246592
+    m_Localized: "They failed to break the curse. The Hombre Caim\xE1n returns to
+      the depths, waiting for those brave enough to challenge him once again."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

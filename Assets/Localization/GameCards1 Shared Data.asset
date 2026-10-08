@@ -111,6 +111,34 @@ MonoBehaviour:
     m_Key: boss_name
     m_Metadata:
       m_Items: []
+  - m_Id: 18190528804327424
+    m_Key: legend_defeated
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18192449661341696
+    m_Key: balance_restored
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18192872031948800
+    m_Key: back_to_main_menu
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18193630643130368
+    m_Key: next_legend
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18196523777560576
+    m_Key: legends_defeated
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18197652557041664
+    m_Key: legend_prevails
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18197911899246592
+    m_Key: ' escaped'
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

@@ -116,6 +116,37 @@ MonoBehaviour:
     m_Localized: El Boss
     m_Metadata:
       m_Items: []
+  - m_Id: 18190528804327424
+    m_Localized: "\xA1La leyenda ha sido derrotada!"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18192449661341696
+    m_Localized: Gracias al trabajo de todos, el equilibrio ha sido restaurado. Por
+      ahora, la leyenda vuelve a las sombras... hasta que alguien la despierte de
+      nuevo.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18192872031948800
+    m_Localized: Volver al inicio
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18193630643130368
+    m_Localized: Siguiente leyenda
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18196523777560576
+    m_Localized: "\xA1Las leyendas han sido derrotadas!"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18197652557041664
+    m_Localized: La leyenda ha triunfado...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18197911899246592
+    m_Localized: "No lograron romper la maldici\xF3n. El Hombre Caim\xE1n regresa
+      a las profundidades, esperando a quienes se atrevan a desafiarlo nuevamente."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
