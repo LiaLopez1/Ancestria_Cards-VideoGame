@@ -3833,7 +3833,7 @@ GameObject:
   - component: {fileID: 413746287}
   - component: {fileID: 413746286}
   m_Layer: 5
-  m_Name: ButtonSala
+  m_Name: ButtonMenu
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3917,7 +3917,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 1174355123}
         m_TargetAssemblyTypeName: GameRestartManager, Assembly-CSharp
         m_MethodName: VolverAlMenu
         m_Mode: 1
@@ -5363,7 +5363,7 @@ GameObject:
   - component: {fileID: 574043511}
   - component: {fileID: 574043510}
   m_Layer: 5
-  m_Name: ButtonSala
+  m_Name: ButtonMenu
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5447,7 +5447,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 1174355123}
         m_TargetAssemblyTypeName: GameRestartManager, Assembly-CSharp
         m_MethodName: VolverAlMenu
         m_Mode: 1
@@ -7605,7 +7605,7 @@ GameObject:
   - component: {fileID: 797781729}
   - component: {fileID: 797781728}
   m_Layer: 5
-  m_Name: ButtonSala
+  m_Name: ButtonMenu
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -7689,7 +7689,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 1174355123}
         m_TargetAssemblyTypeName: GameRestartManager, Assembly-CSharp
         m_MethodName: VolverAlMenu
         m_Mode: 1
@@ -10326,7 +10326,7 @@ GameObject:
   - component: {fileID: 1163704030}
   - component: {fileID: 1163704029}
   m_Layer: 5
-  m_Name: ButtonSala
+  m_Name: ButtonMenu
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -10410,7 +10410,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 1174355123}
         m_TargetAssemblyTypeName: GameRestartManager, Assembly-CSharp
         m_MethodName: VolverAlMenu
         m_Mode: 1
@@ -14311,7 +14311,7 @@ GameObject:
   - component: {fileID: 1570314716}
   - component: {fileID: 1570314715}
   m_Layer: 5
-  m_Name: Buttonsala
+  m_Name: ButtonSala
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -14395,7 +14395,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 1174355123}
         m_TargetAssemblyTypeName: GameRestartManager, Assembly-CSharp
         m_MethodName: SolicitarVolverAJugar
         m_Mode: 1
@@ -16395,7 +16395,7 @@ GameObject:
   - component: {fileID: 1706737014}
   - component: {fileID: 1706737013}
   m_Layer: 5
-  m_Name: Buttonsala
+  m_Name: ButtonNext
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -16459,9 +16459,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: GameRestartManager, Assembly-CSharp
-        m_MethodName: SolicitarVolverAJugar
+      - m_Target: {fileID: 340926873}
+        m_TargetAssemblyTypeName: GameManager, Assembly-CSharp
+        m_MethodName: OnSiguienteJefePressed
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -17856,7 +17856,7 @@ GameObject:
   - component: {fileID: 1967077402}
   - component: {fileID: 1967077401}
   m_Layer: 5
-  m_Name: Buttonsala
+  m_Name: ButtonSala
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -17940,7 +17940,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 1174355123}
         m_TargetAssemblyTypeName: GameRestartManager, Assembly-CSharp
         m_MethodName: SolicitarVolverAJugar
         m_Mode: 1
