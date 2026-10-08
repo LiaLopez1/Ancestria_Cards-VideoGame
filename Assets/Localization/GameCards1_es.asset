@@ -200,6 +200,10 @@ MonoBehaviour:
     m_Localized: '{0} necesita cartas de {1}'
     m_Metadata:
       m_Items: []
+  - m_Id: 18220832251224064
+    m_Localized: "La Leyenda est\xE1 a punto de ganar, le hace falta una carta."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

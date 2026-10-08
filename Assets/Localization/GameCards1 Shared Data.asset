@@ -191,6 +191,10 @@ MonoBehaviour:
     m_Key: notification_needs_category
     m_Metadata:
       m_Items: []
+  - m_Id: 18220832251224064
+    m_Key: legend_one_card_away
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
