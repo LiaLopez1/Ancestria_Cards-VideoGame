@@ -28,6 +28,12 @@ public class TrapNotificationUI : MonoBehaviour
     [Header("Duración")]
     [SerializeField] private float duracionVisible = 3f;
 
+    [Header("Iconos de categorías")]
+    [SerializeField] private Sprite iconoCastigadores;
+    [SerializeField] private Sprite iconoApariciones;
+    [SerializeField] private Sprite iconoProtectores;
+    [SerializeField] private Sprite iconoTransformados;
+
     //[Header("Audio")]
     //[SerializeField] private SoundData trapNotificationSound;
 
@@ -69,6 +75,12 @@ public class TrapNotificationUI : MonoBehaviour
     /// </summary>
     public void MostrarNotificacion(string nombreJugador, string nombreCategoria, Sprite icono, bool tieneCategoria)
     {
+        //Si no se proporciona un icono, lo buscamos según la categoría
+          if (icono == null)
+        {
+          icono = ObtenerIconoCategoria(nombreCategoria);
+        }
+
         cola.Enqueue(new NotificacionPendiente
         {
             nombreJugador = nombreJugador,
@@ -118,5 +130,26 @@ public class TrapNotificationUI : MonoBehaviour
         }
 
         //trapNotificationSound.Play();
+    }
+
+    private Sprite ObtenerIconoCategoria(string nombreCategoria)
+    {
+        switch (nombreCategoria.ToLower())
+        {
+            case "castigadores":
+                return iconoCastigadores;
+
+            case "apariciones":
+                return iconoApariciones;
+
+            case "protectores":
+                return iconoProtectores;
+
+            case "transformados":
+                return iconoTransformados;
+
+            default:
+                return null;
+        }
     }
 }
