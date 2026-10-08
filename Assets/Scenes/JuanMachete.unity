@@ -13434,7 +13434,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1559284922
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -17040,6 +17040,10 @@ MonoBehaviour:
   mensajeText: {fileID: 534599923}
   iconoImage: {fileID: 1559284922}
   duracionVisible: 3
+  iconoCastigadores: {fileID: 21300000, guid: 6af66468417a161449044c59584f4831, type: 3}
+  iconoApariciones: {fileID: 21300000, guid: ce73a743d4c50264abfafd94386af3fa, type: 3}
+  iconoProtectores: {fileID: 21300000, guid: 3fa8b25c33103d840815484482e46ed1, type: 3}
+  iconoTransformados: {fileID: 21300000, guid: 77a3887a5a7ed7f4e963782074783d0a, type: 3}
 --- !u!1 &1979537546
 GameObject:
   m_ObjectHideFlags: 0
