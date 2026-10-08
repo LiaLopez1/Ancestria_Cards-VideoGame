@@ -1,6 +1,7 @@
-using UnityEngine;
-using UnityEngine.UI;
 using TMPro;
+using UnityEngine;
+using UnityEngine.Localization;
+using UnityEngine.UI;
 
 public class IconCarousel : MonoBehaviour
 {
@@ -11,7 +12,7 @@ public class IconCarousel : MonoBehaviour
     public float leftX = -180f;
     public float centerX = 0f;
     public float rightX = 180f;
-    public float hiddenX = 400f; // fuera de pantalla, a la derecha
+    public float hiddenX = 400f;
 
     [Header("Escalas")]
     public float smallScale = 0.6f;
@@ -24,29 +25,48 @@ public class IconCarousel : MonoBehaviour
     public bool autoAdvance = true;
     public float autoAdvanceInterval = 1.5f;
 
-    [Header("Texto animado (máquina de escribir)")]
+    [Header("Texto localizado (máquina de escribir)")]
+    [SerializeField] private LocalizedString fullText;
     public TMP_Text typewriterText;
-    [TextArea] public string fullText = "Elige tu elemento...";
-    public float typingSpeed = 0.05f;      
-    public float pauseBeforeRepeat = 1.2f; 
-    public float pauseBeforeErase = 0f;   
+    public float typingSpeed = 0.05f;
+    public float pauseBeforeRepeat = 1.2f;
+    public float pauseBeforeErase = 0f;
 
     private int[] slotIndex;
     private float timer;
 
+    private string textoLocalizado = "";
+    private Coroutine typewriterCoroutine;
+
+    void OnEnable()
+    {
+        // Escuchar cambios de idioma
+        fullText.StringChanged += ActualizarTextoLocalizado;
+
+        // Pedir el texto correspondiente al idioma actual
+        fullText.RefreshString();
+    }
+
+    void OnDisable()
+    {
+        // Dejar de escuchar cambios de idioma
+        fullText.StringChanged -= ActualizarTextoLocalizado;
+    }
+
     void Start()
     {
         slotIndex = new int[icons.Length];
-        // Estado inicial: los primeros 3 en izquierda/centro/derecha,
-        // el resto (si hay más de 4) empiezan ocultos.
+
         for (int i = 0; i < icons.Length; i++)
         {
-            slotIndex[i] = i < 3 ? (3 - i) : 0; // 3=izq,2=centro,1=der,0=oculto
+            slotIndex[i] = i < 3 ? (3 - i) : 0;
             SnapToSlot(i, slotIndex[i]);
         }
 
         if (typewriterText != null)
-            StartCoroutine(TypewriterLoop());
+        {
+            typewriterCoroutine = StartCoroutine(TypewriterLoop());
+        }
     }
 
     void Update()
@@ -54,6 +74,7 @@ public class IconCarousel : MonoBehaviour
         if (autoAdvance)
         {
             timer += Time.deltaTime;
+
             if (timer >= autoAdvanceInterval)
             {
                 timer = 0f;
@@ -64,27 +85,44 @@ public class IconCarousel : MonoBehaviour
         for (int i = 0; i < icons.Length; i++)
         {
             RectTransform rt = icons[i].rectTransform;
-            (float x, float scale, float alpha) target = SlotTarget(slotIndex[i]);
+
+            (float x, float scale, float alpha) target =
+                SlotTarget(slotIndex[i]);
 
             Vector2 pos = rt.anchoredPosition;
-            pos.x = Mathf.Lerp(pos.x, target.x, Time.deltaTime * transitionSpeed);
+
+            pos.x = Mathf.Lerp(
+                pos.x,
+                target.x,
+                Time.deltaTime * transitionSpeed
+            );
+
             rt.anchoredPosition = pos;
 
-            rt.localScale = Vector3.Lerp(rt.localScale, Vector3.one * target.scale, Time.deltaTime * transitionSpeed);
+            rt.localScale = Vector3.Lerp(
+                rt.localScale,
+                Vector3.one * target.scale,
+                Time.deltaTime * transitionSpeed
+            );
 
             Color c = icons[i].color;
-            c.a = Mathf.Lerp(c.a, target.alpha, Time.deltaTime * transitionSpeed);
+
+            c.a = Mathf.Lerp(
+                c.a,
+                target.alpha,
+                Time.deltaTime * transitionSpeed
+            );
+
             icons[i].color = c;
         }
     }
 
-    /// <summary>Avanza el carrusel una posición (el de la izquierda sale, entra uno nuevo por la derecha).</summary>
     public void NextIcon()
     {
         for (int i = 0; i < icons.Length; i++)
         {
             int oldSlot = slotIndex[i];
-            int newSlot = (oldSlot + 1) % 4; // izquierda(3) -> oculto(0), derecha(1)->centro(2), etc.
+            int newSlot = (oldSlot + 1) % 4;
 
             if (oldSlot == 3 && newSlot == 0)
             {
@@ -99,10 +137,33 @@ public class IconCarousel : MonoBehaviour
     {
         switch (slot)
         {
-            case 3: return (leftX, smallScale, 1f);   // izquierda, visible chico
-            case 2: return (centerX, bigScale, 1f);   // centro, visible grande
-            case 1: return (rightX, smallScale, 1f);  // derecha, visible chico
-            default: return (hiddenX, smallScale, 0f); // oculto, invisible
+            case 3:
+                return (leftX, smallScale, 1f);
+
+            case 2:
+                return (centerX, bigScale, 1f);
+
+            case 1:
+                return (rightX, smallScale, 1f);
+
+            default:
+                return (hiddenX, smallScale, 0f);
+        }
+    }
+
+    private void ActualizarTextoLocalizado(string nuevoTexto)
+    {
+        textoLocalizado = nuevoTexto;
+
+        // Si el idioma cambia, reiniciamos la animación
+        if (typewriterCoroutine != null)
+        {
+            StopCoroutine(typewriterCoroutine);
+        }
+
+        if (typewriterText != null)
+        {
+            typewriterCoroutine = StartCoroutine(TypewriterLoop());
         }
     }
 
@@ -110,25 +171,39 @@ public class IconCarousel : MonoBehaviour
     {
         while (true)
         {
-            // Escribiendo letra por letra
-            typewriterText.text = "";
-            for (int i = 0; i < fullText.Length; i++)
+            if (string.IsNullOrEmpty(textoLocalizado))
             {
-                typewriterText.text += fullText[i];
+                yield return null;
+                continue;
+            }
+
+            // Limpiar el texto
+            typewriterText.text = "";
+
+            // Máquina de escribir
+            for (int i = 0; i < textoLocalizado.Length; i++)
+            {
+                typewriterText.text += textoLocalizado[i];
+
                 yield return new WaitForSeconds(typingSpeed);
             }
 
-            // Pausa con el texto completo visible
+            // Esperar después de terminar
             yield return new WaitForSeconds(pauseBeforeRepeat);
 
-            // Borrado opcional (efecto "backspace") antes de repetir
+            // Borrar texto
             if (pauseBeforeErase > 0f)
             {
-                for (int i = fullText.Length; i > 0; i--)
+                for (int i = textoLocalizado.Length; i > 0; i--)
                 {
-                    typewriterText.text = fullText.Substring(0, i - 1);
-                    yield return new WaitForSeconds(typingSpeed * 0.5f);
+                    typewriterText.text =
+                        textoLocalizado.Substring(0, i - 1);
+
+                    yield return new WaitForSeconds(
+                        typingSpeed * 0.5f
+                    );
                 }
+
                 yield return new WaitForSeconds(pauseBeforeErase);
             }
         }
@@ -137,11 +212,19 @@ public class IconCarousel : MonoBehaviour
     private void SnapToSlot(int iconIndex, int slot)
     {
         var t = SlotTarget(slot);
+
         RectTransform rt = icons[iconIndex].rectTransform;
-        rt.anchoredPosition = new Vector2(t.x, rt.anchoredPosition.y);
+
+        rt.anchoredPosition = new Vector2(
+            t.x,
+            rt.anchoredPosition.y
+        );
+
         rt.localScale = Vector3.one * t.scale;
+
         Color c = icons[iconIndex].color;
         c.a = t.alpha;
+
         icons[iconIndex].color = c;
     }
 }

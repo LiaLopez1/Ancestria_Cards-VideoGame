@@ -261,11 +261,22 @@ MonoBehaviour:
   transitionSpeed: 8
   autoAdvance: 1
   autoAdvanceInterval: 1.5
+  fullText:
+    m_TableReference:
+      m_TableCollectionName: GUID:a66adb36b0ed02149bebeba62eaae47c
+    m_TableEntryReference:
+      m_KeyId: 3551869589295104
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
   typewriterText: {fileID: 710126782}
-  fullText: Las historias toman forma...
   typingSpeed: 0.05
   pauseBeforeRepeat: 1.2
   pauseBeforeErase: 0
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &125982089
 GameObject:
   m_ObjectHideFlags: 0
