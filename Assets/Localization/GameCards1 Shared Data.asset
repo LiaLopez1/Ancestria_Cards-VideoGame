@@ -167,10 +167,6 @@ MonoBehaviour:
     m_Key: balance_restored
     m_Metadata:
       m_Items: []
-  - m_Id: 18192872031948800
-    m_Key: back_to_main_menu
-    m_Metadata:
-      m_Items: []
   - m_Id: 18193630643130368
     m_Key: next_legend
     m_Metadata:
@@ -185,6 +181,14 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 18197911899246592
     m_Key: ' escaped'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18215175221452800
+    m_Key: notification_has_category
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18215177071140864
+    m_Key: notification_needs_category
     m_Metadata:
       m_Items: []
   m_Metadata:

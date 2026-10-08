@@ -174,10 +174,6 @@ MonoBehaviour:
       now, the legend returns to the shadows... until someone awakens it once again."
     m_Metadata:
       m_Items: []
-  - m_Id: 18192872031948800
-    m_Localized: Back to Main Menu
-    m_Metadata:
-      m_Items: []
   - m_Id: 18193630643130368
     m_Localized: Next Legend
     m_Metadata:
@@ -193,6 +189,14 @@ MonoBehaviour:
   - m_Id: 18197911899246592
     m_Localized: "They failed to break the curse. The Hombre Caim\xE1n returns to
       the depths, waiting for those brave enough to challenge him once again."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18215175221452800
+    m_Localized: '{0} has cards from {1}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18215177071140864
+    m_Localized: '{0} needs cards from {1}'
     m_Metadata:
       m_Items: []
   references:

@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Localization.Settings;
 using UnityEngine.UI;
 
 /// <summary>
@@ -36,6 +37,15 @@ public class TrapNotificationUI : MonoBehaviour
 
     //[Header("Audio")]
     //[SerializeField] private SoundData trapNotificationSound;
+
+    private string Localizar(string key, params object[] args)
+    {
+        return LocalizationSettings.StringDatabase.GetLocalizedString(
+            "Notifications",
+            key,
+            args
+        );
+    }
 
 
     /// <summary>Una notificación esperando su turno en la cola.</summary>
@@ -115,8 +125,12 @@ public class TrapNotificationUI : MonoBehaviour
     {
         if (mensajeText != null)
         {
-            string verbo = notificacion.tieneCategoria ? "tiene" : "necesita";
-            mensajeText.text = $"{notificacion.nombreJugador} {verbo} cartas de {notificacion.nombreCategoria}";
+            string key = notificacion.tieneCategoria ? "notification_has_category" : "notification_needs_category";
+            mensajeText.text = Localizar(
+            key,
+            notificacion.nombreJugador,
+            notificacion.nombreCategoria
+        );
         }
 
         if (iconoImage != null)

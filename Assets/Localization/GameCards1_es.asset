@@ -175,10 +175,6 @@ MonoBehaviour:
       nuevo.
     m_Metadata:
       m_Items: []
-  - m_Id: 18192872031948800
-    m_Localized: Volver al inicio
-    m_Metadata:
-      m_Items: []
   - m_Id: 18193630643130368
     m_Localized: Siguiente leyenda
     m_Metadata:
@@ -194,6 +190,14 @@ MonoBehaviour:
   - m_Id: 18197911899246592
     m_Localized: "No lograron romper la maldici\xF3n. El Hombre Caim\xE1n regresa
       a las profundidades, esperando a quienes se atrevan a desafiarlo nuevamente."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18215175221452800
+    m_Localized: '{0} tiene cartas de {1}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18215177071140864
+    m_Localized: '{0} necesita cartas de {1}'
     m_Metadata:
       m_Items: []
   references:
