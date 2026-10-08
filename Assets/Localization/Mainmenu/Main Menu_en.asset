@@ -98,6 +98,22 @@ MonoBehaviour:
     m_Localized: The host left the game. Returning to the main menu...
     m_Metadata:
       m_Items: []
+  - m_Id: 21803811832131584
+    m_Localized: Choose who to trade with
+    m_Metadata:
+      m_Items: []
+  - m_Id: 21804249272872960
+    m_Localized: Accept
+    m_Metadata:
+      m_Items: []
+  - m_Id: 21804287453622272
+    m_Localized: Reject
+    m_Metadata:
+      m_Items: []
+  - m_Id: 21804304000151552
+    m_Localized: Confirm
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

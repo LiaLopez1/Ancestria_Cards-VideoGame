@@ -98,6 +98,22 @@ MonoBehaviour:
     m_Localized: "El anfitri\xF3n abandon\xF3 la partida. Regresando al men\xFA principal..."
     m_Metadata:
       m_Items: []
+  - m_Id: 21803811832131584
+    m_Localized: Elije con quien intercambiar
+    m_Metadata:
+      m_Items: []
+  - m_Id: 21804249272872960
+    m_Localized: Aceptar
+    m_Metadata:
+      m_Items: []
+  - m_Id: 21804287453622272
+    m_Localized: Rechazar
+    m_Metadata:
+      m_Items: []
+  - m_Id: 21804304000151552
+    m_Localized: Confirmar
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
