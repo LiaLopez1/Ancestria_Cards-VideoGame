@@ -134,7 +134,7 @@ public class PlayerCube : NetworkBehaviour
 
     private void AvisarPanelDeNombre()
     {
-        Debug.Log($"[DEBUG PlayerCube] AvisarPanelDeNombre: slot={slotJugador.Value}, nick='{nickJugador.Value}', PlayerNamePanelsUI.Instance es null? {PlayerNamePanelsUI.Instance == null}");
+        //Debug.Log($"[DEBUG PlayerCube] AvisarPanelDeNombre: slot={slotJugador.Value}, nick='{nickJugador.Value}', PlayerNamePanelsUI.Instance es null? {PlayerNamePanelsUI.Instance == null}");
 
         if (slotJugador.Value < 0)
         {

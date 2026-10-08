@@ -374,6 +374,7 @@ public class StartupFlowUI : MonoBehaviour
         crearSalaButton.interactable = false;
         unirseButton.interactable = false;
         if (reintentarButton != null) reintentarButton.gameObject.SetActive(false);
+        
         SetEstadoInicio(LocalizationSettings.StringDatabase.GetLocalizedString(
             "Main Menu",
             "connecting" )

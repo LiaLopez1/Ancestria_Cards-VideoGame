@@ -356,7 +356,7 @@ public class GameManager : NetworkBehaviour
             resultado.Value = ResultadoPartida.DerrotaPorBoss;
         }
 
-        Debug.Log($"[Servidor] Partida terminada tras {totalRondas} ronda(s). Resultado final: {resultado.Value}.");
+        //Debug.Log($"[Servidor] Partida terminada tras {totalRondas} ronda(s). Resultado final: {resultado.Value}.");
     }
 
     /// <summary>SOLO desde el servidor (SuspicionManager), cuando la barra llega al máximo.</summary>
